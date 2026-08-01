@@ -1,0 +1,175 @@
+-- ============================================================
+-- Vista     : VWCOG_Diario_General
+-- Modulo    : Contabilidad General
+-- Objeto    : Detalle del diario general: una fila por linea
+--             de asiento contable.
+--             Construye el numero de documento formateado
+--             como TdiCve-NNNNNNN (7 digitos con ceros a la
+--             izquierda) y convierte ano+mes+dia en tipo Date.
+--             Separa el valor en Debito o Credito segun el
+--             campo DgeOri (1=Debito, 2=Credito).
+--             No aplica agrupacion; devuelve el detalle puro.
+-- Tablas    : CogHdgd   lineas del diario general (tabla base)
+--             CogTdi    tipos de documento contable
+--             CogPer    periodos contables
+--             CogCta    catalogo de cuentas
+--             CogAuxd   catalogo de auxiliares
+--             CogCco    catalogo de centros de costo
+--             CxpCfa    clasificacion de formas de pago (CxP)
+--             SegFec    calendario / tabla de fechas
+-- Esquema   : (default)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2  (mejorada)
+-- Cambios   :
+--   v2 - Se agrega cabecera de documentacion completa.
+--        Se agrega alias explicito As en FROM y JOINs.
+--        Se reformatea SELECT con una columna por linea
+--          y comentario descriptivo en cada campo.
+--        Se indenta la expresion de Numero_Documento y
+--          Fecha_Documento para mayor legibilidad,
+--          respetando la logica original de formateo.
+--        Se reformatea el CASE de Descripcion, Debito y
+--          Credito con sangria uniforme.
+--        Se documenta cada JOIN con su proposito.
+--        Se respeta el orden original de los campos,
+--          la logica original y el limite de 80 posiciones.
+-- ============================================================
+
+Create Or Replace View VWCOG_Diario_General As
+
+Select
+    -- --------------------------------------------------------
+    -- Identificacion del periodo
+    -- --------------------------------------------------------
+    T1.PerAno                              As PerAno,
+    -- Ano contable del periodo
+
+    T1.PerNum                              As PerNum,
+    -- Numero del periodo (1..12)
+
+    T3.PerDes                              As PerDes,
+    -- Descripcion del periodo
+
+    -- --------------------------------------------------------
+    -- Tipo de documento
+    -- --------------------------------------------------------
+    T2.TdiDes                              As TdiDes,
+    -- Descripcion del tipo de documento contable
+
+    -- --------------------------------------------------------
+    -- Numero de documento: TdiCve-NNNNNNN
+    -- Formatea DgeDoc con ceros a la izquierda hasta 7 digitos
+    -- --------------------------------------------------------
+    T1.TdiCve || '-' ||
+    Concat(Substring('0000000', 0, 7 - Length(Trim(T1.DgeDoc))),
+           Trim(T1.DgeDoc))                As Numero_Documento,
+
+    -- --------------------------------------------------------
+    -- Fecha del documento: obtenida del calendario SegFec
+    -- Join por DgeAno+DgeMes+DgeDia -> FecIso (formato ISO)
+    -- --------------------------------------------------------
+    T8.FecIso                              As Fecha_Documento,
+
+    -- --------------------------------------------------------
+    -- Linea del asiento
+    -- --------------------------------------------------------
+    T1.DgeSec                              As DgeSec,
+    -- Numero de secuencia dentro del documento
+
+    T1.CtaCve                              As CtaCve,
+    -- Clave de la cuenta contable
+
+    T1.AuxCve                              As AuxCve,
+    -- Clave del auxiliar; 0 = sin auxiliar
+
+    -- Descripcion: nombre de cuenta o de auxiliar segun caso
+    (Case When T1.AuxCve = 0
+     Then T4.CtaDes
+     Else T5.AuxNom
+     End)                                  As Descripcion,
+
+    T1.CcoCve                              As CcoCve,
+    -- Clave del centro de costo
+
+    T6.CcoDes                              As CcoDes,
+    -- Descripcion del centro de costo
+
+    T1.DgeDe1                              As DgeDe1,
+    -- Descripcion libre de la linea del asiento
+
+    -- --------------------------------------------------------
+    -- Valor separado por orientacion (DgeOri)
+    -- 1 = Debito   2 = Credito
+    -- --------------------------------------------------------
+    (Case When T1.DgeOri = 1
+     Then T1.DgeVal
+     Else 0
+     End)                                  As Debito,
+
+    (Case When T1.DgeOri = 2
+     Then T1.DgeVal
+     Else 0
+     End)                                  As Credito,
+
+    -- --------------------------------------------------------
+    -- Clasificacion de forma de pago (CxP)
+    -- --------------------------------------------------------
+    T1.CfaCve                              As CfaCve,
+    -- Clave de la clasificacion de forma de pago
+
+    T7.CfaDes                              As CfaDes,
+    -- Descripcion de la clasificacion de forma de pago
+
+    -- --------------------------------------------------------
+    -- Campos adicionales de identificacion
+    -- --------------------------------------------------------
+    T1.DgeTid                              As DgeTid,
+    -- Tipo de identificacion fiscal
+
+    T1.DgeIde                              As DgeIde,
+    -- Numero de identificacion fiscal
+
+    T1.NcfNro                              As NcfNro
+    -- Numero de comprobante fiscal (NCF)
+
+-- ============================================================
+-- FROM y JOINs
+-- ============================================================
+From CogHdgd As T1
+
+-- Tipo de documento contable
+Join CogTdi As T2
+    On T1.TdiCve = T2.TdiCve
+
+-- Periodo contable: descripcion del periodo
+Join CogPer As T3
+    On  T1.PerAno = T3.PerAno
+    And T1.PerNum = T3.PerNum
+
+-- Catalogo de cuentas: descripcion de la cuenta
+Join CogCta As T4
+    On T1.CtaCve = T4.CtaCve
+
+-- Auxiliares: LEFT porque no toda linea tiene auxiliar
+Left Outer Join CogAuxd As T5
+    On  T1.AuxLis = T5.AuxLis
+    And T1.AuxCve = T5.AuxCve
+
+-- Centro de costo: LEFT porque no toda linea tiene CCO
+Left Outer Join CogCco As T6
+    On T1.CcoCve = T6.CcoCve
+
+-- Forma de pago CxP: LEFT porque no toda linea tiene CfaCve
+Left Outer Join CxpCfa As T7
+    On T1.CfaCve = T7.CfaCve
+
+-- Calendario: convierte DgeAno+DgeMes+DgeDia en fecha ISO
+Join SegFec As T8
+    On  T1.DgeAno = T8.FecAno
+    And T1.DgeMes = T8.FecMes
+    And T1.DgeDia = T8.FecDia
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.PerAno, T1.PerNum, T1.TdiCve, T1.DgeDoc,
+--          T1.DgeSec

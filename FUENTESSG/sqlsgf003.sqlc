@@ -1,0 +1,81 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Función  : SEGLIB.SG_TIEMPO_MESES
+-- Módulo   : Seguridad (Comunes)
+-- Propósito: Calcula los meses restantes (fracción de año)
+--            entre dos fechas, después de descontar los años
+--            completos.  Sustituye al programa SG7006
+--            (componente meses).
+-- Parámetros:
+--   FechaDes  DATE  Fecha de inicio (desde).
+--   FechaHas  DATE  Fecha de fin    (hasta).
+-- Retorna tabla con columna:
+--   MESES  INTEGER  Meses fraccionarios cumplidos (0-11).
+--                   Tabla vacía si algún parámetro es NULL
+--                     (RETURNS NULL ON NULL INPUT).
+--                   0 si FechaHas < FechaDes.
+-- Tablas   : (ninguna — función escalar pura)
+-- Autor    : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión  : 3  (normalización mixed-case + revisión cabecera)
+-- Cambios  :
+--   v1 - Versión original (cálculo básico).
+--   v2 - Función UDTF; ADD_MONTHS para evitar fechas inválidas;
+--        protección FechaHas < FechaDes; RETURNS NULL ON NULL INPUT.
+--   v3 - Normalización de casing a mixed-case. Sin cambios lógicos.
+-- Uso:
+--   Select * From Table(SEGLIB.SG_TIEMPO_MESES(
+--       Date('1964-07-23'),
+--       Current Date
+--   )) As x;
+-- ============================================================
+
+Create Or Replace Function SEGLIB.SG_TIEMPO_MESES (
+    FechaDes Date,
+    FechaHas Date
+)
+Returns Table (
+    Meses Integer
+)
+Language Sql
+Specific SG_TIEMPO_MESES
+Deterministic
+No External Action
+Returns Null On Null Input
+Begin
+    Declare vAnos    Integer Default 0;
+    Declare vMeses   Integer Default 0;
+    Declare FechaBase Date;
+
+    -- Protección: si la fecha final es anterior a la inicial
+    -- se devuelve 0 en lugar de un valor negativo silencioso.
+    If FechaHas < FechaDes Then
+        Pipe (0);
+        Return;
+    End If;
+
+    -- Calcular años completos entre las dos fechas
+    Set vAnos = Year(FechaHas) - Year(FechaDes);
+    If (Month(FechaHas) < Month(FechaDes))
+       Or (Month(FechaHas) = Month(FechaDes)
+       And Day(FechaHas) < Day(FechaDes)) Then
+        Set vAnos = vAnos - 1;
+    End If;
+
+    -- Fecha base: avanzar FechaDes tantos meses como años completos
+    Set FechaBase = Add_Months(FechaDes, vAnos * 12);
+
+    -- Meses restantes entre FechaBase y FechaHas
+    Set vMeses = (Year(FechaHas) * 12 + Month(FechaHas))
+               - (Year(FechaBase) * 12 + Month(FechaBase));
+
+    -- Ajuste: si todavía no ha pasado el día del mes
+    If Day(FechaHas) < Day(FechaBase) Then
+        Set vMeses = vMeses - 1;
+    End If;
+
+    Pipe (vMeses);
+    Return;
+End;
+
+Grant Execute On Function SEGLIB.SG_TIEMPO_MESES To Public;

@@ -1,0 +1,13 @@
+Create Or Replace View VWFAC_Pedidos_Autorizados
+As Select T1.DisCve, T2.DisDes, T1.OrdNro, T9.FecIso, T1.PauHor,
+          T1.PauWsi, T1.PauUsr, T4.UsrNom, T1.CliCve, T3.CliNom,
+          T1.PauMon, T1.PauTip
+  From FacPau T1
+  Join SegDis T2
+    On (T1.DisCve = T2.DisCve)
+  Join CxcCli T3
+    On (T1.CliCve = T3.CliCve)
+  Join SegUsr T4
+    On (T1.PauUsr = T4.UsrCve)
+  Join SegFec T9
+    On (T1.PauFec = T9.FecYmd)

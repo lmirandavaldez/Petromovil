@@ -1,0 +1,13 @@
+Create Or Replace View VWEST_Estadisticas_Ventas_Clientes
+AS SELECT
+    T1.VenCve As CliCve,
+    T1.DtoAno AS EstAno,
+    T1.DtoMes AS EstMes,
+    Sum(T1.DtoImp) AS ESTIBV,
+    Sum(T1.DtoMpd) AS ESTIDV,
+    Sum(T1.DtoIm1 + T1.DtoIm2) AS ESTIIV,
+    Sum((T1.DtoImp - T1.DtoMpd) + T1.DtoIm1 + T1.DtoIm2) AS ESTINV,
+    Sum(T1.DtoMcp) AS ESTCPR,
+    Sum(T1.DtoMcu) AS ESTCUL
+From FacDtod T1
+Group By T1.CliCve, T1.DtoAno, T1.DtoMes

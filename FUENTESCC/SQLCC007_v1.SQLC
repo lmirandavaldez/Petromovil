@@ -1,0 +1,17 @@
+Create Or Replace View VWCXC_Historico_Descuentos
+As Select T1.CliCve, T2.CliNom, T3.VenCve, T4.VenNom,
+       T1.ArtCve, T5.ArtDes, T1.DprVde, T1.CdcVde,
+       T1.AplUsr, T6.UsrNom,
+       Date(AplTst) As Fecha_Creacion,
+       Time(AplTst) As Hora_Creacion
+  From CxcCdc T1
+  Join CxcCli T2
+    On (T1.CliCve = T2.CliCve)
+  Join CxcRvc T3
+    On (T1.CliCve = T3.CliCve)
+  Join CxcVen T4
+    On (T3.VenCve = T4.VenCve)
+  Join InvArt T5
+    On (T1.ArtCve = T5.ArtCve)
+  Join SegUsr T6
+    On (T1.AplUsr = T6.UsrCve)

@@ -1,0 +1,85 @@
+-- ============================================================
+-- Vista   : VWFAC_Pedidos_Entregados
+-- Módulo  : Facturación
+-- Objeto  : Devuelve los pedidos / planillas que han sido
+--           completamente entregados.
+--           Combina el detalle del pedido (FacPlad) con su
+--           cabecera de planilla (FacPlah) filtrando solo
+--           los registros donde:
+--             SitCve = 'T'  — planilla en estado Terminada
+--             PlaSta = 'R'  — detalle en estado Realizado
+--           Incluye datos del cliente, vendedor, vehículo,
+--           chofer y fechas de planificación / entrega.
+-- Tablas  : FacPlad  — detalle de pedidos / planilla
+--           FacPlah  — cabecera de planilla de entrega
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se agrega alias explícito As en FROM y JOIN.
+--        Se reformatea el SELECT con una columna por línea
+--          agrupada por sección temática y con comentario
+--          descriptivo de cada campo.
+--        Se reformatea el WHERE con una condición por línea
+--          y comentarios de los valores de estado.
+--        Se documenta el INNER JOIN: es intencional — solo
+--          se quieren detalles que tengan cabecera de planilla.
+--        Cabecera de documentación completa.
+-- ============================================================
+
+Create Or Replace View VWFAC_Pedidos_Entregados As
+
+Select
+    -- --------------------------------------------------------
+    -- Identificación del pedido / planilla
+    -- --------------------------------------------------------
+    T1.PlaDis        As PlaDis,   -- Distribución / división de la planilla
+    T1.PlaNro        As PlaNro,   -- Número de planilla
+    T1.CiaCve        As CiaCve,   -- Código de compañía
+    T1.DisCve        As DisCve,   -- Código de distribución
+    T1.OrdNro        As OrdNro,   -- Número de orden del pedido
+    T1.OrdAmd        As OrdAmd,   -- Número de enmienda / versión de la orden
+
+    -- --------------------------------------------------------
+    -- Datos del cliente
+    -- --------------------------------------------------------
+    T1.CliCve        As CliCve,   -- Código del cliente
+    T1.CliNom        As CliNom,   -- Nombre del cliente
+    T1.CliDir        As CliDir,   -- Dirección de entrega del cliente
+    T1.CliLoc        As CliLoc,   -- Localidad del cliente
+    T1.CliCiu        As CliCiu,   -- Ciudad del cliente
+    T1.CliTe1        As CliTe1,   -- Teléfono 1 del cliente
+    T1.CliTe2        As CliTe2,   -- Teléfono 2 del cliente
+
+    -- --------------------------------------------------------
+    -- Datos del vendedor
+    -- --------------------------------------------------------
+    T1.VenCve        As VenCve,   -- Código del vendedor
+    T1.VenNom        As VenNom,   -- Nombre del vendedor
+    T1.VenEma        As VenEma,   -- Correo electrónico del vendedor
+
+    -- --------------------------------------------------------
+    -- Datos de entrega (cabecera de planilla FacPlah)
+    -- --------------------------------------------------------
+    T2.VehFic        As VehFic,   -- Ficha / placa del vehículo de entrega
+    T2.ChoCve        As ChoCve,   -- Código del chofer
+    T2.PlaFpl        As PlaFpl,   -- Fecha planificada de entrega
+    T2.PlaFen        As PlaFen    -- Fecha efectiva de entrega
+
+From FacPlad As T1
+
+-- INNER JOIN intencional: solo se incluyen detalles de pedido
+-- que tengan cabecera de planilla registrada en FacPlah.
+-- La clave compuesta es PlaDis + PlaNro.
+Inner Join FacPlah As T2
+    On  T1.PlaDis = T2.PlaDis
+    And T1.PlaNro = T2.PlaNro
+
+Where
+    -- Solo planillas terminadas (entregadas completamente)
+    T2.SitCve = 'T'             -- SitCve: 'T' = Terminada
+    -- Solo detalles de pedido realizados (no cancelados)
+    And T1.PlaSta = 'R'         -- PlaSta: 'R' = Realizado
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.PlaDis, T1.PlaNro, T1.OrdNro

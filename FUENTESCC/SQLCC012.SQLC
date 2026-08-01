@@ -1,0 +1,58 @@
+-- =============================================================================
+-- Vista   : VWCXC_Relacion_Comision_Vendedores_Externos
+-- Módulo  : Cuentas por Cobrar (CxC)
+-- Propósito: Presenta la relación de comisiones asignadas a vendedores
+--            externos por cliente. Para cada registro de CxcRcve muestra
+--            el nombre del vendedor externo, el nombre del cliente y el
+--            valor/porcentaje de comisión acordado (RcvVa1).
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcRcve - Relación de comisiones por vendedor externo / cliente (principal)
+--   CxcVex  - Catálogo de vendedores externos
+--   CxcCli  - Catálogo de clientes
+-- -----------------------------------------------------------------------------
+-- Relación con otras vistas:
+--   Esta vista es el equivalente externo de VWCXC_Relacion_Comision_Vendedores
+--   (SQLCC011), que trabaja con vendedores internos (CxcRcv / CxcVen).
+--   Diferencias clave:
+--     • CxcRcve / CxcVex  → vendedores externos (agentes / comisionistas)
+--     • CxcRcv  / CxcVen  → vendedores internos de la empresa
+--     • El esquema externo asocia la comisión por cliente (CliCve),
+--       mientras el interno la asocia por categoría de inventario (CatCve).
+-- -----------------------------------------------------------------------------
+-- Notas:
+--   - Todos los JOINs son INNER: solo se muestran registros cuyo vendedor
+--     externo y cliente estén completamente catalogados. Registros con
+--     referencias huérfanas quedan excluidos.
+--   - RcvVa1 : Valor o porcentaje de comisión del vendedor externo
+--              acordado para ese cliente específico.
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1  Versión original
+--   v2  Alias descriptivos, INNER JOIN explícito, columnas documentadas,
+--       referencia cruzada con SQLCC011, encabezado completo
+-- =============================================================================
+
+CREATE OR REPLACE VIEW VWCXC_Relacion_Comision_Vendedores_Externos AS
+
+SELECT
+    -- Vendedor externo
+    rcve.VexCve AS VexCve,  -- Clave del vendedor externo
+    vex.VexNom  AS VexNom,  -- Nombre del vendedor externo
+
+    -- Cliente asociado
+    rcve.CliCve AS CliCve,  -- Clave del cliente
+    cli.CliNom  AS CliNom,  -- Nombre del cliente
+
+    -- Comisión acordada
+    rcve.RcvVa1 AS RcvVa1   -- Valor / porcentaje de comisión para este cliente
+
+FROM CxcRcve rcve
+
+-- Vendedor externo: INNER — excluye comisiones con vendedor no catalogado
+INNER JOIN CxcVex vex
+    ON vex.VexCve = rcve.VexCve
+
+-- Cliente: INNER — excluye comisiones con cliente no registrado
+INNER JOIN CxcCli cli
+    ON cli.CliCve = rcve.CliCve

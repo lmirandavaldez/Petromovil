@@ -1,0 +1,11 @@
+Create Or Replace View VWFAC_Pedidos_Entregados
+As Select T1.PlaDis, T1.PlaNro, T1.CiaCve, T1.DisCve, T1.OrdNro,
+          T1.OrdAmd, T1.CliCve, T1.CliNom, T1.CliDir, T1.CliLoc,
+          T1.CliCiu, T1.CliTe1, T1.CliTe2, T1.VenCve, T1.VenNom,
+          T1.VenEma, T2.VehFic, T2.ChoCve, T2.PlaFpl, T2.PlaFen
+     From FacPlad T1
+     Join FacPlah T2
+       On (T1.PlaDis = T2.PlaDis)
+      And (T1.PlaNro = T2.PlaNro)
+    Where (T2.SitCve = 'T')
+      And (T1.PlaSta = 'R')

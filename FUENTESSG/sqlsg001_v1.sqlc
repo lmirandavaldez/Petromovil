@@ -1,0 +1,14 @@
+Create Or Replace View VWSEG_Tipo_Comprobantes_Validos As
+Select NcfSer As SERIE_RELACIONADA,
+       NcfTip As TIPO_DE_COMPROBANTE,
+       Case
+           When NcfSer = 'A'
+                Then NcfSer concat Right('00' concat Trim(Char(NcfTip)), 2)
+           When NcfSer = 'B'
+                Then NcfSer concat Right('00' concat Trim(Char(NcfTip)), 2)
+           When NcfSer = 'E'
+                Then NcfSer concat Right('00' concat Trim(Char(NcfTip)), 2)
+           Else NcfSer
+       End As NcfTipValido
+   From SegNcf
+   Group By NcfSer, NcfTip

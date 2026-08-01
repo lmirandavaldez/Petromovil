@@ -1,0 +1,96 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.IV_ENTRADAS_SALIDAS
+(
+    P_ARTCVE   CHAR(20),
+    P_DISCVE   DECIMAL(3,0),
+    P_ALMCVE   DECIMAL(2,0),
+    P_FECINI   DATE,
+    P_FECFIN   DATE
+)
+RETURNS TABLE
+(
+    ENTRADAS_ALM_TRAD   DECIMAL(15,4),
+    ENTRADAS_CEX_TRAD   DECIMAL(15,4),
+    ENTRADAS_CEX        DECIMAL(15,4),
+    ENTRADAS_CRP        DECIMAL(15,4),
+    SALIDAS_ALM_TRAD    DECIMAL(15,4),
+    SALIDAS_CEX_TRAD    DECIMAL(15,4),
+    SALIDAS_CEX         DECIMAL(15,4),
+    SALIDAS_CRP         DECIMAL(15,4)
+
+)
+LANGUAGE SQL
+SPECIFIC IV_ENTRADAS_SALIDAS
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN
+
+    RETURN
+    WITH R AS (
+        SELECT
+            T1.TraCan,
+            T1.TraCex,
+            T1.TraUnd,
+            T2.ArtUal,
+            T2.ArtCua,
+            T3.UalCon,
+            T4.TmoOri,
+            T4.TmoCdt,
+            T1.TraCud,
+
+            /* TraCex corregido */
+            CASE
+                WHEN T1.TraUnd = T2.ArtUal THEN
+                COALESCE(T1.TraCan * T2.ArtCua, 0)
+                ELSE COALESCE(T1.TraCan, 0) *
+                COALESCE(T3.UalCon, T2.ArtCua)
+            END AS TraCex_Corregido
+
+        FROM InvTrad T1
+        JOIN InvArt T2
+          ON T1.ArtCve = T2.ArtCve
+
+        LEFT JOIN InvUal T3
+          ON T1.ArtCve = T3.ArtCve
+         AND T1.TraUnd = T3.UndCve
+
+        JOIN InvTmo T4
+          ON T1.TmoCve = T4.TmoCve
+
+        JOIN SegFec T9
+          ON T1.TraAtr = T9.FecAno
+         AND T1.TraMtr = T9.FecMes
+         AND T1.TraDtr = T9.FecDia
+
+        WHERE T1.ArtCve = P_ARTCVE
+          AND T1.DisCve = P_DISCVE
+          AND T1.AlmCve = P_ALMCVE
+          AND T9.FecIso BETWEEN P_FECINI AND P_FECFIN
+    )
+
+    SELECT
+        COALESCE(SUM(CASE WHEN (TmoOri = 1) OR (TmoOri = 3 AND TmoCdt = '  ')
+                          THEN TraCan ELSE 0 END), 0) AS Entradas_Alm_Trad,
+        COALESCE(SUM(CASE WHEN (TmoOri = 1) OR (TmoOri = 3 AND TmoCdt = '  ')
+                          THEN TraCex ELSE 0 END), 0) AS Entradas_Cex_Trad,
+        COALESCE(SUM(CASE WHEN (TmoOri = 1) OR (TmoOri = 3 AND TmoCdt = '  ')
+                          THEN TraCex_Corregido ELSE 0 END), 0) AS Entradas_Cex,
+        COALESCE(SUM(CASE WHEN (TmoOri = 1) OR (TmoOri = 3 AND TmoCdt = '  ')
+                          THEN TraCud ELSE 0 END), 0) AS Entradas_CRP,
+        COALESCE(SUM(CASE WHEN (TmoOri = 2) OR (TmoOri = 3 AND TmoCdt <> '  ')
+                          THEN TraCan * -1 ELSE 0 END), 0) AS Salidas_Alm_Trad,
+        COALESCE(SUM(CASE WHEN (TmoOri = 2) OR (TmoOri = 3 AND TmoCdt <> '  ')
+                          THEN TraCex * -1 ELSE 0 END), 0) AS Salidas_Cex_Trad,
+        COALESCE(SUM(CASE WHEN (TmoOri = 2) OR (TmoOri = 3 AND TmoCdt <> '  ')
+                          THEN -TraCex_Corregido ELSE 0 END), 0) AS Salidas_Cex,
+        COALESCE(SUM(CASE WHEN (TmoOri = 2) OR (TmoOri = 3 AND TmoCdt <> '  ')
+                          THEN TraCud * -1 ELSE 0 END), 0) AS Salidas_CRP
+    FROM R;
+
+END;
+
+
+
+    GRANT EXECUTE ON FUNCTION SEGLIB.IV_ENTRADAS_SALIDAS TO PUBLIC;
+

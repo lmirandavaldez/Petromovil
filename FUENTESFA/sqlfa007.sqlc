@@ -1,0 +1,93 @@
+-- ============================================================
+-- Vista   : VWFAC_Pedidos_Autorizados
+-- Módulo  : Facturación
+-- Objeto  : Devuelve todos los pedidos autorizados registrados
+--           en FacPau, enriquecidos con la descripción del
+--           distrito, nombre del cliente, nombre del usuario
+--           que autorizó y la fecha ISO de la autorización
+--           (resuelta desde el calendario SegFec).
+--           No aplica filtro de estado ni tipo — muestra todos
+--           los registros de la tabla de autorizaciones.
+-- Tablas  : FacPau   — autorizaciones de pedidos
+--           SegDis   — maestro de distribuciones / distritos
+--           CxcCli   — maestro de clientes
+--           SegUsr   — maestro de usuarios del sistema
+--           SegFec   — calendario (FecYmd → FecIso)
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se convierten todos los INNER JOIN a LEFT OUTER JOIN
+--          para preservar autorizaciones cuyos distritos,
+--          clientes, usuarios o fechas no tengan registro en
+--          sus tablas maestras (campos de descripción = NULL).
+--          El JOIN a SegFec en especial: si PauFec no existe
+--          en el calendario, el pedido quedaba excluido
+--          silenciosamente en el original.
+--        Se agrega alias explícito As en todos los FROM/JOIN.
+--        Se reformatea el SELECT con una columna por línea
+--          agrupada por sección temática con comentarios.
+--        Se documenta el propósito de cada campo y JOIN.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentación completa.
+-- ============================================================
+
+Create Or Replace View VWFAC_Pedidos_Autorizados As
+
+Select
+    -- --------------------------------------------------------
+    -- Distribución / División
+    -- --------------------------------------------------------
+    T1.DisCve      As DisCve,   -- Código de distribución del pedido
+    T2.DisDes      As DisDes,   -- Descripción de la distribución 
+                                -- (NULL si no en catálogo)
+
+    -- --------------------------------------------------------
+    -- Identificación del pedido
+    -- --------------------------------------------------------
+    T1.OrdNro      As OrdNro,   -- Número de orden / pedido autorizado
+
+    -- --------------------------------------------------------
+    -- Datos de la autorización
+    -- --------------------------------------------------------
+    T9.FecIso      As FecIso,   -- Fecha ISO de autorización 
+                                -- (YYYY-MM-DD, desde SegFec)
+    T1.PauHor      As PauHor,   -- Hora de la autorización
+    T1.PauWsi      As PauWsi,   -- Identificador de sesión / workstation
+    T1.PauUsr      As PauUsr,   -- Código del usuario que autorizó
+    T4.UsrNom      As UsrNom,   -- Nombre del usuario que autorizó
+
+    -- --------------------------------------------------------
+    -- Datos del cliente
+    -- --------------------------------------------------------
+    T1.CliCve      As CliCve,   -- Código del cliente
+    T3.CliNom      As CliNom,   -- Nombre del cliente
+
+    -- --------------------------------------------------------
+    -- Montos y tipo de pedido
+    -- --------------------------------------------------------
+    T1.PauMon      As PauMon,   -- Monto autorizado del pedido
+    T1.PauTip      As PauTip    -- Tipo de pedido / autorización
+
+From FacPau As T1
+
+-- Distribución del pedido; LEFT para conservar autorizaciones
+Join SegDis As T2
+    On T1.DisCve = T2.DisCve
+
+-- Cliente del pedido; LEFT para conservar autorizaciones
+Join CxcCli As T3
+    On T1.CliCve = T3.CliCve
+
+-- Usuario que autorizó; LEFT para conservar autorizaciones
+Join SegUsr As T4
+    On T1.PauUsr = T4.UsrCve
+
+-- Calendario: convierte PauFec (FecYmd) en fecha ISO.
+-- LEFT para que autorizaciones con fecha no cargada en SegFec
+Join SegFec As T9
+    On T1.PauFec = T9.FecYmd
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.DisCve, T9.FecIso, T1.OrdNro

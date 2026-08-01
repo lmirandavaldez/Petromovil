@@ -1,0 +1,109 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Vista    : VWNOM_ACU_EMP_CONCEPTOSMESES
+-- Propósito: Acumulado anual de importes de nómina por empleado
+--            y concepto, pivotado en columnas por mes (Ene–Dic).
+--            Incluye todos los empleados y estados (sin filtro
+--            de EmpSta) para permitir consultas históricas.
+-- Versión  : 2.0
+-- Correcciones v1 → v2:
+--   1. IfNull reemplazado por COALESCE (estándar SQL).
+--   2. CAST(... AS DECIMAL(15,2)) explícito en importes para
+--      garantizar tipo consistente independiente de AecImd.
+--   3. Alias en la misma línea que la expresión.
+--   4. Capitalización SQL normalizada a mayúsculas.
+--   5. Alineación consistente entre SELECT y GROUP BY.
+--   6. Cabecera de documentación añadida.
+-- Columnas clave:
+--   AecAno      Año del acumulado (permite filtrar por año).
+--   CmcCve/Des  Concepto de nómina agrupador.
+--   CmcTip      Tipo de concepto.
+--   CmcCla      Clasificación del concepto.
+--   CtaCve/Des  Cuenta contable asociada al concepto.
+--   Importe_Ene..Dic  Suma de importes por mes (0 si sin movimiento).
+-- Tablas base:
+--   NomEmp  (T1)  Maestro de empleados
+--   NomAecd (T2)  Acumulado de conceptos por empleado y mes
+--   NomCmc  (T3)  Conceptos de nómina
+--   NomDep  (T4)  Departamentos
+--   CogCco  (T5)  Centros de costo contables
+--   CogCta  (T6)  Cuentas contables
+--   NomUbi  (T7)  Ubicaciones
+--   NomCar  (T8)  Cargos
+--   NomCat  (T9)  Categorías
+-- ============================================================
+
+CREATE OR REPLACE VIEW VWNOM_ACU_EMP_CONCEPTOSMESES AS
+SELECT
+    -- Identificación del empleado
+    T1.EmpCve,
+    T1.EmpApe,
+    T1.EmpNom,
+    T1.EmpSta,
+
+    -- Clasificaciones laborales
+    T1.UbiCve,  T7.UbiDes,
+    T1.DepCve,  T4.DepDes,
+    T1.CarCve,  T8.CarDes,
+    T1.CatCve,  T9.CatDes,
+    T1.CcoCve,  T5.CcoDes,
+
+    -- Concepto de nómina y cuenta contable
+    T2.CmcCve,
+    T3.CmcDes,
+    T3.CmcTip,
+    T3.CmcCla,
+    T3.CtaCve,
+    T6.CtaDes,
+
+    -- Año del acumulado (dimensión de análisis histórico)
+    T2.AecAno,
+
+    -- Importes acumulados por mes — COALESCE garantiza 0 si sin movimiento
+    -- CAST asegura tipo DECIMAL(15,2) consistente con AecImd
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 01 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Ene,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 02 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Feb,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 03 THEN T2.AecImd END)
+    AS DECIMAL(15,2)), 0) AS Importe_Mar,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 04 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Abr,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 05 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_May,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 06 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Jun,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 07 THEN T2.AecImd END)
+    AS DECIMAL(15,2)), 0) AS Importe_Jul,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 08 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Ago,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 09 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Sep,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 10 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Oct,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 11 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Nov,
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 12 THEN T2.AecImd END) 
+    AS DECIMAL(15,2)), 0) AS Importe_Dic
+
+FROM NomEmp  T1
+LEFT OUTER JOIN NomAecd T2  ON T1.EmpCve = T2.EmpCve
+LEFT OUTER JOIN NomCmc  T3  ON T2.CmcCve = T3.CmcCve
+LEFT OUTER JOIN NomDep  T4  ON T1.DepCve = T4.DepCve
+LEFT OUTER JOIN CogCco  T5  ON T1.CcoCve = T5.CcoCve
+LEFT OUTER JOIN CogCta  T6  ON T3.CtaCve = T6.CtaCve
+LEFT OUTER JOIN NomUbi  T7  ON T1.UbiCve = T7.UbiCve
+LEFT OUTER JOIN NomCar  T8  ON T1.CarCve = T8.CarCve
+LEFT OUTER JOIN NomCat  T9  ON T1.CatCve = T9.CatCve
+
+GROUP BY
+    T1.EmpCve,  T1.EmpApe,  T1.EmpNom,  T1.EmpSta,
+    T1.UbiCve,  T7.UbiDes,
+    T1.DepCve,  T4.DepDes,
+    T1.CarCve,  T8.CarDes,
+    T1.CatCve,  T9.CatDes,
+    T1.CcoCve,  T5.CcoDes,
+    T2.CmcCve,  T3.CmcDes,
+    T3.CmcTip,  T3.CmcCla,
+    T3.CtaCve,  T6.CtaDes,
+    T2.AecAno;

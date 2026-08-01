@@ -1,0 +1,69 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- Para Sustituir el Programa SG7006
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_TIEMPO_EXACTO (
+    FechaDes   DATE,
+    FechaHas   DATE,
+    IncluirDia SMALLINT DEFAULT 1
+    -- 1 = incluir día final = SG7006 0 = excluir
+)
+RETURNS TABLE (
+    Anos  INTEGER,
+    Meses INTEGER,
+    Dias  INTEGER
+)
+LANGUAGE SQL
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN
+    -- Declaraciones al inicio
+    DECLARE vAnos      INTEGER;
+    DECLARE vMeses     INTEGER;
+    DECLARE vDias      INTEGER;
+    DECLARE FechaBase  DATE;
+    DECLARE FechaBase2 DATE;
+
+    -- Años completos (ajuste si no ha cumplido el año)
+    SET vAnos = YEAR(FechaHas) - YEAR(FechaDes);
+    IF (MONTH(FechaHas) < MONTH(FechaDes))
+       OR (MONTH(FechaHas) = MONTH(FechaDes) AND
+       DAY(FechaHas) < DAY(FechaDes)) THEN
+        SET vAnos = vAnos - 1;
+    END IF;
+
+    -- Fecha base después de quitar años
+    -- (usar Add_Months para evitar fechas inválidas)
+    SET FechaBase = ADD_MONTHS(FechaDes, vAnos * 12);
+
+    -- Meses restantes (calcular diferencia en meses entre FechaBase y FechaHas)
+    SET vMeses = (YEAR(FechaHas) * 12 + MONTH(FechaHas))
+                 - (YEAR(FechaBase) * 12 + MONTH(FechaBase));
+
+    IF DAY(FechaHas) < DAY(FechaBase) THEN
+        SET vMeses = vMeses - 1;
+    END IF;
+
+    -- Fecha base después de quitar años y meses
+    -- Add_Months garantiza fecha válida)
+    SET FechaBase2 = ADD_MONTHS(FechaBase, vMeses);
+
+    -- Días restantes: diferencia y aplicar convención según IncluirDia
+    SET vDias = FechaHas - FechaBase2;
+
+    IF IncluirDia = 1 THEN
+        SET vDias = vDias + 1;   -- convención inclusiva (como SG7006)
+    END IF;
+
+    -- Seguridad: no devolver negativos
+    IF vDias < 0 THEN
+        SET vDias = 0;
+    END IF;
+
+    RETURN
+        SELECT vAnos, vMeses, vDias
+        FROM SYSIBM.SYSDUMMY1;
+END;
+
+
+
+    GRANT EXECUTE ON FUNCTION SEGLIB.SG_Tiempo_Exacto TO PUBLIC;

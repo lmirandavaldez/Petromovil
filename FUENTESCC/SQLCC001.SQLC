@@ -1,0 +1,105 @@
+-- =============================================================================
+-- Vista   : VWCXC_Maestro_Clientes
+-- Módulo  : Cuentas por Cobrar (CxC)
+-- Objeto  : View
+-- Propósito: Consolida la información maestra de clientes incluyendo datos
+--            generales, dirección fiscal, zona comercial, territorio, vendedor,
+--            supervisor, campaña, provincia, municipio y demarcación.
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcCli  (T1)  - Maestro de clientes
+--   CxcAdc  (T2)  - Datos adicionales del cliente (zona, campaña, límite crédito)
+--   CxcDgc  (T3)  - Datos de gestión comercial (ciudad, macroflota)
+--   CxcZon  (T4)  - Zonas comerciales
+--   CxcTer  (T5)  - Territorios de venta
+--   CxcRvc  (T6)  - Relación vendedor-cliente (LEFT: cliente puede no tener vendedor)
+--   CxcVen  (T7)  - Vendedores (LEFT: dependiente de CxcRvc)
+--   CxcSup  (T8)  - Supervisores (LEFT: dependiente de CxcVen)
+--   CxcCpa  (T9)  - Campañas (LEFT: cliente puede no tener campaña activa)
+--   SegPrv  (T10) - Catálogo de provincias (LEFT: CliPrv puede ser nulo)
+--   SegMun  (T11) - Catálogo de municipios (LEFT: CliMun puede ser nulo)
+--   SegDms  (T12) - Catálogo de demarcaciones/asentamientos
+--           (LEFT: puede ser nulo)
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1 - Versión original (respaldo: SQLCC001_v1.SQLC)
+--   v2 - Corrección alias T7.SupCve → T8.SupCve; normalización de sangría;
+--        eliminación de espacios dobles; documentación del objeto.
+-- =============================================================================
+Create Or Replace View VWCXC_Maestro_Clientes
+As
+Select
+    -- Datos generales del cliente
+    T1.CliCve,                  -- Clave del cliente
+    T1.CliNom,                  -- Nombre / Razón social
+    T1.CliDir,                  -- Dirección línea 1
+    T1.CliDi1,                  -- Dirección línea 2
+    T1.CliTe1,                  -- Teléfono 1
+    T1.CliTe2,                  -- Teléfono 2
+    T1.CliRnc,                  -- RNC / Identificación fiscal
+    T1.CliSta,                  -- Estatus del cliente
+    -- Ubicación geográfica
+    T1.CliPrv,                  -- Clave de provincia
+    T10.PrvDes,                 -- Descripción de provincia
+    T1.CliMun,                  -- Clave de municipio
+    T11.MunDes,                 -- Descripción de municipio
+    T1.CliDms,                  -- Clave de demarcación
+    T1.CliCpo,                  -- Código postal
+    T1.CliSec,                  -- Sector
+    T12.DmsDes,                 -- Descripción de demarcación
+    -- Datos adicionales y crédito
+    T2.AdcLcr,                  -- Límite de crédito
+    T2.CpaCve,                  -- Clave de campaña
+    T9.CpaDes,                  -- Descripción de campaña
+    -- Datos de gestión comercial
+    T3.DgcCdd,                  -- Ciudad de gestión
+    T3.DgcMfl,                  -- Macroflota
+    -- Estructura comercial: zona → territorio → supervisor → vendedor
+    T2.ZonCve,                  -- Clave de zona
+    T4.ZonDes,                  -- Descripción de zona
+    T4.TerCve,                  -- Clave de territorio
+    T5.TerDes,                  -- Descripción de territorio
+    T8.SupCve,                  -- Clave de supervisor 
+    T8.SupNom,                  -- Nombre del supervisor
+    T6.VenCve,                  -- Clave del vendedor
+    T7.VenNom                   -- Nombre del vendedor
+From CxcCli T1
+    -- Datos adicionales: relación obligatoria 1-1
+    Join CxcAdc T2
+      On T1.CliCve = T2.CliCve
+    -- Datos de gestión comercial: relación obligatoria 1-1
+    Join CxcDgc T3
+      On T1.CliCve = T3.CliCve
+    -- Zona comercial: obligatoria desde datos adicionales
+    Join CxcZon T4
+      On T2.ZonCve = T4.ZonCve
+    -- Territorio: obligatorio desde zona
+    Join CxcTer T5
+      On T4.TerCve = T5.TerCve
+    -- Vendedor asignado: opcional (cliente puede no tener vendedor)
+    Left Outer Join CxcRvc T6
+      On T1.CliCve = T6.CliCve
+    -- Datos del vendedor: depende de CxcRvc
+    Left Outer Join CxcVen T7
+      On T6.VenCve = T7.VenCve
+    -- Supervisor: depende de CxcVen
+    Left Outer Join CxcSup T8
+      On T7.SupCve = T8.SupCve
+    -- Campaña: opcional
+    Left Outer Join CxcCpa T9
+      On T2.CpaCve = T9.CpaCve
+    -- Provincia: opcional (dirección puede ser incompleta)
+    Left Outer Join SegPrv T10
+      On T1.CliPrv = T10.PrvCve
+    -- Municipio: requiere provincia + municipio
+    Left Outer Join SegMun T11
+      On  T1.CliPrv = T11.PrvCve
+     And  T1.CliMun = T11.MunCve
+    -- Demarcación / asentamiento: requiere provincia 
+    -- + municipio + demarcación + CP + sector
+    Left Outer Join SegDms T12
+      On  T1.CliPrv = T12.PrvCve
+     And  T1.CliMun = T12.MunCve
+     And  T1.CliDms = T12.DmsCve
+     And  T1.CliCpo = T12.DmsCpo
+     And  T1.CliSec = T12.DmsSec

@@ -1,0 +1,65 @@
+-- VERSIÓN ORIGINAL (respaldo) — ver sqlnm007.sqlc para v2.0
+-- PROBLEMAS CONOCIDOS:
+--   1. IfNull no estándar — usar COALESCE.
+--   2. Alias As en línea separada — dificulta legibilidad.
+--   3. Sin CAST explícito en importes.
+--   4. Lógica de signo CmcTip repetida 12 veces.
+--   5. Importe_Dec inconsistente con Importe_Dic (sqlnm002).
+--   6. Sin cabecera de documentación.
+--   7. Capitalización SQL mixta.
+Create Or Replace View VWNOM_HISTORICO_NOMINAS_EMPLEADOS
+As Select T1.CnoCve, T4.CnoDes, T1.TnoCve, T5.TnoDes,
+          T1.EmpCve, T2.EmpApe, T2.EmpNom, T2.EmpSta, T2.UbiCve,
+          T6.UbiDes, T2.DepCve, T7.DepDes, T2.CarCve, T8.CarDes,
+          T2.CatCve, T9.CatDes, T1.CmcCve, T3.CmcDes, T3.CmcTip,
+          T1.CipAac,
+IfNull (Sum(Case When T1.CipMac = 01 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Ene,
+IfNull (Sum(Case When T1.CipMac = 02 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Feb,
+IfNull (Sum(Case When T1.CipMac = 03 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Mar,
+IfNull (Sum(Case When T1.CipMac = 04 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Abr,
+IfNull (Sum(Case When T1.CipMac = 05 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_May,
+IfNull (Sum(Case When T1.CipMac = 06 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Jun,
+IfNull (Sum(Case When T1.CipMac = 07 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Jul,
+IfNull (Sum(Case When T1.CipMac = 08 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Ago,
+IfNull (Sum(Case When T1.CipMac = 09 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Sep,
+IfNull (Sum(Case When T1.CipMac = 10 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Oct,
+IfNull (Sum(Case When T1.CipMac = 11 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Nov,
+IfNull (Sum(Case When T1.CipMac = 12 Then
+(Case When T3.CmcTip = 1 Then T1.NgeImp Else T1.NgeImp * -1 End)
+ End), 0) As Importe_Dec
+  From NomNgeh T1
+Left Outer Join NomEmp T2 On (T1.EmpCve = T2.EmpCve)
+Left Outer Join NomCmc T3 On (T1.CmcCve = T3.CmcCve)
+Left Outer Join NomCno T4 On (T1.CnoCve = T4.CnoCve)
+Left Outer Join NomTno T5 On (T1.TnoCve = T5.TnoCve)
+Left Outer Join NomUbi T6 On (T2.UbiCve = T6.UbiCve)
+Left Outer Join NomDep T7 On (T2.DepCve = T7.DepCve)
+Left Outer Join NomCar T8 On (T2.CarCve = T8.CarCve)
+Left Outer Join NomCat T9 On (T2.CatCve = T9.CatCve)
+Group By T1.CnoCve, T4.CnoDes, T1.TnoCve, T5.TnoDes,
+         T1.EmpCve, T2.EmpApe, T2.EmpNom, T2.EmpSta, T2.UbiCve,
+         T6.UbiDes, T2.DepCve, T7.DepDes, T2.CarCve, T8.CarDes,
+         T2.CatCve, T9.CatDes, T1.CmcCve, T3.CmcDes, T3.CmcTip,
+         T1.CipAac

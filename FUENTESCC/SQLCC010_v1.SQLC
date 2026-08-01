@@ -1,0 +1,43 @@
+Create Or Replace View VWCXC_Documentos_Pendiente_a_la_fecha as
+  WITH RECIBOS AS( Select T2.CliCve, T1.DisCve, T1.CdoCve, T1.DocNum,
+       T1.PerAno,T1.PerNum, Sum(T1.IngVtr) As Suma_Ingresos
+     From CajRefd T1
+     Join CajRech T2
+       On (T1.McaCve = T2.McaCve)
+      And (T1.RecNum = T2.RecNum)
+     Join SegFec T9
+       On (T2.IngAno = T9.FecAno)
+      And (T2.IngMes = T9.FecMes)
+      And (T2.IngDia = T9.FecDia)
+    Where (T2.SitCve = '1')
+ Group By T2.CliCve, T1.DisCve, T1.CdoCve, T1.DocNum, T1.PerAno,
+            T1.PerNum)
+   Select T1.DisCve, T1.CliCve, T1.CdoCve, T1.DocNum,
+          T1.PerAno, T1. Pernum,
+          T20.FecYmd As Fecha_Documento, T1.CpaCve,
+          T1.DocTas, T1.DocVal,
+         (T1.DocBce - IfNull(T2.Suma_Ingresos,0)) As
+         BALANCE_DEL_DOCUMENTO,
+        T21.FecYmd As Fecha_Vencimiento,
+         T22.FecYmd As Fecha_Despacho
+    From CxcDoch T1
+    Left Outer Join RECIBOS T2
+      On (T1.CliCve = T2.CliCve)
+     And (T1.CdoCve = T2.CdoCve)
+     And (T1.DocNum = T2.DocNum)
+     And (T1.DisCve = T2.DisCve)
+     And (T1.PerAno = T2.PerAno)
+     And (T1.PerNum = T2.PerNum)
+    Join SegFec T20
+      On (T1.DocAno = T20.FecAno)
+     And (T1.DocMes = T20.FecMes)
+     And (T1.DocDia = T20.FecDia)
+    Join SegFec T21
+      On (T1.DocAve = T21.FecAno)
+     And (T1.DocMve = T21.FecMes)
+     And (T1.DocDve = T21.FecDia)
+    Join SegFec T22
+      On (T1.DocAde = T22.FecAno)
+     And (T1.DocMde = T22.FecMes)
+     And (T1.DocDde = T22.FecDia)
+   Where ((T1.DocBce - IfNull(T2.Suma_Ingresos,0)) <> 0)

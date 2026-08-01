@@ -1,0 +1,7 @@
+Create Or Replace View VWCXC_Relacion_Comision_Vendedores_Externos
+AS  Select T1.VexCve, T2.VexNom, T1.CliCve, T3.CliNom, T1.RcvVa1
+      From CxcRcve T1
+      Join CxcVex T2
+        On (T1.VexCve = T2.VexCve)
+      Join CxcCli T3
+        On (T1.CliCve = T3.CliCve)

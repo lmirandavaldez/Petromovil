@@ -1,0 +1,10 @@
+Create Or Replace View VWFAC_Fec_Ult_Documento
+As Select T1.CliCve, Max(T9.FecYmd) As DtoFec
+     From FacDtoh T1
+      Join SegFec T9
+        On (T1.DtoAno = T9.FecAno)
+       And (T1.DtoMes = T9.FecMes)
+       And (T1.DtoDia = T9.FecDia)
+     Where (T1.DtoTip = 1 Or T1.DtoTip > 3)
+       And (T1.DtoSta = 'A')
+  Group By T1.CliCve

@@ -1,0 +1,219 @@
+-- ============================================================
+-- Vista     : VWCOG_Diario_General_3
+-- Modulo    : Contabilidad General
+-- Objeto    : Detalle del diario general completo: una fila
+--             por linea de asiento contable.
+--             Extiende VWCOG_Diario_General_2 con:
+--               - TdiCve y DgeDoc explícitos (sin formatear).
+--               - DgeSec: secuencia de la linea del asiento.
+--               - Fecha_Aplicacion: fecha de aplicacion del
+--                 encabezado (AplAno+AplMes+AplDia de CogHdgh
+--                 resuelta via SegFec T11).
+--               - AplUsr y UsrNom: usuario que aplico el
+--                 asiento (de CogHdgh y SegUsr).
+--             CogHdgh es Left Outer Join (asientos pueden no
+--             tener encabezado registrado).
+--             Separa el valor en Debito o Credito segun
+--             DgeOri (1=Debito, 2=Credito).
+--             No aplica agrupacion; devuelve el detalle puro.
+-- Tablas    : CogHdgd   lineas del diario general (tabla base)
+--             CogTdi    tipos de documento contable
+--             CogPer    periodos contables
+--             CogCta    catalogo de cuentas
+--             CogAuxd   catalogo de auxiliares
+--             CogCco    catalogo de centros de costo
+--             CxpCfa    clasificacion de formas de pago (CxP)
+--             CogHdgh   encabezado del diario general
+--             SegUsr    usuarios del sistema
+--             SegFec T10 fecha del documento (DgeAno/Mes/Dia)
+--             SegFec T11 fecha de aplicacion (AplAno/Mes/Dia)
+-- Esquema   : (default)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2  (mejorada)
+-- Cambios   :
+--   v2 - Se agrega cabecera de documentacion completa.
+--        Se agrega alias explicito As en FROM y JOINs.
+--        Se reformatea SELECT con una columna por linea
+--          y comentario descriptivo en cada campo.
+--        Se reformatea los CASEs con sangria uniforme.
+--        Se documenta cada JOIN con su proposito.
+--        Se respeta el orden original de los campos,
+--          la logica original y el limite de 80 posiciones.
+-- ============================================================
+
+Create Or Replace View VWCOG_Diario_General_3 As
+
+Select
+    -- --------------------------------------------------------
+    -- Identificacion del periodo
+    -- --------------------------------------------------------
+    T1.PerAno                              As PerAno,
+    -- Ano contable del periodo
+
+    T1.PerNum                              As PerNum,
+    -- Numero del periodo (1..12)
+
+    T3.PerDes                              As PerDes,
+    -- Descripcion del periodo
+
+    -- --------------------------------------------------------
+    -- Tipo y numero de documento
+    -- --------------------------------------------------------
+    T2.TdiDes                              As TdiDes,
+    -- Descripcion del tipo de documento contable
+
+    T1.TdiCve                              As TdiCve,
+    -- Clave del tipo de documento
+
+    T1.DgeDoc                              As DgeDoc,
+    -- Numero del documento (sin formatear)
+
+    -- --------------------------------------------------------
+    -- Fechas del documento
+    -- --------------------------------------------------------
+    T10.FecIso                             As Fecha_Documento,
+    -- Fecha del documento (ISO) desde SegFec
+    -- Resuelve DgeAno+DgeMes+DgeDia de la linea
+
+    T11.FecIso                             As Fecha_Aplicacion,
+    -- Fecha de aplicacion (ISO) desde SegFec
+    -- Resuelve AplAno+AplMes+AplDia del encabezado CogHdgh
+    -- NULL si el encabezado no tiene fecha de aplicacion
+
+    -- --------------------------------------------------------
+    -- Descripcion del encabezado del documento
+    -- --------------------------------------------------------
+    T8.DgeDes                              As DgeDes,
+    -- Descripcion general del asiento (de CogHdgh)
+    -- NULL si el documento no tiene encabezado
+
+    -- --------------------------------------------------------
+    -- Linea del asiento
+    -- --------------------------------------------------------
+    T1.DgeSec                              As DgeSec,
+    -- Numero de secuencia dentro del documento
+
+    T1.CtaCve                              As CtaCve,
+    -- Clave de la cuenta contable
+
+    T1.AuxCve                              As AuxCve,
+    -- Clave del auxiliar; 0 = sin auxiliar
+
+    -- Descripcion: nombre de cuenta o de auxiliar segun caso
+    (Case When T1.AuxCve = 0
+     Then T4.CtaDes
+     Else T5.AuxNom
+     End)                                  As Descripcion,
+
+    T1.CcoCve                              As CcoCve,
+    -- Clave del centro de costo
+
+    T6.CcoDes                              As CcoDes,
+    -- Descripcion del centro de costo
+
+    T1.DgeDe1                              As DgeDe1,
+    -- Descripcion libre de la linea del asiento
+
+    -- --------------------------------------------------------
+    -- Valor separado por orientacion (DgeOri)
+    -- 1 = Debito   2 = Credito
+    -- --------------------------------------------------------
+    (Case When T1.DgeOri = 1
+     Then T1.DgeVal
+     Else 0
+     End)                                  As Debito,
+
+    (Case When T1.DgeOri = 2
+     Then T1.DgeVal
+     Else 0
+     End)                                  As Credito,
+
+    -- --------------------------------------------------------
+    -- Clasificacion de forma de pago (CxP)
+    -- --------------------------------------------------------
+    T1.CfaCve                              As CfaCve,
+    -- Clave de la clasificacion de forma de pago
+
+    T7.CfaDes                              As CfaDes,
+    -- Descripcion de la clasificacion de forma de pago
+
+    -- --------------------------------------------------------
+    -- Campos adicionales de identificacion fiscal
+    -- --------------------------------------------------------
+    T1.DgeTid                              As DgeTid,
+    -- Tipo de identificacion fiscal
+
+    T1.DgeIde                              As DgeIde,
+    -- Numero de identificacion fiscal
+
+    T1.NcfNro                              As NcfNro,
+    -- Numero de comprobante fiscal (NCF)
+
+    -- --------------------------------------------------------
+    -- Usuario que aplico el asiento (del encabezado CogHdgh)
+    -- --------------------------------------------------------
+    T8.AplUsr                              As AplUsr,
+    -- Clave del usuario que aplico el documento
+
+    T9.UsrNom                              As UsrNom
+    -- Nombre del usuario que aplico el documento
+
+-- ============================================================
+-- FROM y JOINs
+-- ============================================================
+From CogHdgd As T1
+
+-- Tipo de documento contable
+Join CogTdi As T2
+    On T1.TdiCve = T2.TdiCve
+
+-- Periodo contable: descripcion del periodo
+Join CogPer As T3
+    On  T1.PerAno = T3.PerAno
+    And T1.PerNum = T3.PerNum
+
+-- Catalogo de cuentas: descripcion de la cuenta
+Join CogCta As T4
+    On T1.CtaCve = T4.CtaCve
+
+-- Auxiliares: LEFT porque no toda linea tiene auxiliar
+Left Outer Join CogAuxd As T5
+    On  T1.AuxLis = T5.AuxLis
+    And T1.AuxCve = T5.AuxCve
+
+-- Centro de costo: LEFT porque no toda linea tiene CCO
+Left Outer Join CogCco As T6
+    On T1.CcoCve = T6.CcoCve
+
+-- Forma de pago CxP: LEFT porque no toda linea tiene CfaCve
+Left Outer Join CxpCfa As T7
+    On T1.CfaCve = T7.CfaCve
+
+-- Encabezado: LEFT porque asientos pueden no tener encabezado
+Left Outer Join CogHdgh As T8
+    On  T1.TdiCve = T8.TdiCve
+    And T1.PerAno = T8.PerAno
+    And T1.PerNum = T8.PerNum
+    And T1.DgeDoc = T8.DgeDoc
+
+-- Usuario que aplico: LEFT porque T8 puede ser NULL
+Left Outer Join SegUsr As T9
+    On T8.AplUsr = T9.UsrCve
+
+-- Fecha del documento: LEFT para tolerar fechas no registradas
+Left Outer Join SegFec As T10
+    On  T1.DgeAno = T10.FecAno
+    And T1.DgeMes = T10.FecMes
+    And T1.DgeDia = T10.FecDia
+
+-- Fecha de aplicacion: LEFT porque T8 puede ser NULL y la
+-- fecha de aplicacion puede no estar en SegFec
+Left Outer Join SegFec As T11
+    On  T8.AplAno = T11.FecAno
+    And T8.AplMes = T11.FecMes
+    And T8.AplDia = T11.FecDia
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.PerAno, T1.PerNum, T1.TdiCve, T1.DgeDoc,
+--          T1.DgeSec

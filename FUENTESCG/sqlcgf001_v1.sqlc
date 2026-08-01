@@ -1,0 +1,56 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- Funcion para Buscar el periodo Contable Anterior
+
+CREATE OR REPLACE FUNCTION SEGLIB.CG_PERIODO_ANTERIOR (
+  p_perano INTEGER,
+  p_pernum INTEGER
+)
+RETURNS TABLE (
+  PERANO INTEGER,
+  PERNUM INTEGER,
+  PERDES VARCHAR(15),
+  PERSIT CHAR(1),
+  PERFIP DATE,
+  PERFFP DATE
+)
+LANGUAGE SQL
+READS SQL DATA
+RETURN
+SELECT
+  COALESCE(PERANO, p_perano) AS PERANO,
+  COALESCE(PERNUM, 89) AS PERNUM,
+  PERDES,
+  PERSIT,
+    /* Fecha inicial del periodo Contable*/
+  DATE(
+      TIMESTAMP_FORMAT(
+          VARCHAR(PerAin) CONCAT '-' CONCAT
+          VARCHAR_FORMAT(PerMin, '00') CONCAT  '-' CONCAT
+          VARCHAR_FORMAT(PerDin, '00'),
+          'YYYY-MM-DD'
+      )
+  ) AS FechaIniPeriodo,
+
+  /* Fecha final del periodo Contable */
+  LAST_DAY(
+      DATE(
+     TIMESTAMP_FORMAT(
+          VARCHAR(PerAfi) CONCAT '-' CONCAT
+          VARCHAR_FORMAT(PerMfi, '00') CONCAT  '-' CONCAT
+          VARCHAR_FORMAT(PerDfi, '00'),
+          'YYYY-MM-DD'
+          )
+      )
+  ) AS FechaFinPeriodo
+FROM (
+  SELECT *
+  FROM COGPER
+  WHERE (INTEGER(PERANO) < p_perano)
+     OR (INTEGER(PERANO) = p_perano AND INTEGER(PERNUM) < p_pernum)
+  ORDER BY INTEGER(PERANO) DESC, INTEGER(PERNUM) DESC
+  FETCH FIRST 1 ROW ONLY
+) AS anterior;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.CG_PERIODO_ANTERIOR TO PUBLIC;
+

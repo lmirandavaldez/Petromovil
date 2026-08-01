@@ -1,0 +1,36 @@
+Create Or Replace View VWCXC_Maestro_Clientes
+As Select T1.CliCve, T1.CliNom, T1.CliDir, T1.CliDi1,
+          T1.CliPrv, T10.PrvDes, T1.CliMun, T11.MunDes,
+          T1.CliDms, T1.CliCpo, T1.CliSec,  T12.DmsDes,
+          T1.CliTe1, T1.CliTe2, T1.CliRnc, T1.CliSta, T2.AdcLcr,
+          T3.DgcCdd, T3.DgcMfl,
+          T2.ZonCve, T4.ZonDes, T4.TerCve, T5.TerDes, T7.SupCve,
+          T8.SupNom, T6.VenCve, T7.VenNom, T2.CpaCve, T9.CpaDes
+  From CxcCli T1
+  Join CxcAdc T2
+    On (T1.CliCve = T2.CliCve)
+  Join CxcDgc T3
+    On (T1.CliCve = T3.CliCve)
+  Join CxcZon T4
+    On (T2.ZonCve = T4.ZonCve)
+  Join CxcTer T5
+    On (T4.TerCve = T5.TerCve)
+Left Outer Join CxcRvc T6
+    On (T1.CliCve = T6.CliCve)
+Left Outer Join CxcVen T7
+    On (T6.VenCve = T7.VenCve)
+Left Outer Join CxcSup T8
+    On (T7.SupCve = T8.SupCve)
+Left Outer Join CxcCpa T9
+    On (T2.CpaCve = T9.CpaCve)
+Left Outer Join SegPrv T10
+    On (T1.CliPrv = T10.PrvCve)
+Left Outer Join SegMun T11
+    On (T1.CliPrv = T11.PrvCve)
+   And (T1.CliMun = T11.MunCve)
+Left Outer Join SegDms T12
+    On (T1.CliPrv = T12.PrvCve)
+   And (T1.CliMun = T12.MunCve)
+   And (T1.CliDms = T12.DmsCve)
+   And (T1.CliCpo = T12.DmsCpo)
+   And (T1.CliSec = T12.DmsSec)

@@ -1,0 +1,21 @@
+Create Or Replace View VWCXC_Direcciones_Despacho
+   As Select T1.CliCve, T1.CliNom, T2.DdcCve, T2.DdcNom, T2.DdcDir, T2.DdcDi1,
+             T2.DdcPrv, T10.PrvDes, T2.DdcMun, T11.MunDes, T2.DdcDms,
+             T12.DmsDes,
+             T2.DdcTe1, T2.DdcTe2,
+             T2.DdcFax, T2.DdcLat, T2.DdcLog
+     From CxcCli T1
+   Left Outer Join CxcDdc T2
+     On (T1.CliCve = T2.CliCve)
+   Left Outer Join SegPrv T10
+       On (T2.DdcPrv = T10.PrvCve)
+   Left Outer Join SegMun T11
+       On (T2.DdcPrv = T11.PrvCve)
+      And (T2.DdcMun = T11.MunCve)
+   Left Outer Join SegDms T12
+       On (T2.DdcPrv = T12.PrvCve)
+      And (T2.DdcMun = T12.MunCve)
+      And (T2.DdcDms = T12.DmsCve)
+      And (T2.DdcCpo = T12.DmsCpo)
+      And (T2.DdcSec = T12.DmsSec)
+    Where (T1.CliSta = 'A')

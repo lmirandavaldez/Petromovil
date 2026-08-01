@@ -1,0 +1,40 @@
+Create Or Replace View VWFAC_Ventas_Vendedor_Cliente_Articulos_Dias
+As Select T1.DtoAno, T1.DtoMes, T3.VenCve, T1.CliCve, T1.ArtCve,
+IfNull (Sum(Case When T1.DtoDia = 01 Then T1.DtoCua End), 0) Dia01,
+IfNull (Sum(Case When T1.DtoDia = 02 Then T1.DtoCua End), 0) Dia02,
+IfNull (Sum(Case When T1.DtoDia = 03 Then T1.DtoCua End), 0) Dia03,
+IfNull (Sum(Case When T1.DtoDia = 04 Then T1.DtoCua End), 0) Dia04,
+IfNull (Sum(Case When T1.DtoDia = 05 Then T1.DtoCua End), 0) Dia05,
+IfNull (Sum(Case When T1.DtoDia = 06 Then T1.DtoCua End), 0) Dia06,
+IfNull (Sum(Case When T1.DtoDia = 07 Then T1.DtoCua End), 0) Dia07,
+IfNull (Sum(Case When T1.DtoDia = 08 Then T1.DtoCua End), 0) Dia08,
+IfNull (Sum(Case When T1.DtoDia = 09 Then T1.DtoCua End), 0) Dia09,
+IfNull (Sum(Case When T1.DtoDia = 10 Then T1.DtoCua End), 0) Dia10,
+IfNull (Sum(Case When T1.DtoDia = 11 Then T1.DtoCua End), 0) Dia11,
+IfNull (Sum(Case When T1.DtoDia = 12 Then T1.DtoCua End), 0) Dia12,
+IfNull (Sum(Case When T1.DtoDia = 13 Then T1.DtoCua End), 0) Dia13,
+IfNull (Sum(Case When T1.DtoDia = 14 Then T1.DtoCua End), 0) Dia14,
+IfNull (Sum(Case When T1.DtoDia = 15 Then T1.DtoCua End), 0) Dia15,
+IfNull (Sum(Case When T1.DtoDia = 16 Then T1.DtoCua End), 0) Dia16,
+IfNull (Sum(Case When T1.DtoDia = 17 Then T1.DtoCua End), 0) Dia17,
+IfNull (Sum(Case When T1.DtoDia = 18 Then T1.DtoCua End), 0) Dia18,
+IfNull (Sum(Case When T1.DtoDia = 19 Then T1.DtoCua End), 0) Dia19,
+IfNull (Sum(Case When T1.DtoDia = 20 Then T1.DtoCua End), 0) Dia20,
+IfNull (Sum(Case When T1.DtoDia = 21 Then T1.DtoCua End), 0) Dia21,
+IfNull (Sum(Case When T1.DtoDia = 22 Then T1.DtoCua End), 0) Dia22,
+IfNull (Sum(Case When T1.DtoDia = 23 Then T1.DtoCua End), 0) Dia23,
+IfNull (Sum(Case When T1.DtoDia = 24 Then T1.DtoCua End), 0) Dia24,
+IfNull (Sum(Case When T1.DtoDia = 25 Then T1.DtoCua End), 0) Dia25,
+IfNull (Sum(Case When T1.DtoDia = 26 Then T1.DtoCua End), 0) Dia26,
+IfNull (Sum(Case When T1.DtoDia = 27 Then T1.DtoCua End), 0) Dia27,
+IfNull (Sum(Case When T1.DtoDia = 28 Then T1.DtoCua End), 0) Dia28,
+IfNull (Sum(Case When T1.DtoDia = 29 Then T1.DtoCua End), 0) Dia29,
+IfNull (Sum(Case When T1.DtoDia = 30 Then T1.DtoCua End), 0) Dia30,
+IfNull (Sum(Case When T1.DtoDia = 31 Then T1.DtoCua End), 0) Dia31
+     From FacDtod T1
+     Join InvArt T2
+       On (T1.ArtCve = T2.ArtCve)
+     Join CxcRvc T3
+       On (T1.CliCve = T3.CliCve)
+    Where (T1.DtoTip <> 3)
+ Group by T1.DtoAno, T1.DtoMes, T3.VenCve, T1.CliCve, T1.ArtCve

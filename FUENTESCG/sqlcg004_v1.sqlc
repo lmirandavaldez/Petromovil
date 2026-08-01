@@ -1,0 +1,28 @@
+Create Or Replace View VWCOG_MAYOR_GENERALBCC
+As Select T1.PerAno, T1.PerNum, T1.CcoCve, T5.CcoDes,
+T1.CtaCve, T1.AuxLis, T1.AuxCve,
+(Case When T3.CtaTip = 1 And T1.AuxLis = 0 And T1.AuxCve = 0 Then 1
+Else 2 End) Tipo_Cuenta,
+(Case When T1.AuxCve = 0 Then T3.CtaDes Else T4.AuxNom End)
+Descripcion,
+IfNull (Sum(BccBip), 0) As Balance_Inicial,
+IfNull (Sum(BccDeb), 0) As Debitos,
+IfNUll (Sum(BccCre), 0) As Creditos,
+IfNull (Sum(BccBal), 0) As Balance_Final
+   From CogBcc T1
+   Join CogPer T2
+     On (T1.PerAno = T2.PerAno)
+    And (T1.PerNum = T2.PerNum)
+   Join CogCta T3
+     On (T1.CtaCve = T3.CtaCve)
+  Left Outer Join CogAuxd T4
+      On (T1.AuxLis = T4.AuxLis)
+     And (T1.AuxCve = T4.AuxCve)
+    Join CogCco T5
+      On (T1.CcoCve = T5.CcoCve)
+   Where (T2.PerSit = 'C')
+   Group By T1.PerAno, T1.PerNum, T1.CcoCve, T5.CcoDes, T1.CtaCve,
+            T1.Auxlis, T1.AuxCve,
+ (Case When T3.CtaTip = 1 And T1.AuxLis = 0 And T1.AuxCve = 0 Then 1
+   Else 2 End),
+   (Case When T1.AuxCve = 0 Then T3.CtaDes Else T4.AuxNom End)

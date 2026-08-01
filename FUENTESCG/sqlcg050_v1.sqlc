@@ -1,0 +1,12 @@
+Create View VWCOG_ENTRADAS_DIARIO
+as Select T1.PerAno, T1.PerNum, T1.TdiCve, T1.DgeDoc, T1.DgeSec,
+          T1.DgeDe1, T1.CtaCve, T2.CtaDes, T1.AuxCve, T3.AuxNom,
+          T1.CcoCve,
+ (Case When T1.DgeOri = 1 Then T1.DgeVal Else 0 End) As Debito,
+ (Case When T1.DgeOri = 2 Then T1.DgeVal Else 0 End) As Credito
+            From CogDged T1
+            Join CogCta T2
+              On (T1.CtaCve = T2.CtaCve)
+ Left Outer Join CogAuxd T3
+              On (T1.AuxLis = T3.AuxLis)
+             And (T1.AuxCve = T3.AuxCve)

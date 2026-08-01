@@ -1,0 +1,59 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- Funcion Busar Periodo Contable Posterior
+
+CREATE OR REPLACE FUNCTION SEGLIB.CG_PERIODO_POSTERIOR (
+  p_perano INTEGER,
+  p_pernum INTEGER
+)
+RETURNS TABLE (
+  PERANO INTEGER,
+  PERNUM INTEGER,
+  PERDES VARCHAR(15),
+  PERSIT CHAR(1),
+  PERFIP DATE,
+  PERFFP DATE
+)
+LANGUAGE SQL
+READS SQL DATA
+RETURN
+SELECT
+  PERANO,
+  PERNUM,
+  PERDES,
+  PERSIT,
+
+  /* Fecha inicial del periodo contable */
+  DATE(
+      TIMESTAMP_FORMAT(
+          VARCHAR(PerAin) CONCAT '-' CONCAT
+          VARCHAR_FORMAT(PerMin, '00') CONCAT '-' CONCAT
+          VARCHAR_FORMAT(PerDin, '00'),
+          'YYYY-MM-DD'
+      )
+  ) AS PERFIP,
+
+  /* Fecha final del periodo contable */
+  LAST_DAY(
+      DATE(
+          TIMESTAMP_FORMAT(
+              VARCHAR(PerAfi) CONCAT '-' CONCAT
+              VARCHAR_FORMAT(PerMfi, '00') CONCAT '-' CONCAT
+              VARCHAR_FORMAT(PerDfi, '00'),
+              'YYYY-MM-DD'
+          )
+      )
+  ) AS PERFFP
+
+FROM (
+    SELECT *
+      FROM COGPER
+     WHERE (INTEGER(PERANO) > p_perano)
+        OR (INTEGER(PERANO) = p_perano AND INTEGER(PERNUM) > p_pernum)
+     ORDER BY INTEGER(PERANO) ASC, INTEGER(PERNUM) ASC
+     FETCH FIRST 1 ROW ONLY
+) AS posterior;
+
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.CG_PERIODO_POSTERIOR TO PUBLIC;
+

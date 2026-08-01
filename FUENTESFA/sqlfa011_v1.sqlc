@@ -1,0 +1,32 @@
+Create Or Replace View VWFAC_Comprobantes_Planillas AS
+   Select
+       T1.PLADIS As CODIGO_DISTRITO_PLANILLA_Plah,
+       T1.PLANRO AS NUMERO_DEFINITIVO_PLANILLA_Plah,
+       T1.VEHFIC As FICHA_DEL_VEHICULO_Plah,
+       T1.PLAFPL As FECHA_DE_LA_PLANILLA_Plah,
+       T2.DISCVE AS CODIGO_DE_DISTRITO_Plad,
+IfNull(T4.AlmCve, 0) As CODIGO_DEL_ALMACEN_Ordh,
+       T2.ORDNRO As NUMERO_ORDEN_PEDIDO_Plad,
+       T2.ORDAMD As FECHA_ORDEN_DEL_PEDIDO_AMD_Plad,
+       T2.CLICVE As CODIGO_DEL_CLIENTE_Plad,
+       T5.TcfCve As TIPO_COMPROBANTE_FISCAL
+     From FacPlah T1
+     Join FacPlad T2
+       On (T1.PlaDis = T2.PlaDis)
+      And (T1.PlaNro = T2.PlaNro)
+     Join FacVeh T3
+       On (T1.VehFic = T3.VehFic)
+Left Outer Join FacOrdh T4
+       On (T2.DisCve = T4.DisCve)
+      And (T2.OrdNro = T4.OrdNro)
+      And (T2.CliCve = T4.CliCve)
+      And (T2.PlaOri = 'P')
+Left Outer Join CxcAdc T5
+       On (T2.CliCve = T5.CliCve)
+    Where (T1.SitCve Not In('O', 'R', 'Y'))
+      And (T3.VehOri = 'P')
+      And (T3.VehTip <= 2)
+      And (T2.PlaSta = 'A')
+      And (T2.PlaOri = 'P')
+      And (T5.TcfCve In(01,02,14,15,31,32,44,45))
+      And (Date(T1.PlaTpl) <= Current Date)

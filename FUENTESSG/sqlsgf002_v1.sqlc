@@ -1,0 +1,26 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- Para Sustituir el Programa SG7006
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_TIEMPO_ANOS (
+  FechaDes DATE,
+  FechaHas DATE
+)
+RETURNS INTEGER
+LANGUAGE SQL
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN
+  DECLARE vAnos INTEGER;
+
+  SET vAnos = YEAR(FechaHas) - YEAR(FechaDes);
+  IF (MONTH(FechaHas) < MONTH(FechaDes))
+     OR (MONTH(FechaHas) = MONTH(FechaDes) AND
+     DAY(FechaHas) < DAY(FechaDes)) THEN
+    SET vAnos = vAnos - 1;
+  END IF;
+
+  RETURN vAnos;
+END;
+
+
+    GRANT EXECUTE ON FUNCTION SEGLIB.SG_TIEMPO_ANOS TO PUBLIC;

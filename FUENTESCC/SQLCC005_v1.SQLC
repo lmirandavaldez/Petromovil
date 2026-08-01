@@ -1,0 +1,29 @@
+Create Or Replace View VWCXC_Ingresos_Aplicados
+As Select T1.CliCve, T1.CdoCve, T1.DocNum,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.DocAno))),
+       Trim(T1.DocAno)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.DocMes))),
+       Trim(T1.DocMes)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.DocDia))),
+       Trim(T1.DocDia))) As Fecha_Documento,
+       T1.DisCve, T1.DisTra, T3.VenCve, T1.PerAno, T1.PerNum,
+       T1.DocTas, T1.DocVtr, T1.CmoCve, T1.DocRef,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.DocAtr))),
+       Trim(T1.DocAtr)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.DocMtr))),
+       Trim(T1.DocMtr)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.DocDtr))),
+       Trim(T1.DocDtr))) As Fecha_Transaccion,
+       T1.DocTtr, T1.DocVlc, T1.DocVto, T1.DocPri, T1.Status,
+       T1.DocAno, T1.DocMes, T1.DocDia, T1.DocAtr, T1.DocMtr,
+       T1.DocDtr
+  From CxcDocd T1
+Left Outer Join CxcCmo T2
+    On (T1.CmoCve = T2.CmoCve)
+Left Outer Join CxcRvc T3
+    On (T1.CliCve = T3.CliCve)
+Left Outer Join CxcCdo T4
+    On (T1.CdoCve = T4.CdoCve)
+ Where (T2.CmoRel = '01' Or T2.CmoRel = '09')
+   And (T4.CdoRel = '01' Or T4.CdoRel = '09' Or T4.CdoRel = '10'
+    Or T4.CdoRel = '11')

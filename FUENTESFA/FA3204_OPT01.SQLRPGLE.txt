@@ -1,0 +1,100 @@
+        // ------------------------------------------------------
+        // MEJORA: INSERT masivo desde SELECT — sin loop cursor  -
+        // Sustituye el DOW/FETCH+INSERT fila a fila original.   -
+        // Toda la logica KPI queda dentro de una sola sentencia.-
+        // ------------------------------------------------------
+           Begsr Impresion     ;
+
+           Exec Sql
+             Insert Into Fac3204
+                  (SupCve, SupNom, VenCve, VenNom, ClaCve,
+                   ClaDes, CliCve, CliNom, Feulco, DiasPr,
+                   DiaSco, Canu12, Monu12, Canu24, Monu24,
+                   VarCan, PorCan, TenCli, Estado)
+             Select
+                    T4.SupCve,
+                    T5.SupNom,
+                    T3.VenCve,
+                    T4.VenNom,
+                    T2.ClaCve,
+                    T6.ClaDes,
+                    T1.CliCve,
+                    T1.CliNom,
+                    Coalesce(T1.FechaUlt, Date('1900-01-01')),
+                    Coalesce(T1.PromDias, 0),
+                    Coalesce(Days(:FechaPro) - Days(T1.FechaUlt), 99999),
+                    Coalesce(T1.Cantidad12, 0),
+                    Coalesce(T1.Monto12, 0),
+                    Coalesce(T1.CantidadPrev12, 0),
+                    Coalesce(T1.Monto12Prev, 0),
+             --Variacion absoluta de cantidad
+                    Coalesce(T1.Cantidad12, 0) - Coalesce(T1.CantidadPrev12, 0),
+             --Variacion porcentual de cantidad
+                    Dec(Case When Coalesce(T1.CantidadPrev12, 0) = 0 Then 0
+                          Else ((Coalesce(T1.Cantidad12, 0) -
+                                 Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
+                                 Coalesce(Nullif(T1.CantidadPrev12, 0), 1)
+                         End, 7, 2),
+             --Indicador textual de tendencia
+                    Case When Coalesce(T1.CantidadPrev12, 0) = 0
+                          And Coalesce(T1.Cantidad12, 0) > 0
+                         Then 'Crecimiento Fuerte'
+                         When Coalesce(T1.CantidadPrev12, 0) = 0
+                          And Coalesce(T1.Cantidad12, 0) = 0
+                         Then 'Estable'
+                         When (((Coalesce(T1.Cantidad12, 0) -
+                                Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
+                                Coalesce(Nullif(T1.CantidadPrev12, 0), 1)) > 10
+                         Then 'Crecimiento fuerte'
+                         When (((Coalesce(T1.Cantidad12, 0) -
+                                Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
+                                Coalesce(Nullif(T1.CantidadPrev12, 0), 1)) > 0
+                         Then 'Crecimiento leve'
+                         When (((Coalesce(T1.Cantidad12, 0) -
+                                Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
+                                Coalesce(Nullif(T1.CantidadPrev12, 0), 1)) = 0
+                         Then 'Estable'
+                         When (((Coalesce(T1.Cantidad12, 0) -
+                                Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
+                                Coalesce(Nullif(T1.CantidadPrev12, 0), 1)) < -10
+                         Then 'Caida fuerte'
+                         Else 'Caida leve'
+                    End,
+             --Estado del cliente (KPI Churn)
+                    Case When T1.FechaUlt Is Null
+                              Or T1.PromDias Is Null
+                              Or T1.PromDias = 0
+                              Then 'SIN HISTORIAL'
+                    When Days(:FechaPro) - Days(T1.FechaUlt) <= T1.PromDias
+                              Then 'ACTIVO'
+                    When Days(:FechaPro) - Days(T1.FechaUlt) <= T1.PromDias * 1.5
+                              Then 'EN RIESGO'
+                      Else 'CHURN'
+                    End
+               From Qtemp/Churnwk T1
+               Join CxcAdc T2
+                 On (T1.CliCve = T2.CliCve)
+               Join CxcRvc T3
+                 On (T1.CliCve = T3.CliCve)
+               Join CxcVen T4
+                 On (T3.VenCve = T4.VenCve)
+               Join CxcSup T5
+                 On (T4.SupCve = T5.SupCve)
+               Join CxcCla T6
+                 On (T2.ClaCve = T6.ClaCve)
+              Where (T4.SupCve = :SupCod Or :SupCod = 0)
+                And (T3.VenCve = :VenCod Or :VenCod = 0)
+                And Not Exists (
+                    Select 1
+                       From Fac3204
+                      Where (SupCve = T4.SupCve)
+                        And (VenCve = T3.VenCve)
+                        And (ClaCve = T2.ClaCve)
+                        And (CliCve = T1.CliCve));
+
+           If SqlCod < *Zeros ;
+             SqlMsgTxt = 'Impresion: INSERT masivo Fac3204' ;
+             Exsr ErrSql ;
+           Endif ;
+
+           EndSr ;

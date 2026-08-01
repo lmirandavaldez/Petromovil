@@ -1,0 +1,99 @@
+-- ============================================================
+-- Vista   : VWFAC_Fec_Ult_Doc_Ven_Cli_Art
+-- Modulo  : Facturacion
+-- Objeto  : Devuelve la fecha del ultimo documento de venta
+--           valido (DtoFec) por combinacion de vendedor,
+--           cliente y articulo.
+--           Solo considera documentos de tipo factura
+--           (DtoTip = 1) o tipos superiores a 3 (notas de
+--           debito, etc.), excluyendo devoluciones (2 y 3).
+--           La fecha se resuelve a traves del calendario
+--           SegFec (ano+mes+dia -> FecYmd).
+-- Tablas  : CxcCli    maestro de clientes (tabla base)
+--           FacDtod   detalle de documentos de facturacion
+--           CxcRvc    vendedor por cliente
+--           InvArt    maestro de articulos
+--           SegFec    calendario / tabla de fechas
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Version : 3  (mejorada)
+-- Cambios :
+--   v2 - Se cambia el INNER JOIN a SegFec por LEFT OUTER JOIN
+--          para que los documentos sin coincidencia en el
+--          calendario no queden excluidos silenciosamente;
+--          cuando no haya fecha en SegFec, FecYmd = NULL y
+--          Max() lo ignora correctamente.
+--        Se protege el JOIN de CxcRvc con subconsulta
+--          FETCH FIRST 1 ROW ONLY para evitar multiplicacion
+--          de filas cuando un cliente tenga mas de un vendedor
+--          asignado (bug potencial de duplicacion en original).
+--        Se agrega COALESCE en el WHERE para manejar
+--          correctamente NULLs de DtoTip provenientes del
+--          LEFT JOIN de FacDtod.
+--        Se agrega alias explicito As en todos los FROM/JOIN.
+--        Se reformatea SELECT, FROM, JOINs, WHERE y GROUP BY
+--          con una columna/condicion por linea y comentarios.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentacion completa.
+--   v3 - Se reemplaza Left Outer Join + subconsulta FETCH FIRST
+--          por Join directo en CxcRvc, dado que la relacion
+--          con CxcCli es garantizada 1:1.
+--          La subconsulta sin WHERE provocaba SQL0206 en
+--          DB2 for i al no poder resolver la columna en contexto.
+-- ============================================================
+
+Create Or Replace View VWFAC_Fec_Ult_Doc_Ven_Cli_Art As
+
+Select
+    -- --------------------------------------------------------
+    -- Dimensiones de agrupacion
+    -- --------------------------------------------------------
+    T3.VenCve           As VenCve,   -- Codigo del vendedor (de CxcRvc)
+    T1.CliCve           As CliCve,   -- Codigo del cliente
+    T2.ArtCve           As ArtCve,   -- Codigo del articulo
+    T4.CatCve           As CatCve,   -- Categoria del articulo
+    T4.ArtPpr           As ArtPpr,   -- Precio de referencia del articulo
+
+    -- --------------------------------------------------------
+    -- Metrica: fecha del ultimo documento valido
+    -- --------------------------------------------------------
+    Max(T9.FecYmd)      As DtoFec    -- Fecha (YYYYMMDD)
+                                     -- del ultimo doc. de venta valido
+
+From CxcCli As T1
+
+-- Detalle de documentos; LEFT para conservar clientes sin facturas
+Left Outer Join FacDtod As T2
+    On T1.CliCve = T2.CliCve
+
+-- Vendedor por cliente  relacion 1:1 garantizada
+Left Outer Join CxcRvc As T3
+    On T1.CliCve = T3.CliCve
+
+-- Articulo del detalle
+Left Outer Join InvArt As T4
+    On T2.ArtCve = T4.ArtCve
+
+-- Calendario: convierte ano+mes+dia en fecha escalar (FecYmd).
+-- LEFT OUTER JOIN para que documentos sin entrada en SegFec no
+-- queden excluidos; Max() ignorara los FecYmd = NULL.
+Join SegFec As T9
+    On  T2.DtoAno = T9.FecAno
+    And T2.DtoMes = T9.FecMes
+    And T2.DtoDia = T9.FecDia
+
+Where
+    -- Excluye tipo 2 (devolucion), 3 (Promociones) y 8 (notas de debito)
+    -- COALESCE convierte NULL a 0 para que clientes sin facturas
+    -- (LEFT JOIN de FacDtod) no sean eliminados por NOT IN.
+    COALESCE(T2.DtoTip, 0) Not In (2, 3, 8)
+
+Group By
+    T3.VenCve,
+    T1.CliCve,
+    T2.ArtCve,
+    T4.CatCve,
+    T4.ArtPpr
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T3.VenCve, T1.CliCve, T2.ArtCve

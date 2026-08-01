@@ -1,0 +1,125 @@
+Create Or Replace View VWCOG_MAYOR_GENERAL_Bcc_MESES
+As Select T2.PerAno, T1.CtaCve, T2.AuxLis, T2.AuxCve,
+(Case When T1.CtaTip = 1 And T2.AuxLis = 0 And T2.AuxCve = 0 Then 1
+Else 2 End) Tipo_Cuenta,
+(Case When T2.AuxCve = 0 Then T1.CtaDes Else T3.AuxNom End)
+Descripcion, T4.CcoCve, T5.CcoDes As Descripcion_Cco,
+IfNull (Sum(Case When T2.PerNum = 01 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Ene,
+IfNull (Sum(Case When T2.PerNum = 01 Then T2.MgeBal End), 0)
+Balance_Mge_Ene,
+IfNull (Sum(Case When T2.PerNum = 02 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Feb,
+IfNull (Sum(Case When T2.PerNum = 02 Then T2.MgeBal End), 0)
+Balance_Mge_Feb,
+IfNull (Sum(Case When T2.PerNum = 03 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Mar,
+IfNull (Sum(Case When T2.PerNum = 03 Then T2.MgeBal End), 0)
+Balance_Mge_Mar,
+IfNull (Sum(Case When T2.PerNum = 04 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Abr,
+IfNull (Sum(Case When T2.PerNum = 04 Then T2.MgeBal End), 0)
+Balance_Mge_Abr,
+IfNull (Sum(Case When T2.PerNum = 05 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_May,
+IfNull (Sum(Case When T2.PerNum = 05 Then T2.MgeBal End), 0)
+Balance_Mge_May,
+IfNull (Sum(Case When T2.PerNum = 06 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Jun,
+IfNull (Sum(Case When T2.PerNum = 06 Then T2.MgeBal End), 0)
+Balance_Mge_Jun,
+IfNull (Sum(Case When T2.PerNum = 07 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Jul,
+IfNull (Sum(Case When T2.PerNum = 07 Then T2.MgeBal End), 0)
+Balance_Mge_Jul,
+IfNull (Sum(Case When T2.PerNum = 08 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Ago,
+IfNull (Sum(Case When T2.PerNum = 08 Then T2.MgeBal End), 0)
+Balance_Mge_Ago,
+IfNull (Sum(Case When T2.PerNum = 09 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Sep,
+IfNull (Sum(Case When T2.PerNum = 09 Then T2.MgeBal End), 0)
+Balance_Mge_Sep,
+IfNull (Sum(Case When T2.PerNum = 10 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Oct,
+IfNull (Sum(Case When T2.PerNum = 10 Then T2.MgeBal End), 0)
+Balance_Mge_Oct,
+IfNull (Sum(Case When T2.PerNum = 11 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Nov,
+IfNull (Sum(Case When T2.PerNum = 11 Then T2.MgeBal End), 0)
+Balance_Mge_Nov,
+IfNull (Sum(Case When T2.PerNum = 12 Then (T2.MgeDeb - T2.MgeCre)
+End), 0) Movimiento_Mge_Dic,
+IfNull (Sum(Case When T2.PerNum = 12 Then T2.MgeBal End), 0)
+Balance_Mge_Dic,
+IfNull (Sum(Case When T4.PerNum = 01 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Ene,
+IfNull (Sum(Case When T4.PerNum = 01 Then T4.BccBal End), 0)
+Balance_Bcc_Ene,
+IfNull (Sum(Case When T4.PerNum = 02 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Feb,
+IfNull (Sum(Case When T4.PerNum = 02 Then T4.BccBal End), 0)
+Balance_Bcc_Feb,
+IfNull (Sum(Case When T4.PerNum = 03 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Mar,
+IfNull (Sum(Case When T4.PerNum = 03 Then T4.BccBal End), 0)
+Balance_Bcc_Mar,
+IfNull (Sum(Case When T4.PerNum = 04 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Abr,
+IfNull (Sum(Case When T4.PerNum = 04 Then T4.BccBal End), 0)
+Balance_Bcc_Abr,
+IfNull (Sum(Case When T4.PerNum = 05 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_May,
+IfNull (Sum(Case When T4.PerNum = 05 Then T4.BccBal End), 0)
+Balance_Bcc_May,
+IfNull (Sum(Case When T4.PerNum = 06 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Jun,
+IfNull (Sum(Case When T4.PerNum = 06 Then T4.BccBal End), 0)
+Balance_Bcc_Jun,
+IfNull (Sum(Case When T4.PerNum = 07 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Jul,
+IfNull (Sum(Case When T4.PerNum = 07 Then T4.BccBal End), 0)
+Balance_Bcc_Jul,
+IfNull (Sum(Case When T4.PerNum = 08 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Ago,
+IfNull (Sum(Case When T4.PerNum = 08 Then T4.BccBal End), 0)
+Balance_Bcc_Ago,
+IfNull (Sum(Case When T4.PerNum = 09 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Sep,
+IfNull (Sum(Case When T4.PerNum = 09 Then T4.BccBal End), 0)
+Balance_Bcc_Sep,
+IfNull (Sum(Case When T4.PerNum = 10 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Oct,
+IfNull (Sum(Case When T4.PerNum = 10 Then T4.BccBal End), 0)
+Balance_Bcc_Oct,
+IfNull (Sum(Case When T4.PerNum = 11 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Nov,
+IfNull (Sum(Case When T4.PerNum = 11 Then T4.BccBal End), 0)
+Balance_Bcc_Nov,
+IfNull (Sum(Case When T4.PerNum = 12 Then (T4.BccDeb - T4.BccCre)
+End), 0) Movimiento_Bcc_Dic,
+IfNull (Sum(Case When T4.PerNum = 12 Then T4.BccBal End), 0)
+Balance_Bcc_Dic
+           From CogCta T1
+           Join CogMge T2
+             On (T1.CtaCve = T2.CtaCve)
+Left Outer Join CogAuxd T3
+             On (T2.AuxLis = T3.AuxLis)
+            And (T2.AuxCve = T3.AuxCve)
+Left Outer Join CogBcc T4
+             On (T2.PerAno = T4.PerAno)
+            And (T2.PerNum = T4.PerNum)
+            And (T1.CtaCve = T4.CtaCve)
+            And (T2.AuxLis = T4.AuxLis)
+            And (T2.AuxCve = T4.AuxCve)
+Left Outer Join CogCco T5
+             On (T4.CcoCve = T5.CcoCve)
+           Join CogPer T6
+             On (T2.PerAno = T6.PerAno)
+            And (T2.PerNum = T6.PerNum)
+          Where (T6.PerSit = 'C')
+Group By T2.PerAno, T1.CtaCve, T2.AuxLis, T2.AuxCve,
+(Case When T1.CtaTip = 1 And T2.AuxLis = 0 And T2.AuxCve = 0 Then 1
+Else 2 End),
+(Case When T2.AuxCve = 0 Then T1.CtaDes Else T3.AuxNom End),
+T4.CcoCve, T5.CcoDes

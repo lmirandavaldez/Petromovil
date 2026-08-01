@@ -1,0 +1,87 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.IV_ENTRADAS_SALIDAS
+(
+    P_ARTCVE   CHAR(20),
+    P_DISCVE   DECIMAL(3,0),
+    P_ALMCVE   DECIMAL(2,0),
+    P_FECINI   DATE,
+    P_FECFIN   DATE
+)
+RETURNS TABLE
+(
+    ENTRADAS_ALM_TRAD   DECIMAL(15,4),
+    ENTRADAS_CEX_TRAD   DECIMAL(15,4),
+    ENTRADAS_CEX        DECIMAL(15,4),
+    ENTRADAS_CRP        DECIMAL(15,4),
+    SALIDAS_ALM_TRAD    DECIMAL(15,4),
+    SALIDAS_CEX_TRAD    DECIMAL(15,4),
+    SALIDAS_CEX         DECIMAL(15,4),
+    SALIDAS_CRP         DECIMAL(15,4)
+)
+LANGUAGE SQL
+SPECIFIC IV_ENTRADAS_SALIDAS
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN
+
+    RETURN
+    SELECT
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'E' THEN R.TraCan           
+        ELSE 0 END), 0) AS ENTRADAS_ALM_TRAD,
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'E' THEN R.TraCex           
+        ELSE 0 END), 0) AS ENTRADAS_CEX_TRAD,
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'E' THEN R.TraCex_Corregido 
+        ELSE 0 END), 0) AS ENTRADAS_CEX,
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'E' THEN R.TraCud          
+        ELSE 0 END), 0) AS ENTRADAS_CRP,
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'S' THEN R.TraCan
+        * -1 ELSE 0 END), 0) AS SALIDAS_ALM_TRAD,
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'S' THEN R.TraCex
+        * -1 ELSE 0 END), 0) AS SALIDAS_CEX_TRAD,
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'S' THEN R.TraCex_Corregido
+        * -1 ELSE 0 END), 0) AS SALIDAS_CEX,
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'S' THEN R.TraCud           
+        * -1 ELSE 0 END), 0) AS SALIDAS_CRP
+    FROM (
+        SELECT
+            T1.TraCan,
+            T1.TraCex,
+            T1.TraCud,
+
+    /* TraCex corregido: unifica la cantidad en la unidad base del artículo */
+        CASE
+            WHEN T1.TraUnd = T2.ArtUal
+            THEN COALESCE(T1.TraCan, 0) * COALESCE(T2.ArtCua, 1)
+            ELSE COALESCE(T1.TraCan, 0) * COALESCE(T3.UalCon, T2.ArtCua, 1)
+            END AS TraCex_Corregido,
+
+    /* Indicador de entrada/salida calculado una sola vez */
+        CASE
+            WHEN (T4.TmoOri = 1) OR (T4.TmoOri = 3 AND RTRIM(T4.TmoCdt) = ' ')
+            THEN 'E'
+            WHEN (T4.TmoOri = 2) OR (T4.TmoOri = 3 AND RTRIM(T4.TmoCdt) <> ' ')
+            THEN 'S' ELSE NULL END AS TipoMov
+
+        FROM InvTrad T1
+        JOIN InvArt T2
+          ON T1.ArtCve = T2.ArtCve
+        LEFT JOIN InvUal T3
+          ON T1.ArtCve = T3.ArtCve
+         AND T1.TraUnd = T3.UndCve
+        JOIN InvTmo T4
+          ON T1.TmoCve = T4.TmoCve
+        JOIN SegFec T9
+          ON T1.TraAtr = T9.FecAno
+         AND T1.TraMtr = T9.FecMes
+         AND T1.TraDtr = T9.FecDia
+        WHERE T1.ArtCve = P_ARTCVE
+          AND T1.DisCve = P_DISCVE
+          AND T1.AlmCve = P_ALMCVE
+          AND T9.FecIso BETWEEN P_FECINI AND P_FECFIN
+    ) AS R;
+
+END;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.IV_ENTRADAS_SALIDAS TO PUBLIC;
+

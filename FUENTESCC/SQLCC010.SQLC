@@ -1,0 +1,142 @@
+-- =============================================================================
+-- Vista   : VWCXC_Documentos_Pendiente_a_la_fecha
+-- Módulo  : Cuentas por Cobrar (CxC) / Caja
+-- Propósito: Muestra los documentos de cobro (CxcDoch) que tienen balance
+--            pendiente a la fecha, es decir, cuyo balance original (DocBce)
+--            menos los ingresos ya aplicados de recibos procesados es distinto
+--            de cero. Incluye las fechas de documento, vencimiento y despacho
+--            obtenidas desde la tabla de fechas del sistema (SegFec).
+-- -----------------------------------------------------------------------------
+-- Estructura:
+--   CTE RECIBOS — Consolida los ingresos aplicados por documento desde los
+--                 detalles de recibo (CajRefd / CajRech), filtrando solo
+--                 recibos con estado '1' (procesados/activos). Agrupa por
+--                 cliente, distribución, tipo de documento, número, período.
+--
+--   SELECT principal — Cruza CxcDoch con RECIBOS (LEFT OUTER) y calcula el
+--                      balance pendiente. Filtra documentos con balance ≠ 0.
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CajRefd - Detalle de recibos de caja (líneas de ingreso)
+--   CajRech - Encabezado de recibos de caja (filtro SitCve='1': procesados)
+--   CxcDoch - Encabezado de documentos de cobro (tabla principal del SELECT)
+--   SegFec  - Tabla de fechas del sistema (usada 4 veces: 1 en CTE + 3 en
+--             SELECT para Fecha_Documento, Fecha_Vencimiento, Fecha_Despacho)
+-- -----------------------------------------------------------------------------
+-- Notas técnicas:
+--   - McaCve + RecNum forman la clave compuesta del encabezado de recibo 
+--   (CajRech).
+--   - IngVtr  : Valor del ingreso en moneda de transacción (detalle de recibo).
+--   - DocBce  : Balance del documento (importe pendiente original).
+--   - DocVal  : Valor total del documento.
+--   - DocTas  : Tasa de cambio del documento.
+--   - CpaCve  : Clave de comprobante de pago asociado.
+--   - Los tres INNER JOINs a SegFec para fechas de documento / vencimiento /
+--     despacho excluirán silenciosamente cualquier documento cuyas fechas
+--     desglosadas (Ano/Mes/Dia) no tengan correspondencia en SegFec.
+--   - SitCve='1' en la CTE filtra solo recibos en estado procesado/activo.
+--   - Los alias T20/T21/T22/T9 del original reflejan versiones previas con
+--     tablas intermedias eliminadas.
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1  Versión original (incluía error tipográfico: "T1. Pernum" con espacio)
+--   v2  Corrección de "T1. Pernum" → "doc.PerNum", alias descriptivos,
+--       JOINs explícitos, indentación estándar, documentación completa
+-- =============================================================================
+
+CREATE OR REPLACE VIEW VWCXC_Documentos_Pendiente_a_la_fecha AS
+
+-- -----------------------------------------------------------------------------
+-- CTE: RECIBOS
+-- Suma los ingresos aplicados por documento desde los recibos procesados.
+-- -----------------------------------------------------------------------------
+WITH RECIBOS AS (
+    SELECT
+        rech.CliCve              AS CliCve,          -- Clave del cliente
+        refd.DisCve              AS DisCve,          -- Clave de distribución
+        refd.CdoCve              AS CdoCve,          -- Tipo de documento
+        refd.DocNum              AS DocNum,          -- Número de documento
+        refd.PerAno              AS PerAno,          -- Año del período
+        refd.PerNum              AS PerNum,          -- Número del período
+        SUM(refd.IngVtr)         AS Suma_Ingresos    
+                            -- Total de ingresos aplicados (moneda transacción)
+    FROM CajRefd refd
+    -- Encabezado del recibo: clave compuesta McaCve + RecNum
+    INNER JOIN CajRech rech
+        ON  rech.McaCve = refd.McaCve
+        AND rech.RecNum = refd.RecNum
+    -- Tabla de fechas: valida que la fecha del recibo exista en SegFec
+    INNER JOIN SegFec fec_rec
+        ON  fec_rec.FecAno = rech.IngAno
+        AND fec_rec.FecMes = rech.IngMes
+        AND fec_rec.FecDia = rech.IngDia
+    WHERE rech.SitCve = '1'             -- Solo recibos procesados / activos
+    GROUP BY
+        rech.CliCve,
+        refd.DisCve,
+        refd.CdoCve,
+        refd.DocNum,
+        refd.PerAno,
+        refd.PerNum
+)
+
+-- -----------------------------------------------------------------------------
+-- SELECT principal: documentos con balance pendiente
+-- -----------------------------------------------------------------------------
+SELECT
+    -- Identificación del documento
+    doc.DisCve     AS DisCve,              -- Clave de distribución
+    doc.CliCve     AS CliCve,              -- Clave del cliente
+    doc.CdoCve     AS CdoCve,              -- Tipo de documento
+    doc.DocNum     AS DocNum,              -- Número de documento
+
+    -- Período contable
+    doc.PerAno     AS PerAno,              -- Año del período
+    doc.PerNum     AS PerNum,              -- Número del período
+
+    -- Fechas (obtenidas desde SegFec por los campos Ano/Mes/Dia descompuestos)
+    fec_doc.FecYmd AS Fecha_Documento,     -- Fecha de emisión del documento
+    fec_vto.FecYmd AS Fecha_Vencimiento,   -- Fecha de vencimiento
+    fec_des.FecYmd AS Fecha_Despacho,      -- Fecha de despacho
+
+    -- Comprobante y valores
+    doc.CpaCve     AS CpaCve,              -- Clave de comprobante de pago
+    doc.DocTas     AS DocTas,              -- Tasa de cambio del documento
+    doc.DocVal     AS DocVal,              -- Valor total del documento
+
+    -- Balance pendiente: importe original menos ingresos aplicados
+    (doc.DocBce - IFNULL(rec.Suma_Ingresos, 0))
+                                        AS Balance_del_Documento
+
+FROM CxcDoch doc
+
+-- Ingresos aplicados: LEFT OUTER para incluir 
+-- documentos sin recibos (balance = DocBce)
+LEFT OUTER JOIN RECIBOS rec
+    ON  rec.CliCve = doc.CliCve
+    AND rec.CdoCve = doc.CdoCve
+    AND rec.DocNum = doc.DocNum
+    AND rec.DisCve = doc.DisCve
+    AND rec.PerAno = doc.PerAno
+    AND rec.PerNum = doc.PerNum
+
+-- Fecha del documento (campos DocAno/DocMes/DocDia → FecYmd)
+INNER JOIN SegFec fec_doc
+    ON  fec_doc.FecAno = doc.DocAno
+    AND fec_doc.FecMes = doc.DocMes
+    AND fec_doc.FecDia = doc.DocDia
+
+-- Fecha de vencimiento (campos DocAve/DocMve/DocDve → FecYmd)
+INNER JOIN SegFec fec_vto
+    ON  fec_vto.FecAno = doc.DocAve
+    AND fec_vto.FecMes = doc.DocMve
+    AND fec_vto.FecDia = doc.DocDve
+
+-- Fecha de despacho (campos DocAde/DocMde/DocDde → FecYmd)
+INNER JOIN SegFec fec_des
+    ON  fec_des.FecAno = doc.DocAde
+    AND fec_des.FecMes = doc.DocMde
+    AND fec_des.FecDia = doc.DocDde
+
+-- Solo documentos con balance pendiente distinto de cero
+WHERE (doc.DocBce - IFNULL(rec.Suma_Ingresos, 0)) <> 0

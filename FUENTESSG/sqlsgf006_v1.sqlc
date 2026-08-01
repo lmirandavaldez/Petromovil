@@ -1,0 +1,116 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- Para Sustituir el Programa SG7005
+
+
+
+ -- DROP si existe (según versión de DB2 for i)
+--DROP FUNCTION IF EXISTS SEGLIB.SG_CALC_IMP_ARTICULO (CHAR(20), DECIMAL(12,3));
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_CALC_IMP_ARTICULO (
+  pCodArt CHAR(20),
+  pPrecio DECIMAL(12,3)
+)
+RETURNS TABLE (
+  PREDI1 DECIMAL(12,3),
+  IMP1   DECIMAL(16,6),
+  PREDI2 DECIMAL(12,3),
+  IMP2   DECIMAL(16,6)
+)
+LANGUAGE SQL
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN
+  DECLARE vArtImp CHAR(1) DEFAULT ' ';
+  DECLARE vParIm1 DECIMAL(9,6) DEFAULT 0;
+  DECLARE vParIm2 DECIMAL(9,6) DEFAULT 0;
+  DECLARE vParPim CHAR(1) DEFAULT 'N';
+  DECLARE vPorIm1 DECIMAL(9,6) DEFAULT 0;
+  DECLARE vPorIm2 DECIMAL(9,6) DEFAULT 0;
+  DECLARE vPredi1 DECIMAL(12,3) DEFAULT 0;
+  DECLARE vImp1   DECIMAL(16,6) DEFAULT 0;
+  DECLARE vPredi2 DECIMAL(12,3) DEFAULT 0;
+  DECLARE vImp2   DECIMAL(16,6) DEFAULT 0;
+  DECLARE vFecha  DATE;
+
+  SET vFecha = CURRENT_DATE;
+
+  -- Leer solo ArtImp desde InvArt (no existe ParCve en InvArt en tu esquema)
+  BEGIN
+    DECLARE CONTINUE HANDLER FOR NOT FOUND
+      BEGIN END;
+    SELECT ArtImp
+      INTO vArtImp
+      FROM InvArt
+     WHERE ArtCve = pCodArt
+     FETCH FIRST 1 ROW ONLY;
+  END;
+
+  -- Leer parámetros de impuesto desde InvPar:
+  --tomar el primer registro (ParCve por defecto)
+  BEGIN
+    DECLARE CONTINUE HANDLER FOR NOT FOUND
+      BEGIN
+        SET vParIm1 = 0;
+        SET vParIm2 = 0;
+        SET vParPim = 'N';
+      END;
+    SELECT COALESCE(ParIm1,0), COALESCE(ParIm2,0), COALESCE(ParPim,'N')
+      INTO vParIm1, vParIm2, vParPim
+      FROM InvPar
+     FETCH FIRST 1 ROW ONLY;
+  END;
+
+  -- Regla histórica: si fecha actual < 2013-01-01 entonces ParIm1 := ParIm2
+  IF vFecha < DATE('2013-01-01') THEN
+    SET vParIm1 = vParIm2;
+  END IF;
+
+  -- Calcular solo si ArtImp = 'S' (gravable)
+  IF UPPER(TRIM(COALESCE(vArtImp,' '))) = 'S' THEN
+
+    IF COALESCE(vParIm1,0) <> 0 THEN
+      SET vPorIm1 = vParIm1 / 100.0;
+      IF UPPER(TRIM(COALESCE(vParPim,'N'))) = 'N' THEN
+        SET vImp1 = DECIMAL(pPrecio * vPorIm1, 16, 6);
+        SET vPredi1 = DECIMAL(0,12,3);
+      ELSE
+        SET vPredi1 = DECIMAL(pPrecio / (1.0 + vPorIm1), 12, 3);
+        SET vImp1   = DECIMAL(pPrecio - vPredi1, 16, 6);
+      END IF;
+    ELSE
+      SET vImp1 = 0;
+      SET vPredi1 = 0;
+    END IF;
+
+    IF COALESCE(vParIm2,0) <> 0 THEN
+      SET vPorIm2 = vParIm2 / 100.0;
+      IF UPPER(TRIM(COALESCE(vParPim,'N'))) = 'N' THEN
+        SET vImp2 = DECIMAL(pPrecio * vPorIm2, 16, 6);
+        SET vPredi2 = DECIMAL(0,12,3);
+      ELSE
+        SET vPredi2 = DECIMAL(pPrecio / (1.0 + vPorIm2), 12, 3);
+        SET vImp2   = DECIMAL(pPrecio - vPredi2, 16, 6);
+      END IF;
+    ELSE
+      SET vImp2 = 0;
+      SET vPredi2 = 0;
+    END IF;
+
+  ELSE
+    SET vPredi1 = 0; SET vImp1 = 0;
+    SET vPredi2 = 0; SET vImp2 = 0;
+  END IF;
+
+  RETURN
+    SELECT vPredi1 AS PREDI1,
+           vImp1   AS IMP1,
+           vPredi2 AS PREDI2,
+           vImp2   AS IMP2
+    FROM SYSIBM.SYSDUMMY1;
+END;
+
+
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_CALC_IMP_ARTICULO TO PUBLIC;
+

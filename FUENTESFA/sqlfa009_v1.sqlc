@@ -1,0 +1,178 @@
+Create Or Replace View VWFAC_Carga_Planillas AS
+  Select
+    T1.PLADIS As CODIGO_DISTRITO_PLANILLA_Plah,
+    T1.PLANRO AS NUMERO_DEFINITIVO_PLANILLA_Plah,
+    T1.VEHFIC As FICHA_DEL_VEHICULO_Plah,
+    T1.CHOCVE As CODIGO_DEL_CHOFER_Plah,
+    T1.PLAFPL As FECHA_DE_LA_PLANILLA_Plah,
+    T1.PLACBU AS CANTIDAD_DE_BULTOS_PLANILLA_Plah,
+    T1.PLACRP As CANTIDAD_PROD_REQ_PESO_PLANILLA_Plah,
+    T1.PLACAD As CANTIDAD_DE_BULTOS_DESPACHAR_Plah,
+    T1.PLACDV As CANTIDAD_DEVUELTA_Plah,
+    T1.PLATCE As TOTAL_CANTIDAD_ENTREGADA_Plah,
+    T1.PLALIT As LECTURA_INICIAL_TOTAL_Plah,
+    T1.PLALFT As LECTURA_FINAL_TOTAL_Plah,
+    T1.PLAMBR As TOTAL_PLANILLA_MONTO_BRUTO_Plah,
+    T1.PLAMD1 As TOTAL_PLANILLA_1ER_DESCUENTO_Plah,
+    T1.PLAMD2 As TOTAL_PLANILLA_2DO_DESCUENTO_Plah,
+    T1.PLAMI1 As TOTAL_PLANILLA_1ER_IMPUESTO_Plah,
+    T1.PLAMI2 As TOTAL_PLANILLA_2DO_IMPUESTO_Plah,
+    T1.PLAMI3 As TOTAL_PLANILLA_3ER_IMPUESTO_Plah,
+    T1.PLAMNE As TOTAL_PLANILLA_NETO_DOCTO_Plah,
+    T1.SITCVE As CLAVE_DE_SITUACION_Plah,
+    T1.APLUSR As USUARIO_QUE_APLICO_Plah,
+    T1.APLWSI As TERMINAL_DONDE_SE_APLICO_Plah,
+    T1.APLHOR AS HORA_QUE_SE_APLICO_Plah,
+    T2.PLASEC As SECUENCIA_PLANILLA_Detalle_Plad,
+    T2.DISCVE AS CODIGO_DE_DISTRITO_Plad,
+    T2.ORDNRO As NUMERO_ORDEN_PEDIDO_Plad,
+    T2.ORDAMD As FECHA_ORDEN_DEL_PEDIDO_AMD_Plad,
+    T2.CLICVE As CODIGO_DEL_CLIENTE_Plad,
+    T2.CLINOM As NOMBRE_DEL_NEGOCIO_Plad,
+    T2.CLIDIR As DIRECCION_DEL_NEGOCIO_Plad,
+    T2.CLIDI1 As DIRECCION_DEL_NEGOCIO_2_Plad,
+    T2.CLIPRV As CODIGO_DE_PROVINCIA_NEGOCIO_Plad,
+    T2.CLIMUN As CODIGO_DEL_MUNICIPIO_NEGOCIO_Plad,
+    T2.CLIDMS As CODIGO_DISTRITO_MUNICIPAL_NEG_Plad,
+    T2.CLICPO As CODIGO_POSTAL_DM_NEGOCIO_Plad,
+    T2.CLISEC As SEC_DISTRITO_MUNICIPAL_NEGOCIO_PLAD,
+    T2.CLITE1 AS TELEFONO_DEL_NEGOCIO_1_Plad,
+    T2.CLITE2 As TELEFONO_DEL_NEGOCIO_2_Plad,
+    T2.CLIPNO As NOMBRE_DEL_PROPIETARIO_Plad,
+    T2.DEMLAT As COORDENADA_UTM_LATITUD_Plad,
+    T2.DEMLOG As COORDENADA_UTM_LONGITUD_Plad,
+    T2.MSGCVE As CODIGO_DEL_MENSAJE_Plad,
+    T2.CCLCVE AS CODIGO_DEL_CONTACTO_Plad,
+    T2.DDCCVE As CODIGO_DIRECCION_DESPACHO_Plad,
+    T2.OBSDEM As OBSERVACION_DEL_PEDIDO_Plad,
+    T2.VENCVE As CODIGO_DE_VENDEDOR_Plad,
+    T2.VENNOM As NOMBRE_DEL_VENDEDOR_Plad,
+    T2.VENEMA As DIRECCION_EMAIL_DEL_VENDEDOR_Plad,
+    T2.ORDTIB As TOTAL_IMPORTE_BRUTO_Plad,
+    T2.ORDTD1 As TOTAL_IMPORTE_DESCUENTO_1_Plad,
+    T2.ORDTD2 As TOTAL_IMPORTE_DESCUENTO_2_Plad,
+    T2.ORDTI1 As TOTAL_IMPORTE_IMPUESTO_1_Plad,
+    T2.ORDTI2 As TOTAL_IMPORTE_IMPUESTO_2_Plad,
+    T2.ORDTI3 As TOTAL_IMPORTE_IMPUESTO_3_Plad,
+    T2.ORDTIN As TOTAL_IMPORTE_NETO_Plad,
+    T2.PLACBD As CANTIDAD_DE_BULTOS_PLANILLA_Plad,
+    T2.PLACRD As CANTIDAD_PROD_REQ_PESO_Plad,
+    T2.PLACDE AS CANTIDAD_BULTOS_DESPACHAR_Plad,
+    T2.PLACDC As CANTIDAD_DESPACHADA_CUADRE_Plad,
+    T2.PLAORI As ORIGEN_DEL_DOCUMENTO_PLANILLA_Plad,
+    T2.PLASTA As STATUS_DEL_DOCUMENTO_PLANILLA_Plad,
+IfNull(T5.DtoTip, 0) As TIPO_DE_DOCUMENTO_Dtoh,
+IfNull(T5.DtoNro, 0) As NUMERO_DEL_DOCUMENTO_Dtoh,
+IfNull(T20.FecYmd, 0) As FECHA_DEL_DOCUMENTO_Dtoh ,
+IfNull(T5.AlmCve, 0) As CODIGO_DEL_ALMACEN_Dtoh,
+IfNull(T5.MonCve, 0) As CODIGO_DE_MONEDA_Dtoh,
+IfNull(T5.CpaCve, 0) As CODIGO_CONDICION_DE_PAGO_Dtoh,
+IfNull(T5.FeenPe, 0) As FECHA_ENTREGA_PEDIDO_DTOH,
+IfNull(T6.CliIde, ' ') As NUMERO_DE_IDENTIFICACION_Ded,
+IfNull(T6.NcfNro, ' ') As NUMERO_COMPROBANTE_FISCAL_Ded,
+IfNull(T7.DtoSec, 0) As SECUENCIA_TRANSACCION_Dtod,
+IfNull(T7.ArtCve, ' ') As CODIGO_DE_ARTICULO_Dtod,
+IfNull(T8.ArtDes, ' ') As DESCRIPCION_DEL_ARTICULO_Dtod,
+IfNull(T8.ArtPre, ' ') As PRESENTACION_ARTICULO_Dtod,
+IfNull(T7.DtoUde, 0) As UNIDAD_DE_DESPACHO_Dtod,
+IfNull(T7.DtoCan, 0) As CANTIDAD_A_DESPACHAR_Dtod,
+IfNull(T7.DtoCua, 0) As CANTIDAD_UNIDAD_ALMACENMTO_Dtod,
+IfNull(T7.DtoCup, 0) As CANTIDAD_PROUDCTO_REQ_PESO_Dtod,
+IfNull(T7.DtoPve, 0) As PRECIO_DE_VENTA_Dtod,
+IfNull(T7.DtoImp, 0) As IMPORTE_DEL_DOCUMENTO_Dtod,
+IfNull(T7.DtoPd1, 0) As PORCIENTO_PRIMER_DESCUENTO_Dtod,
+IfNull(T7.DtoMpd, 0) As MONTO_PRIMER_DESCUENTO_Dtod,
+IfNull(T7.DtoPd2, 0) As PORCIENTO_SEGUNDO_DESCUENTO_Dtod,
+IfNull(T7.DtoMpd, 0) As MONTO_SEGUNDO_DESCUENTO_Dtod,
+IfNull(T7.DtoIm1, 0) As MONTO_PRIMER_IMPUESTO_DTOD,
+IfNull(T7.DtoIm2, 0) As MONTO_SEGUNDO_IMPUESTO_DTOD,
+IfNull(T7.DtoIm3, 0) As MONTO_TERCER_IMPUESTO_DTOD,
+IfNull(T7.DtoVd1, 0) As VALOR_DETALLE_1_Dtod,
+IfNull(T7.DtoVd2, 0) As VALOR_DETALLE_2_Dtod,
+IfNull(T7.DtoVd3, 0) As VALOR_DETALLE_3_Dtod,
+IfNull(T7.DtoVd4, 0) As VALOR_DETALLE_4_Dtod,
+IfNull(T7.DtoVd5, 0) As VALOR_DETALLE_5_Dtod,
+IfNull(T9.AlmCve, 0) As CODIGO_DEL_ALMACEN_Ordh,
+IfNull(T9.MonCve, 0) As CODIGO_DE_MONEDA_Ordh,
+IfNull(T9.CpaCve, 0) As CODIGO_CONDICION_DE_PAGO_Ordh,
+IfNull(T9.FeenPe, 0) As FECHA_ENTREGA_PEDIDO_Ordh,
+IfNull(T10.CliIde, ' ') As NUMERO_DE_IDENTIFICACION_Dem,
+IfNull(T11.OrdSec, 0) As SECUENCIA_TRANSACCION_Ordd,
+IfNull(T11.ArtCve, ' ') As CODIGO_DE_ARTICULO_Ordd,
+IfNull(T12.ArtDes, ' ') As DESCRIPCION_DEL_ARTICULO_Ordd,
+IfNull(T12.ArtPre, ' ') As PRESENTACION_ARTICULO_Ordd,
+IfNull(T11.OrdUnd, 0) As UNIDAD_DE_DESPACHO_Ordd,
+IfNull(T11.OrdCan, 0) As CANTIDAD_ORDENADA_Ordd,
+IfNull(T11.OrdCex, 0) As CANTIDAD_UNIDAD_ALMACENMTO_Ordd,
+IfNull(T11.OrdCde, 0) As CANTIDAD_A_DESPACHAR_ORDD,
+IfNull(T11.ORDCDX, 0) As CANT_UNIDAD_ALM_A_DESPACHAR_Ordd,
+IfNull(T11.ORDPVE, 0) As PRECIO_DE_VENTA_PEDIDO_Ordd,
+IfNull(T11.OrdImp, 0) As IMPORTE_BRUTO_Ordd,
+IfNull(T11.ORDID1, 0) As IMPORTE_DESCUENTO_1_Ordd,
+IfNull(T11.ORDID2, 0) As IMPORTE_DESCUENTO_2_Ordd,
+IfNull(T11.ORDII1, 0) As IMPORTE_IMPUESTO_1_Ordd,
+IfNull(T11.ORDII2, 0) As IMPORTE_IMPUESTO_2_Ordd,
+IfNull(T11.ORDII3, 0) As IMPORTE_IMPUESTO_3_Ordd,
+IfNull(T11.ORDDPE, 0) As PORCUENTO_DESCUENTO_PRODUCTO_Ordd,
+IfNull(T11.ORDVDE, 0) As VALOR_DESCUENTO_Ordd,
+(Case When (T2.PlaOri = 'P' and T2.DisCve In(01, 02) And T9.AlmCve = 01)
+        Or (T2.PlaOri = 'P' And T2.DisCve In(02) And T9.AlmCve = 02)
+        Then 'F' Else 'C' End) As Que_debe_Emitir
+     From FacPlah T1
+     Join FacPlad T2
+       On (T1.PlaDis = T2.PlaDis)
+      And (T1.PlaNro = T2.PlaNro)
+     Join FacVeh T3
+       On (T1.VehFic = T3.VehFic)
+Left Outer Join FacDtoh T5
+       On (T2.DisCve = T5.DisCve)
+      And (T2.OrdNro = T5.OrdNro)
+      And (T2.CliCve = T5.CliCve)
+      And (T2.PlaOri = 'F')
+Left Outer Join FacDed T6
+       On (T5.DisCve = T6.DisCve)
+      And (T5.DtoTip = T6.DtoTip)
+      And (T5.DtoNro = T6.DtoNro)
+      And (T2.PlaOri = 'F')
+Left Outer Join FacDtod T7
+       On (T5.DisCve = T7.DisCve)
+      And (T5.DtoTip = T7.DtoTip)
+      And (T5.DtoNro = T7.DtoNro)
+      And (T5.CliCve = T7.CliCve)
+      And (T5.DtoAno = T7.DtoAno)
+      And (T5.DtoMes = T7.DtoMes)
+      And (T5.DtoDia = T7.DtoDia)
+      And (T2.PlaOri = 'F')
+Left Outer Join InvArt T8
+       On (T7.ArtCve = T8.ArtCve)
+      And (T2.PlaOri = 'F')
+Left Outer Join FacOrdh T9
+       On (T2.DisCve = T9.DisCve)
+      And (T2.OrdNro = T9.OrdNro)
+      And (T2.CliCve = T9.CliCve)
+      And (T2.PlaOri = 'P')
+Left Outer Join FacDem T10
+       On (T2.DisCve = T10.DisCve)
+      And (T2.OrdNro = T10.OrdNro)
+      And (T2.PlaOri = 'P')
+Left Outer Join FacOrdd T11
+       On (T2.DisCve = T11.DisCve)
+      And (T2.OrdNro = T11.OrdNro)
+      And (T2.PlaOri = 'P')
+Left Outer Join InvArt T12
+       On (T11.ArtCve = T12.ArtCve)
+      And (T2.PlaOri = 'P')
+Left Outer Join SegFec T20
+       On (T5.DtoAno = T20.FecAno)
+      And (T5.DtoMes = T20.FecMes)
+      And (T5.DtoDia = T20.FecDia)
+      And (T2.PlaOri = 'F')
+    Where (T1.SitCve Not In('O', 'R', 'Y'))
+      And (T3.VehOri = 'P')
+      And (T3.VehTip <= 2)
+      And (T2.PlaSta = 'A')
+      And (Date(T1.PlaTpl) <= Current Date)
+      And Not Exists(Select 1 From Imeccme T14
+       Where (T1.PlaDis = T14.PlaDis)
+         And (T1.PlaNro = T14.PlaNro)
+         And (T1.VehFic = T14.VehFic))

@@ -1,0 +1,100 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+/* Funcion Fechas Historicas Clientes */
+CREATE OR REPLACE FUNCTION SEGLIB.FA_FECHAS_CLIENTE (
+    P_CODIGO_CLIENTE INTEGER,
+    P_FECHA_TOPE     DATE,
+    P_TIPO           CHAR(1)     -- 'N' = solo DisTip N, 'T' = todos
+)
+RETURNS TABLE (
+    CODIGO_CLIENTE               INTEGER,
+    FECHA_CREACION               DATE,
+    FECHA_MODIFICACION           DATE,
+    FECHA_ULTIMA_COMPRA          DATE,
+    FECHA_COMPRA_PERIODO         DATE,
+    FECHA_PRIMERA_COMPRA_HIST    DATE
+)
+LANGUAGE SQL
+DETERMINISTIC
+READS SQL DATA
+RETURN (
+    SELECT
+        P_CODIGO_CLIENTE AS CODIGO_CLIENTE,
+
+        /* FECHA CREACIÓN */
+        COALESCE(
+            (SELECT DATE(C.CreTst)
+             FROM CXCCLI C
+             WHERE C.CliCve = P_CODIGO_CLIENTE),
+            DATE('0001-01-01')
+        ) AS FECHA_CREACION,
+
+        /* FECHA MODIFICACIÓN */
+        COALESCE(
+            (SELECT DATE(C.ModTst)
+             FROM CXCCLI C
+             WHERE C.CliCve = P_CODIGO_CLIENTE),
+            DATE('0001-01-01')
+        ) AS FECHA_MODIFICACION,
+
+        /* ÚLTIMA COMPRA <= FECHA TOPE */
+        COALESCE(
+            (SELECT MAX(T9.FecIso)
+             FROM FacDtoh T2
+             JOIN SegDis T3 ON T2.DisCve = T3.DisCve
+             JOIN SegFec T9
+               ON T2.DtoAno = T9.FecAno
+              AND T2.DtoMes = T9.FecMes
+              AND T2.DtoDia = T9.FecDia
+             WHERE T2.CliCve = P_CODIGO_CLIENTE
+               AND T2.DtoSta = 'A'
+               AND T2.DtoTip NOT IN (2,8)
+               AND T9.FecIso <= P_FECHA_TOPE
+               AND (P_TIPO = 'T' OR T3.DisTip = 'N')
+            ),
+            DATE('0001-01-01')
+        ) AS FECHA_ULTIMA_COMPRA,
+
+        /* PRIMERA COMPRA DEL PERÍODO */
+        COALESCE(
+            (SELECT MIN(T9.FecIso)
+             FROM FacDtoh T2
+             JOIN SegDis T3 ON T2.DisCve = T3.DisCve
+             JOIN SegFec T9
+               ON T2.DtoAno = T9.FecAno
+              AND T2.DtoMes = T9.FecMes
+              AND T2.DtoDia = T9.FecDia
+             WHERE T2.CliCve = P_CODIGO_CLIENTE
+               AND T2.DtoSta = 'A'
+               AND T2.DtoTip NOT IN (2,8)
+               AND T9.FecIso BETWEEN
+                     DATE(TO_CHAR(P_FECHA_TOPE, 'YYYY-MM') || '-01')
+                 AND P_FECHA_TOPE
+               AND (P_TIPO = 'T' OR T3.DisTip = 'N')
+            ),
+            DATE('0001-01-01')
+        ) AS FECHA_COMPRA_PERIODO,
+
+        /* PRIMERA COMPRA HISTÓRICA <= último día del mes anterior */
+        COALESCE(
+            (SELECT MIN(T9.FecIso)
+             FROM FacDtoh T2
+             JOIN SegDis T3 ON T2.DisCve = T3.DisCve
+             JOIN SegFec T9
+               ON T2.DtoAno = T9.FecAno
+              AND T2.DtoMes = T9.FecMes
+              AND T2.DtoDia = T9.FecDia
+             WHERE T2.CliCve = P_CODIGO_CLIENTE
+               AND T2.DtoSta = 'A'
+               AND T2.DtoTip NOT IN (2,8)
+               AND T9.FecIso <= LAST_DAY(P_FECHA_TOPE - 1 MONTH)
+               AND (P_TIPO = 'T' OR T3.DisTip = 'N')
+            ),
+            DATE('0001-01-01')
+        ) AS FECHA_PRIMERA_COMPRA_HIST
+
+    FROM SYSIBM.SYSDUMMY1
+);
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_FECHAS_CLIENTE TO PUBLIC;
+

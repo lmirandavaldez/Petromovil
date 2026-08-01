@@ -1,0 +1,38 @@
+-- ============================================================
+-- Vista   : VWSEG_Tipo_Comprobantes_Validos
+-- Módulo  : Seguridad (Comunes)
+-- Objeto  : Devuelve los tipos de comprobante fiscales (NCF)
+--           vigentes junto con su código normalizado
+--           (serie + número de dos dígitos).
+-- Tabla   : SegNcf
+-- Autor   : L.Miranda
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Eliminación de ramas CASE redundantes mediante IN().
+--        Uso de SubStr/RPad en lugar de Right+concat+Trim+Char
+--        para mayor legibilidad.
+--        Añadir comentarios descriptivos.
+-- ============================================================
+Create Or Replace View VWSEG_Tipo_Comprobantes_Validos As
+
+Select
+    -- Serie del comprobante fiscal (A, B, E, etc.)
+    NcfSer                                      As SERIE_RELACIONADA,
+
+    -- Código numérico del tipo de comprobante
+    NcfTip                                      As TIPO_DE_COMPROBANTE,
+
+    -- Código normalizado: para series A, B y E se forma como
+    -- SERIE + número de tipo con relleno a 2 dígitos (ej. A01, E11).
+    -- Para cualquier otra serie se devuelve sólo la serie.
+    Case
+        When NcfSer In ('A', 'B', 'E')
+            Then NcfSer Concat Right('00' Concat Trim(Char(NcfTip)), 2)
+        Else NcfSer
+    End                                         As NcfTipValido
+
+From SegNcf
+
+Group By
+    NcfSer,
+    NcfTip

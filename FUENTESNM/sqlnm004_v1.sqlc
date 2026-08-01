@@ -1,0 +1,138 @@
+-- VERSIÓN ORIGINAL (respaldo) — ver sqlnm004.sqlc para v2.0
+-- PROBLEMAS CONOCIDOS:
+--   1. IfNull no estándar — usar COALESCE.
+--   2. Alias As en línea separada — dificulta legibilidad.
+--   3. Sin CAST explícito en horas/minutos.
+--   4. JOIN SegFec sin comentario que documente intención.
+--   5. Sin cabecera de documentación.
+--   6. Capitalización SQL mixta.
+Create Or Replace View VWNOM_TOTAL_HORAS_EXTRAS
+As Select T9.FecAno, T9.FecMes, T1.EmpCve, T2.EmpNom, T2.EmpApe,
+IfNull (Sum(Case When T9.FecDia = 01 Then (T1.ExtHor) End), 0) As
+HoraDia01,
+IfNull (Sum(Case When T9.FecDia = 01 Then (T1.ExtMin) End), 0) As
+MinutosDia01,
+IfNull (Sum(Case When T9.FecDia = 02 Then (T1.ExtHor) End), 0) As
+HoraDia02,
+IfNull (Sum(Case When T9.FecDia = 02 Then (T1.ExtMin) End), 0) As
+MinutosDia02,
+IfNull (Sum(Case When T9.FecDia = 03 Then (T1.ExtHor) End), 0) As
+HoraDia03,
+IfNull (Sum(Case When T9.FecDia = 03 Then (T1.ExtMin) End), 0) As
+MinutosDia03,
+IfNull (Sum(Case When T9.FecDia = 04 Then (T1.ExtHor) End), 0) As
+HoraDia04,
+IfNull (Sum(Case When T9.FecDia = 04 Then (T1.ExtMin) End), 0) As
+MinutosDia04,
+IfNull (Sum(Case When T9.FecDia = 05 Then (T1.ExtHor) End), 0) As
+HoraDia05,
+IfNull (Sum(Case When T9.FecDia = 05 Then (T1.ExtMin) End), 0) As
+MinutosDia05,
+IfNull (Sum(Case When T9.FecDia = 06 Then (T1.ExtHor) End), 0) As
+HoraDia06,
+IfNull (Sum(Case When T9.FecDia = 06 Then (T1.ExtMin) End), 0) As
+MinutosDia06,
+IfNull (Sum(Case When T9.FecDia = 07 Then (T1.ExtHor) End), 0) As
+HoraDia07,
+IfNull (Sum(Case When T9.FecDia = 07 Then (T1.ExtMin) End), 0) As
+MinutosDia07,
+IfNull (Sum(Case When T9.FecDia = 08 Then (T1.ExtHor) End), 0) As
+HoraDia08,
+IfNull (Sum(Case When T9.FecDia = 08 Then (T1.ExtMin) End), 0) As
+MinutosDia08,
+IfNull (Sum(Case When T9.FecDia = 09 Then (T1.ExtHor) End), 0) As
+HoraDia09,
+IfNull (Sum(Case When T9.FecDia = 09 Then (T1.ExtMin) End), 0) As
+MinutosDia09,
+IfNull (Sum(Case When T9.FecDia = 10 Then (T1.ExtHor) End), 0) As
+HoraDia10,
+IfNull (Sum(Case When T9.FecDia = 10 Then (T1.ExtMin) End), 0) As
+MinutosDia10,
+IfNull (Sum(Case When T9.FecDia = 11 Then (T1.ExtHor) End), 0) As
+HoraDia11,
+IfNull (Sum(Case When T9.FecDia = 11 Then (T1.ExtMin) End), 0) As
+MinutosDia11,
+IfNull (Sum(Case When T9.FecDia = 12 Then (T1.ExtHor) End), 0) As
+HoraDia12,
+IfNull (Sum(Case When T9.FecDia = 12 Then (T1.ExtMin) End), 0) As
+MinutosDia12,
+IfNull (Sum(Case When T9.FecDia = 13 Then (T1.ExtHor) End), 0) As
+HoraDia13,
+IfNull (Sum(Case When T9.FecDia = 13 Then (T1.ExtMin) End), 0) As
+MinutosDia13,
+IfNull (Sum(Case When T9.FecDia = 14 Then (T1.ExtHor) End), 0) As
+HoraDia14,
+IfNull (Sum(Case When T9.FecDia = 14 Then (T1.ExtMin) End), 0) As
+MinutosDia14,
+IfNull (Sum(Case When T9.FecDia = 15 Then (T1.ExtHor) End), 0) As
+HoraDia15,
+IfNull (Sum(Case When T9.FecDia = 15 Then (T1.ExtMin) End), 0) As
+MinutosDia15,
+IfNull (Sum(Case When T9.FecDia = 16 Then (T1.ExtHor) End), 0) As
+HoraDia16,
+IfNull (Sum(Case When T9.FecDia = 16 Then (T1.ExtMin) End), 0) As
+MinutosDia16,
+IfNull (Sum(Case When T9.FecDia = 17 Then (T1.ExtHor) End), 0) As
+HoraDia17,
+IfNull (Sum(Case When T9.FecDia = 17 Then (T1.ExtMin) End), 0) As
+MinutosDia17,
+IfNull (Sum(Case When T9.FecDia = 18 Then (T1.ExtHor) End), 0) As
+HoraDia18,
+IfNull (Sum(Case When T9.FecDia = 18 Then (T1.ExtMin) End), 0) As
+MinutosDia18,
+IfNull (Sum(Case When T9.FecDia = 19 Then (T1.ExtHor) End), 0) As
+HoraDia19,
+IfNull (Sum(Case When T9.FecDia = 19 Then (T1.ExtMin) End), 0) As
+MinutosDia19,
+IfNull (Sum(Case When T9.FecDia = 20 Then (T1.ExtHor) End), 0) As
+HoraDia20,
+IfNull (Sum(Case When T9.FecDia = 20 Then (T1.ExtMin) End), 0) As
+MinutosDia20,
+IfNull (Sum(Case When T9.FecDia = 21 Then (T1.ExtHor) End), 0) As
+HoraDia21,
+IfNull (Sum(Case When T9.FecDia = 21 Then (T1.ExtMin) End), 0) As
+MinutosDia21,
+IfNull (Sum(Case When T9.FecDia = 22 Then (T1.ExtHor) End), 0) As
+HoraDia22,
+IfNull (Sum(Case When T9.FecDia = 22 Then (T1.ExtMin) End), 0) As
+MinutosDia22,
+IfNull (Sum(Case When T9.FecDia = 23 Then (T1.ExtHor) End), 0) As
+HoraDia23,
+IfNull (Sum(Case When T9.FecDia = 23 Then (T1.ExtMin) End), 0) As
+MinutosDia23,
+IfNull (Sum(Case When T9.FecDia = 24 Then (T1.ExtHor) End), 0) As
+HoraDia24,
+IfNull (Sum(Case When T9.FecDia = 24 Then (T1.ExtMin) End), 0) As
+MinutosDia24,
+IfNull (Sum(Case When T9.FecDia = 25 Then (T1.ExtHor) End), 0) As
+HoraDia25,
+IfNull (Sum(Case When T9.FecDia = 25 Then (T1.ExtMin) End), 0) As
+MinutosDia25,
+IfNull (Sum(Case When T9.FecDia = 26 Then (T1.ExtHor) End), 0) As
+HoraDia26,
+IfNull (Sum(Case When T9.FecDia = 26 Then (T1.ExtMin) End), 0) As
+MinutosDia26,
+IfNull (Sum(Case When T9.FecDia = 27 Then (T1.ExtHor) End), 0) As
+HoraDia27,
+IfNull (Sum(Case When T9.FecDia = 27 Then (T1.ExtMin) End), 0) As
+MinutosDia27,
+IfNull (Sum(Case When T9.FecDia = 28 Then (T1.ExtHor) End), 0) As
+HoraDia28,
+IfNull (Sum(Case When T9.FecDia = 28 Then (T1.ExtMin) End), 0) As
+MinutosDia28,
+IfNull (Sum(Case When T9.FecDia = 29 Then (T1.ExtHor) End), 0) As
+HoraDia29,
+IfNull (Sum(Case When T9.FecDia = 29 Then (T1.ExtMin) End), 0) As
+MinutosDia29,
+IfNull (Sum(Case When T9.FecDia = 30 Then (T1.ExtHor) End), 0) As
+HoraDia30,
+IfNull (Sum(Case When T9.FecDia = 30 Then (T1.ExtMin) End), 0) As
+MinutosDia30,
+IfNull (Sum(Case When T9.FecDia = 31 Then (T1.ExtHor) End), 0) As
+HoraDia31,
+IfNull (Sum(Case When T9.FecDia = 31 Then (T1.ExtMin) End), 0) As
+MinutosDia31
+  From NomExtd T1
+Left Outer Join NomEmp T2 On (T1.EmpCve = T2.EmpCve)
+           Join SegFec T9 On (T1.HorFec = T9.FecYmd)
+Group By T9.FecAno, T9.FecMes, T1.EmpCve, T2.EmpNom, T2.EmpApe

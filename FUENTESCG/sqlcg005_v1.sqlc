@@ -1,0 +1,33 @@
+Create Or Replace View VWCOG_MAYOR_GENERAL_BCC
+As Select T2.PerAno, T2.PerNum, T1.CtaCve, T2.AuxLis, T2.AuxCve,
+(Case When T2.AuxCve = 0 Then T1.CtaDes Else T3.AuxNom End)
+Descripcion, T4.CcoCve, T5.CcoDes As Descripcion_Cco,
+IfNull (Sum(T2.MgeBip), 0) As Balance_Inicial,
+IfNull (Sum(T2.MgeDeb), 0) As Debitos,
+IfNUll (Sum(T2.MgeCre), 0) As Creditos,
+IfNull (Sum(T2.MgeBal), 0) As Balance_Final,
+IfNull (Sum(T4.BccBip), 0) As Balance_Inicial_Bcc,
+IfNull (Sum(T4.BccDeb), 0) As Debitos_Bcc,
+IfNUll (Sum(T4.BccCre), 0) As Creditos_Bcc,
+IfNull (Sum(T4.BccBal), 0) As Balance_Final_Bcc
+           From CogCta T1
+           Join CogMge T2
+             On (T1.CtaCve = T2.CtaCve)
+Left Outer Join CogAuxd T3
+             On (T2.AuxLis = T3.AuxLis)
+            And (T2.AuxCve = T3.AuxCve)
+Left Outer Join CogBcc T4
+             On (T2.PerAno = T4.PerAno)
+            And (T2.PerNum = T4.PerNum)
+            And (T1.CtaCve = T4.CtaCve)
+            And (T2.AuxLis = T4.AuxLis)
+            And (T2.AuxCve = T4.AuxCve)
+Left Outer Join CogCco T5
+             On (T4.CcoCve = T5.CcoCve)
+           Join CogPer T6
+             On (T2.PerAno = T6.PerAno)
+            And (T2.PerNum = T6.PerNum)
+          Where (T6.PerSit = 'C')
+Group By T2.PerAno, T2.PerNum, T1.CtaCve, T2.AuxLis, T2.AuxCve,
+(Case When T2.AuxCve = 0 Then T1.CtaDes Else T3.AuxNom End),
+T4.CcoCve, T5.CcoDes

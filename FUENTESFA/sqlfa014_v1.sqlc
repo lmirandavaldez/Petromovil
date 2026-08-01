@@ -1,0 +1,36 @@
+Create Or Replace View VWFAC_SUBDIVIDIR_MONTOS_UNICO_INGRESO_DEFINITIVO
+As Select T1.DisCve As Codigo_Del_Distrito,
+          T2.AlmCve As Codigo_Almacen,
+          T1.OrdNro As Numero_Pedido,
+          T2.CliCve As Codigo_Cliente,
+          T9.FecYmd As Fecha_Pedido,
+          T1.ArtCve As Codigo_Articulo,
+          Sum(T1.OrdCan) As Total_Cantidad,
+          Avg(T1.OrdPve) As Precio_Promedio,
+          Sum(T1.OrdImp) As Importe,
+          Int((Sum(T1.OrdImp) +
+               (Select ParMti From ItePar Where ParCve= '@') - 1) /
+               (Select ParMti From ItePar Where ParCve= '@')) As Veces
+     From FacOrdd T1
+     Join FacOrdh T2
+       On (T1.DisCve = T2.DisCve)
+      And (T1.OrdNro = T2.OrdNro)
+     Join SegDis T3
+       On (T1.DisCve = T3.DisCve)
+      And (T3.DisTip = 'S' Or T3.DisTip = 'E')
+     Join CxcAdc T4
+       On (T1.DisCve = T4.DisCve)
+      And (T2.CliCve = T4.CliCve)
+      And (T4.TcfCve In(12, 32))
+     Join InvAlm T5
+       On (T1.DisCve = T5.DisCve)
+      And (T2.AlmCve = T5.AlmCve)
+      And (T5.AlmVen = 'S')
+      And (T5.AlmTip = 'G' Or T5.AlmTip = 'E')
+     Join SegFec T9
+       On (T2.OrdAno = T9.FecAno)
+      And (T2.OrdMes = T9.FecMes)
+      And (T2.OrdDia = T9.FecDia)
+    Group by T1.DisCve, T2.AlmCve, T1.OrdNro, T2.CliCve,
+             T9.FecYmd, T1.ArtCve
+        Having Sum(T1.OrdCan) > 0 And Sum(T1.OrdImp) > 0

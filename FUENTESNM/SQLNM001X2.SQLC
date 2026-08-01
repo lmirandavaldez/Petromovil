@@ -1,0 +1,86 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Vista   : VWNOM_MAESTRO_EMPLEADOS_V2
+-- Propósito: Maestro de empleados activos con antigüedad
+--            desglosada en años, meses y días usando las
+--            funciones de tabla SEGLIB.SG_TIEMPO_*.
+-- Versión : 2.0
+-- Corrección v1→v2:
+--   Las funciones SG_TIEMPO_ANOS, SG_TIEMPO_MESES y
+--   SG_TIEMPO_DIAS son funciones de TABLA (RETURNS TABLE).
+--   No pueden usarse directamente en la lista SELECT como
+--   funciones escalares (causa SQL0390).
+--   Solución: se usan CROSS JOIN LATERAL (TABLE(...)) para
+--   obtener el valor de cada función en la cláusula FROM.
+--   Adicionalmente, la construcción de Fecha_Ingreso se
+--   centraliza en un primer LATERAL para eliminar la
+--   repetición de la expresión en 4 lugares.
+-- ============================================================
+
+Create Or Replace View VWNOM_MAESTRO_EMPLEADOS_V2 (
+    EmpCve,
+    EmpNom,
+    EmpApe,
+    Fecha_Ingreso,
+    Anos_En_la_Empresa,
+    Meses_En_la_Empresa,
+    Dias_En_la_Empresa
+) AS
+SELECT
+    T1.EmpCve,
+    T1.EmpNom,
+    T1.EmpApe,
+    FI.Fecha_Ingreso,
+    A.ANOS    AS Anos_En_la_Empresa,
+    M.MESES   AS Meses_En_la_Empresa,
+    D.DIAS    AS Dias_En_la_Empresa
+
+FROM NomEmp T1
+
+-- LATERAL 1: construye Fecha_Ingreso una sola vez
+-- evita repetir la misma expresión en cada función
+CROSS JOIN LATERAL (
+    SELECT DATE(
+        Concat(Substring('0000', 0, 5 - Length(Trim(T1.EmpAin))),
+               Trim(T1.EmpAin)) || '-' ||
+        Concat(Substring('00',   0, 3 - Length(Trim(T1.EmpMin))),
+               Trim(T1.EmpMin)) || '-' ||
+        Concat(Substring('00',   0, 3 - Length(Trim(T1.EmpDin))),
+               Trim(T1.EmpDin))
+    ) AS Fecha_Ingreso
+    FROM SYSIBM.SYSDUMMY1
+) AS FI
+
+-- LATERAL 2: años completos de antigüedad
+-- SG_TIEMPO_ANOS es función de tabla → se llama con TABLE(...)
+CROSS JOIN LATERAL (
+    SELECT ANOS
+    FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(
+        FI.Fecha_Ingreso,
+        CURRENT_DATE
+    ))
+) AS A
+
+-- LATERAL 3: meses fraccionarios de antigüedad
+-- SG_TIEMPO_MESES es función de tabla → se llama con TABLE(...)
+CROSS JOIN LATERAL (
+    SELECT MESES
+    FROM TABLE(SEGLIB.SG_TIEMPO_MESES(
+        FI.Fecha_Ingreso,
+        CURRENT_DATE
+    ))
+) AS M
+
+-- LATERAL 4: días fraccionarios de antigüedad
+-- SG_TIEMPO_DIAS es función de tabla → se llama con TABLE(...)
+-- IncluirDia = 1 para replicar el comportamiento de SG7006
+CROSS JOIN LATERAL (
+    SELECT DIAS
+    FROM TABLE(SEGLIB.SG_TIEMPO_DIAS(
+        FI.Fecha_Ingreso,
+        CURRENT_DATE,
+        1
+    ))
+) AS D
+
+WHERE T1.EmpSta = 'A';

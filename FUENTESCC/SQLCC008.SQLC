@@ -1,0 +1,72 @@
+-- =============================================================================
+-- Vista   : VWCXC_Ultimos_Documentos
+-- Módulo  : Cuentas por Cobrar (CxC)
+-- Propósito: Resume, por cliente y tipo de documento, la fecha del último
+--            documento emitido y la cantidad total de documentos registrados
+--            en CxcUlt. Filtra únicamente los tipos de documento vigentes
+--            para el subsistema 'CC' (Cuentas por Cobrar) según el catálogo
+--            de listas de documentos (SegLdm).
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcUlt  - Últimos documentos por cliente (tabla principal, con contadores
+--             y campos de fecha descompuestos: UltAno, UltMes, UltDia)
+--   CxcCdo  - Catálogo de tipos de documento de CxC
+--   SegLdm  - Lista maestra de documentos del sistema (filtrada por SisCve='CC')
+--   SegFec  - Tabla de fechas del sistema; se usa para obtener FecYmd
+--             (fecha ISO) a partir de los campos año/mes/día de CxcUlt
+-- -----------------------------------------------------------------------------
+-- Notas técnicas:
+--   - El patrón de JOIN con SegFec convierte los campos separados UltAno /
+--     UltMes / UltDia en un único valor de fecha (FecYmd) sin necesidad de
+--     construir una cadena; alternativa al patrón CONCAT/SUBSTRING
+--     de otras vistas.
+--   - El filtro SisCve = 'CC' se coloca en la condición ON del JOIN con SegLdm.
+--     Como el JOIN es INNER, el resultado es equivalente a ponerlo en WHERE;
+--     se conserva en ON para no excluir filas de la tabla base (CxcUlt) si en
+--     alguna revisión futura el JOIN cambiara a LEFT OUTER.
+--   - LdmTip : Tipo de documento según la lista maestra.
+--   - LdmTor : Orden / secuencia del tipo de documento.
+--   - UltCon : Contador de documentos emitidos para esa clave de documento.
+--   - FecYmd : Fecha en formato ISO (YYYY-MM-DD o YYYYMMDD según el motor).
+--   - T9 en el original sugiere tablas intermedias 
+--      eliminadas en versiones previas.
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1  Versión original
+--   v2  Alias descriptivos, JOINs explícitos (INNER JOIN), indentación
+--       estándar, documentación completa y convención UPPER CASE
+-- =============================================================================
+
+CREATE OR REPLACE VIEW VWCXC_Ultimos_Documentos AS
+
+SELECT
+    -- Agrupadores
+    ult.CliCve  AS CliCve,              -- Clave del cliente
+    ldm.LdmTip  AS LdmTip,              -- Tipo de documento (lista maestra)
+    ldm.LdmTor  AS LdmTor,              -- Orden / secuencia del tipo de documento
+
+    -- Agregados
+    MAX(fec.FecYmd) AS Fecha_Ultimo_Doc,    -- Fecha del último documento emitido
+    SUM(ult.UltCon) AS Cantidad_Emitidos    -- Total de documentos emitidos
+
+FROM CxcUlt ult
+
+-- Tipo de documento de CxC asociado al registro
+INNER JOIN CxcCdo cdo
+    ON cdo.CdoCve = ult.CdoCve
+
+-- Lista maestra de documentos, filtrada al subsistema CxC ('CC')
+INNER JOIN SegLdm ldm
+    ON  ldm.LdmCve = cdo.CdoRel
+    AND ldm.SisCve = 'CC'
+
+-- Tabla de fechas: convierte UltAno/UltMes/UltDia en el campo FecYmd (fecha ISO)
+INNER JOIN SegFec fec
+    ON  fec.FecAno = ult.UltAno
+    AND fec.FecMes = ult.UltMes
+    AND fec.FecDia = ult.UltDia
+
+GROUP BY
+    ult.CliCve,     -- Clave del cliente
+    ldm.LdmTip,    -- Tipo de documento
+    ldm.LdmTor     -- Orden del tipo de documento

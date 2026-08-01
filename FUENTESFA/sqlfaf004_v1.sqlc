@@ -1,0 +1,78 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- VERSIÓN ORIGINAL (respaldo) — ver sqlfaf004.sqlc para v2.0
+
+/* Funcion Fechas Historicas Clientes */
+CREATE OR REPLACE FUNCTION SEGLIB.FA_FECHAS_CLIENTE (
+    P_CODIGO_CLIENTE INTEGER,
+    P_FECHA_TOPE     DATE,
+    P_TIPO           CHAR(1)     -- 'N' = solo DisTip N, 'T' = todos
+)
+RETURNS TABLE (
+    CODIGO_CLIENTE               INTEGER,
+    FECHA_CREACION               DATE,
+    FECHA_MODIFICACION           DATE,
+    FECHA_ULTIMA_COMPRA          DATE,
+    FECHA_COMPRA_PERIODO         DATE,
+    FECHA_PRIMERA_COMPRA_HIST    DATE
+)
+LANGUAGE SQL
+NOT DETERMINISTIC
+READS SQL DATA
+RETURN (
+    SELECT
+        P_CODIGO_CLIENTE AS CODIGO_CLIENTE,
+
+        /* FECHAS CREACIÓN Y MODIFICACIÓN  un solo acceso a CXCCLI */
+        COALESCE(CXC.FECHA_CREACION,    DATE('1900-01-01'))
+                 AS FECHA_CREACION,
+        COALESCE(CXC.FECHA_MODIFICACION,DATE('1900-01-01'))
+                 AS FECHA_MODIFICACION,
+
+        /* FECHAS DE COMPRA  un solo acceso a FacDtoh/SegDis/SegFec */
+        COALESCE(FAC.FECHA_ULTIMA_COMPRA,       DATE('1900-01-01'))
+        AS FECHA_ULTIMA_COMPRA,
+        COALESCE(FAC.FECHA_COMPRA_PERIODO,      DATE('1900-01-01'))
+        AS FECHA_COMPRA_PERIODO,
+        COALESCE(FAC.FECHA_PRIMERA_COMPRA_HIST, DATE('1900-01-01'))
+        AS FECHA_PRIMERA_COMPRA_HIST
+
+    FROM SYSIBM.SYSDUMMY1
+
+    /*  CXCCLI: creación y modificación en un único acceso  */
+    LEFT JOIN LATERAL (
+        SELECT
+            DATE(C.CreTst) AS FECHA_CREACION,
+            DATE(C.ModTst) AS FECHA_MODIFICACION
+        FROM CXCCLI C
+        WHERE C.CliCve = P_CODIGO_CLIENTE
+        FETCH FIRST 1 ROW ONLY
+    ) AS CXC ON 1 = 1
+
+    /*  FacDtoh: tres métricas de fecha en un único scan  */
+    LEFT JOIN LATERAL (
+        SELECT
+            MAX(CASE WHEN T9.FecIso <= P_FECHA_TOPE
+                     THEN T9.FecIso END)
+                     AS FECHA_ULTIMA_COMPRA,
+            MIN(CASE WHEN T9.FecIso BETWEEN
+                          DATE(TO_CHAR(P_FECHA_TOPE, 'YYYY-MM') || '-01')
+                      AND P_FECHA_TOPE
+                     THEN T9.FecIso END)
+                     AS FECHA_COMPRA_PERIODO,
+            MIN(CASE WHEN T9.FecIso <= LAST_DAY(P_FECHA_TOPE - 1 MONTH)
+                     THEN T9.FecIso END)
+                     AS FECHA_PRIMERA_COMPRA_HIST
+        FROM FacDtoh T2
+        JOIN SegDis T3 ON T2.DisCve = T3.DisCve
+        JOIN SegFec T9
+          ON T2.DtoAno = T9.FecAno
+         AND T2.DtoMes = T9.FecMes
+         AND T2.DtoDia = T9.FecDia
+        WHERE T2.CliCve = P_CODIGO_CLIENTE
+          AND T2.DtoSta = 'A'
+          AND T2.DtoTip NOT IN (2, 8)
+          AND (P_TIPO = 'T' OR T3.DisTip = 'N')
+    ) AS FAC ON 1 = 1
+);
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_FECHAS_CLIENTE TO PUBLIC;

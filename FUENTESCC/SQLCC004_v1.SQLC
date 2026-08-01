@@ -1,0 +1,9 @@
+Create Or Replace View VWCXC_Vendedores_Comision
+As Select T1.VenCve, T1.VenNom, T2.CatCve, T3.CatDes, T2.RcvLmi,
+       T2.RcvLms, T2.RcvCfi, T2.RcvPad, T2.RcvVa1, T2.RcvPo1,
+       T2.RcvMdc
+  From CxcVen T1
+Left Outer Join CxcRcv T2
+    On (T1.VenCve = T2.VenCve)
+Left Outer Join InvCat T3
+    On (T2.CatCve = T3.CatCve)

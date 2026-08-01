@@ -1,0 +1,5 @@
+Create Or Replace View VWCXC_Territorios_Zonas
+As Select T1.TerCve, T1.TerDes, T2.ZonCve, T2.ZonDes
+  From CxcTer T1
+  Join CxcZon T2
+    On (T1.TerCve = T2.TerCve)

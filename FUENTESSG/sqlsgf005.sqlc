@@ -1,0 +1,60 @@
+-- ============================================================
+-- Función : SEGLIB.SG_DIA_SEMANA
+-- Tipo    : Tabla Function (UDTF)
+-- Objeto  : Recibe una fecha y devuelve el número de día de la
+--           semana (DIA_NUM: 1=Domingo … 7=Sábado) y su nombre
+--           en español (DIA_NOM).
+--           Sustituye al programa SG7002.
+-- Esquema : SEGLIB
+-- Autor   : L. Miranda
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se corrigen tildes en los nombres de días
+--          (Miércoles, Sábado).
+--        Se agrega CALLED ON NULL INPUT para documentar
+--          el comportamiento ante fechas nulas.
+--        Se agrega SPECIFIC para identificar unívocamente
+--          la firma de la función.
+--        Se documenta cada sección con comentarios.
+--        Mejora de formato e indentación.
+-- ============================================================
+
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02)
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_DIA_SEMANA (
+    -- Fecha para la cual se desea conocer el día de la semana
+    Fecha DATE
+)
+RETURNS TABLE (
+    DIA_NUM  INTEGER,       -- Número de día: 1=Domingo, 2=Lunes … 7=Sábado
+    DIA_NOM  VARCHAR(10)    -- Nombre del día en español
+)
+SPECIFIC          SEGLIB.SG_DIA_SEMANA
+LANGUAGE          SQL
+DETERMINISTIC             -- El mismo input siempre produce el mismo output
+NO EXTERNAL ACTION        -- No tiene efectos secundarios externos
+CALLED ON NULL INPUT      -- Si Fecha es NULL la función 
+                          --es llamada igual (devuelve NULL)
+BEGIN
+    RETURN
+        SELECT
+            -- Número de día según la convención ISO de DB2/IBM i (1=Domingo)
+            DAYOFWEEK(Fecha)                AS DIA_NUM,
+
+            -- Nombre del día en español con tildes correctas
+            CASE DAYOFWEEK(Fecha)
+                WHEN 1 THEN 'Domingo'
+                WHEN 2 THEN 'Lunes'
+                WHEN 3 THEN 'Martes'
+                WHEN 4 THEN 'Miércoles'
+                WHEN 5 THEN 'Jueves'
+                WHEN 6 THEN 'Viernes'
+                WHEN 7 THEN 'Sábado'
+                ELSE        NULL    -- Nunca ocurre; cubre el CASE formalmente
+            END                             AS DIA_NOM
+
+        FROM SYSIBM.SYSDUMMY1;
+END;
+
+-- Conceder permisos de ejecución a todos los usuarios
+GRANT EXECUTE ON SPECIFIC FUNCTION SEGLIB.SG_DIA_SEMANA TO PUBLIC;

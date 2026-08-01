@@ -1,0 +1,87 @@
+Create Or Replace View VWFAC_Ventas_Distrito_Meses
+As Select T1.DisCve, T2.DisDes, T1.DtoAno, T1.ArtCve, T3.ArtDes,
+          T3.CatCve, T4.CatDes, T3.ArtPpr,
+IfNull (Sum(Case When T1.DtoMes = 01 Then (T1.DtoCan) End), 0) As
+Cantidad_Ene,
+IfNull (Sum(Case When T1.DtoMes = 01 Then (T1.DtoImp) End), 0) As
+Importe_Ene,
+IfNull (Sum(Case When T1.DtoMes = 01 Then (T1.DtoMcp) End), 0) As
+Costo_Ene,
+IfNull (Sum(Case When T1.DtoMes = 02 Then (T1.DtoCan) End), 0) As
+Cantidad_Feb,
+IfNull (Sum(Case When T1.DtoMes = 02 Then (T1.DtoImp) End), 0) As
+Importe_Feb,
+IfNull (Sum(Case When T1.DtoMes = 02 Then (T1.DtoMcp) End), 0) As
+Costo_Feb,
+IfNull (Sum(Case When T1.DtoMes = 03 Then (T1.DtoCan) End), 0) As
+Cantidad_Mar,
+IfNull (Sum(Case When T1.DtoMes = 03 Then (T1.DtoImp) End), 0) As
+Importe_Mar,
+IfNull (Sum(Case When T1.DtoMes = 03 Then (T1.DtoMcp) End), 0) As
+Costo_Mar,
+IfNull (Sum(Case When T1.DtoMes = 04 Then (T1.DtoCan) End), 0) As
+Cantidad_Abr,
+IfNull (Sum(Case When T1.DtoMes = 04 Then (T1.DtoImp) End), 0) As
+Importe_Abr,
+IfNull (Sum(Case When T1.DtoMes = 04 Then (T1.DtoMcp) End), 0) As
+Costo_Abr,
+IfNull (Sum(Case When T1.DtoMes = 05 Then (T1.DtoCan) End), 0) As
+Cantidad_May,
+IfNull (Sum(Case When T1.DtoMes = 05 Then (T1.DtoImp) End), 0) As
+Importe_May,
+IfNull (Sum(Case When T1.DtoMes = 05 Then (T1.DtoMcp) End), 0) As
+Costo_May,
+IfNull (Sum(Case When T1.DtoMes = 06 Then (T1.DtoCan) End), 0) As
+Cantidad_Jun,
+IfNull (Sum(Case When T1.DtoMes = 06 Then (T1.DtoImp) End), 0) As
+Importe_Jun,
+IfNull (Sum(Case When T1.DtoMes = 06 Then (T1.DtoMcp) End), 0) As
+Costo_Jun,
+IfNull (Sum(Case When T1.DtoMes = 07 Then (T1.DtoCan) End), 0) As
+Cantidad_Jul,
+IfNull (Sum(Case When T1.DtoMes = 07 Then (T1.DtoImp) End), 0) As
+Importe_Jul,
+IfNull (Sum(Case When T1.DtoMes = 07 Then (T1.DtoMcp) End), 0) As
+Costo_Jul,
+IfNull (Sum(Case When T1.DtoMes = 08 Then (T1.DtoCan) End), 0) As
+Cantidad_Ago,
+IfNull (Sum(Case When T1.DtoMes = 08 Then (T1.DtoImp) End), 0) As
+Importe_Ago,
+IfNull (Sum(Case When T1.DtoMes = 08 Then (T1.DtoMcp) End), 0) As
+Costo_Ago,
+IfNull (Sum(Case When T1.DtoMes = 09 Then (T1.DtoCan) End), 0) As
+Cantidad_Sep,
+IfNull (Sum(Case When T1.DtoMes = 09 Then (T1.DtoImp) End), 0) As
+Importe_Sep,
+IfNull (Sum(Case When T1.DtoMes = 09 Then (T1.DtoMcp) End), 0) As
+Costo_Sep,
+IfNull (Sum(Case When T1.DtoMes = 10 Then (T1.DtoCan) End), 0) As
+Cantidad_Oct,
+IfNull (Sum(Case When T1.DtoMes = 10 Then (T1.DtoImp) End), 0) As
+Importe_Oct,
+IfNull (Sum(Case When T1.DtoMes = 10 Then (T1.DtoMcp) End), 0) As
+Costo_Oct,
+IfNull (Sum(Case When T1.DtoMes = 11 Then (T1.DtoCan) End), 0) As
+Cantidad_Nov,
+IfNull (Sum(Case When T1.DtoMes = 11 Then (T1.DtoImp) End), 0) As
+Importe_Nov,
+IfNull (Sum(Case When T1.DtoMes = 11 Then (T1.DtoMcp) End), 0) As
+Costo_Nov,
+IfNull (Sum(Case When T1.DtoMes = 12 Then (T1.DtoCan) End), 0) As
+Cantidad_Dic,
+IfNull (Sum(Case When T1.DtoMes = 12 Then (T1.DtoImp) End), 0) As
+Importe_Dic,
+IfNull (Sum(Case When T1.DtoMes = 12 Then (T1.DtoMcp) End), 0) As
+Costo_Dic,
+IfNull (Sum(T1.DtoCan), 0) As Total_Cantidad,
+IfNull (Sum(T1.DtoImp), 0) As Total_Importe,
+IfNull (Sum(T1.DtoMcp), 0) As Total_Costo
+  From FacDtod T1
+  Join SegDis T2
+    On (T1.DisCve = T2.DisCve)
+  Join InvArt T3
+    On (T1.ArtCve = T3.ArtCve)
+Left Outer Join InvCat T4
+    On (T3.CatCve = T4.CatCve)
+Group By T1.DisCve, T2.DisDes, T1.DtoAno, T1.ArtCve, T3.ArtDes,
+         T3.CatCve, T4.CatDes, T3.ArtPpr

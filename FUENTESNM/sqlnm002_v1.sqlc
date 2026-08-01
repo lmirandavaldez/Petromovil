@@ -1,0 +1,51 @@
+-- VERSIÓN ORIGINAL (respaldo) — ver sqlnm002.sqlc para v2.0
+-- PROBLEMAS CONOCIDOS:
+--   1. IfNull no estándar — usar COALESCE.
+--   2. Alias As en línea separada — dificulta legibilidad.
+--   3. Sin CAST explícito en los importes — tipo puede ser inconsistente.
+--   4. Sin cabecera de documentación.
+--   5. Capitalización SQL mixta.
+Create Or Replace View VWNOM_ACU_EMP_CONCEPTOSMESES
+As Select T1.EmpCve, T1.EmpApe, T1.EmpNom, T1.EmpSta, T1.UbiCve,
+          T7.UbiDes, T1.DepCve, T4.DepDes, T1.CarCve, T8.CarDes,
+          T1.CatCve, T9.CatDes,
+                     T1.CcoCve, T5.CcoDes, T2.CmcCve, T3.CmcDes,
+          T3.CmcTip, T3.CmcCla, T3.CtaCve, T6.CtaDes, T2.AecAno,
+IfNull (Sum(Case When T2.AecMes = 01 Then (T2.AecImd) End), 0) As
+Importe_Ene,
+IfNull (Sum(Case When T2.AecMes = 02 Then (T2.AecImd) End), 0) As
+Importe_Feb,
+IfNull (Sum(Case When T2.AecMes = 03 Then (T2.AecImd) End), 0) As
+Importe_Mar,
+IfNull (Sum(Case When T2.AecMes = 04 Then (T2.AecImd) End), 0) As
+Importe_Abr,
+IfNull (Sum(Case When T2.AecMes = 05 Then (T2.AecImd) End), 0) As
+Importe_May,
+IfNull (Sum(Case When T2.AecMes = 06 Then (T2.AecImd) End), 0) As
+Importe_Jun,
+IfNull (Sum(Case When T2.AecMes = 07 Then (T2.AecImd) End), 0) As
+Importe_Jul,
+IfNull (Sum(Case When T2.AecMes = 08 Then (T2.AecImd) End), 0) As
+Importe_Ago,
+IfNull (Sum(Case When T2.AecMes = 09 Then (T2.AecImd) End), 0) As
+Importe_Sep,
+IfNull (Sum(Case When T2.AecMes = 10 Then (T2.AecImd) End), 0) As
+Importe_Oct,
+IfNull (Sum(Case When T2.AecMes = 11 Then (T2.AecImd) End), 0) As
+Importe_Nov,
+IfNull (Sum(Case When T2.AecMes = 12 Then (T2.AecImd) End), 0) As
+Importe_Dic
+  From NomEmp T1
+  Left Outer Join NomAecd T2 On (T1.EmpCve = T2.EmpCve)
+  Left Outer Join NomCmc  T3 On (T2.CmcCve = T3.CmcCve)
+  Left Outer Join NomDep  T4 On (T1.DepCve = T4.DepCve)
+  Left Outer Join CogCco  T5 On (T1.CcoCve = T5.CcoCve)
+  Left Outer Join CogCta  T6 On (T3.CtaCve = T6.CtaCve)
+  Left Outer Join NomUbi  T7 On (T1.UbiCve = T7.UbiCve)
+  Left Outer Join NomCar  T8 On (T1.CarCve = T8.CarCve)
+  Left Outer Join NomCat  T9 On (T1.CatCve = T9.CatCve)
+  Group By T1.EmpCve, T1.EmpApe, T1.EmpNom, T1.EmpSta, T1.UbiCve,
+           T7.UbiDes, T1.DepCve, T4.DepDes, T1.CarCve, T8.CarDes,
+           T1.CatCve, T9.CatDes,
+                      T1.CcoCve, T5.CcoDes, T2.CmcCve, T3.CmcDes,
+           T3.CmcTip, T3.CmcCla, T3.CtaCve, T6.CtaDes, T2.AecAno

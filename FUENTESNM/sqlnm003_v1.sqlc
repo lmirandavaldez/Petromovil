@@ -1,0 +1,140 @@
+-- VERSIÓN ORIGINAL (respaldo) — ver sqlnm003.sqlc para v2.0
+-- PROBLEMAS CONOCIDOS:
+--   1. IfNull no estándar — usar COALESCE.
+--   2. Alias As en línea separada — dificulta legibilidad.
+--   3. Sin CAST explícito en horas/minutos.
+--   4. CRÍTICO: Falta T9.FecAno y T9.FecMes en SELECT y GROUP BY.
+--      Sin esos campos, las horas de todos los meses/años se acumulan
+--      juntas para cada número de día — resultado incorrecto.
+--   5. Sin cabecera de documentación.
+--   6. Capitalización SQL mixta.
+Create Or Replace View VWNOM_DIST_HORAS_EXTRAS_TEMP
+As Select T1.EmpCve, T2.EmpNom, T2.EmpApe,
+IfNull (Sum(Case When T9.FecDia = 01 Then (T1.HorCht) End), 0) As
+Horas_01,
+IfNull (Sum(Case When T9.FecDia = 01 Then (T1.HorMin) End), 0) As
+Minutos_01,
+IfNull (Sum(Case When T9.FecDia = 02 Then (T1.HorCht) End), 0) As
+Horas_02,
+IfNull (Sum(Case When T9.FecDia = 02 Then (T1.HorMin) End), 0) As
+Minutos_02,
+IfNull (Sum(Case When T9.FecDia = 03 Then (T1.HorCht) End), 0) As
+Horas_03,
+IfNull (Sum(Case When T9.FecDia = 03 Then (T1.HorMin) End), 0) As
+Minutos_03,
+IfNull (Sum(Case When T9.FecDia = 04 Then (T1.HorCht) End), 0) As
+Horas_04,
+IfNull (Sum(Case When T9.FecDia = 04 Then (T1.HorMin) End), 0) As
+Minutos_04,
+IfNull (Sum(Case When T9.FecDia = 05 Then (T1.HorCht) End), 0) As
+Horas_05,
+IfNull (Sum(Case When T9.FecDia = 05 Then (T1.HorMin) End), 0) As
+Minutos_05,
+IfNull (Sum(Case When T9.FecDia = 06 Then (T1.HorCht) End), 0) As
+Horas_06,
+IfNull (Sum(Case When T9.FecDia = 06 Then (T1.HorMin) End), 0) As
+Minutos_06,
+IfNull (Sum(Case When T9.FecDia = 07 Then (T1.HorCht) End), 0) As
+Horas_07,
+IfNull (Sum(Case When T9.FecDia = 07 Then (T1.HorMin) End), 0) As
+Minutos_07,
+IfNull (Sum(Case When T9.FecDia = 08 Then (T1.HorCht) End), 0) As
+Horas_08,
+IfNull (Sum(Case When T9.FecDia = 08 Then (T1.HorMin) End), 0) As
+Minutos_08,
+IfNull (Sum(Case When T9.FecDia = 09 Then (T1.HorCht) End), 0) As
+Horas_09,
+IfNull (Sum(Case When T9.FecDia = 09 Then (T1.HorMin) End), 0) As
+Minutos_09,
+IfNull (Sum(Case When T9.FecDia = 10 Then (T1.HorCht) End), 0) As
+Horas_10,
+IfNull (Sum(Case When T9.FecDia = 10 Then (T1.HorMin) End), 0) As
+Minutos_10,
+IfNull (Sum(Case When T9.FecDia = 11 Then (T1.HorCht) End), 0) As
+Horas_11,
+IfNull (Sum(Case When T9.FecDia = 11 Then (T1.HorMin) End), 0) As
+Minutos_11,
+IfNull (Sum(Case When T9.FecDia = 12 Then (T1.HorCht) End), 0) As
+Horas_12,
+IfNull (Sum(Case When T9.FecDia = 12 Then (T1.HorMin) End), 0) As
+Minutos_12,
+IfNull (Sum(Case When T9.FecDia = 13 Then (T1.HorCht) End), 0) As
+Horas_13,
+IfNull (Sum(Case When T9.FecDia = 13 Then (T1.HorMin) End), 0) As
+Minutos_13,
+IfNull (Sum(Case When T9.FecDia = 14 Then (T1.HorCht) End), 0) As
+Horas_14,
+IfNull (Sum(Case When T9.FecDia = 14 Then (T1.HorMin) End), 0) As
+Minutos_14,
+IfNull (Sum(Case When T9.FecDia = 15 Then (T1.HorCht) End), 0) As
+Horas_15,
+IfNull (Sum(Case When T9.FecDia = 15 Then (T1.HorMin) End), 0) As
+Minutos_15,
+IfNull (Sum(Case When T9.FecDia = 16 Then (T1.HorCht) End), 0) As
+Horas_16,
+IfNull (Sum(Case When T9.FecDia = 16 Then (T1.HorMin) End), 0) As
+Minutos_16,
+IfNull (Sum(Case When T9.FecDia = 17 Then (T1.HorCht) End), 0) As
+Horas_17,
+IfNull (Sum(Case When T9.FecDia = 17 Then (T1.HorMin) End), 0) As
+Minutos_17,
+IfNull (Sum(Case When T9.FecDia = 18 Then (T1.HorCht) End), 0) As
+Horas_18,
+IfNull (Sum(Case When T9.FecDia = 18 Then (T1.HorMin) End), 0) As
+Minutos_18,
+IfNull (Sum(Case When T9.FecDia = 19 Then (T1.HorCht) End), 0) As
+Horas_19,
+IfNull (Sum(Case When T9.FecDia = 19 Then (T1.HorMin) End), 0) As
+Minutos_19,
+IfNull (Sum(Case When T9.FecDia = 20 Then (T1.HorCht) End), 0) As
+Horas_20,
+IfNull (Sum(Case When T9.FecDia = 20 Then (T1.HorMin) End), 0) As
+Minutos_20,
+IfNull (Sum(Case When T9.FecDia = 21 Then (T1.HorCht) End), 0) As
+Horas_21,
+IfNull (Sum(Case When T9.FecDia = 21 Then (T1.HorMin) End), 0) As
+Minutos_21,
+IfNull (Sum(Case When T9.FecDia = 22 Then (T1.HorCht) End), 0) As
+Horas_22,
+IfNull (Sum(Case When T9.FecDia = 22 Then (T1.HorMin) End), 0) As
+Minutos_22,
+IfNull (Sum(Case When T9.FecDia = 23 Then (T1.HorCht) End), 0) As
+Horas_23,
+IfNull (Sum(Case When T9.FecDia = 23 Then (T1.HorMin) End), 0) As
+Minutos_23,
+IfNull (Sum(Case When T9.FecDia = 24 Then (T1.HorCht) End), 0) As
+Horas_24,
+IfNull (Sum(Case When T9.FecDia = 24 Then (T1.HorMin) End), 0) As
+Minutos_24,
+IfNull (Sum(Case When T9.FecDia = 25 Then (T1.HorCht) End), 0) As
+Horas_25,
+IfNull (Sum(Case When T9.FecDia = 25 Then (T1.HorMin) End), 0) As
+Minutos_25,
+IfNull (Sum(Case When T9.FecDia = 26 Then (T1.HorCht) End), 0) As
+Horas_26,
+IfNull (Sum(Case When T9.FecDia = 26 Then (T1.HorMin) End), 0) As
+Minutos_26,
+IfNull (Sum(Case When T9.FecDia = 27 Then (T1.HorCht) End), 0) As
+Horas_27,
+IfNull (Sum(Case When T9.FecDia = 27 Then (T1.HorMin) End), 0) As
+Minutos_27,
+IfNull (Sum(Case When T9.FecDia = 28 Then (T1.HorCht) End), 0) As
+Horas_28,
+IfNull (Sum(Case When T9.FecDia = 28 Then (T1.HorMin) End), 0) As
+Minutos_28,
+IfNull (Sum(Case When T9.FecDia = 29 Then (T1.HorCht) End), 0) As
+Horas_29,
+IfNull (Sum(Case When T9.FecDia = 29 Then (T1.HorMin) End), 0) As
+Minutos_29,
+IfNull (Sum(Case When T9.FecDia = 30 Then (T1.HorCht) End), 0) As
+Horas_30,
+IfNull (Sum(Case When T9.FecDia = 30 Then (T1.HorMin) End), 0) As
+Minutos_30,
+IfNull (Sum(Case When T9.FecDia = 31 Then (T1.HorCht) End), 0) As
+Horas_31,
+IfNull (Sum(Case When T9.FecDia = 31 Then (T1.HorMin) End), 0) As
+Minutos_31
+  From NomHord T1
+Left Outer Join NomEmp T2 On (T1.EmpCve = T2.EmpCve)
+           Join SegFec T9 On (T1.HorFec = T9.FecYmd)
+Group By T1.EmpCve, T2.EmpNom, T2.EmpApe

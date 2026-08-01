@@ -1,0 +1,220 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Vista    : VWNOM_MAESTRO_EMPLEADOS_V1
+-- Propósito: Maestro completo de empleados activos con datos
+--            personales, laborales, de contacto y fechas clave,
+--            incluyendo antigüedad desglosada en años, meses y
+--            días calculada mediante las funciones de tabla
+--            SEGLIB.SG_TIEMPO_*.
+-- Versión  : 2.0
+-- Correcciones v1 → v2:
+--   1. SQL0390 corregido: SG_TIEMPO_ANOS, SG_TIEMPO_MESES y
+--      SG_TIEMPO_DIAS se invocan con CROSS JOIN LATERAL /
+--      TABLE(...) en lugar de como funciones escalares.
+--   2. Anos_de_Edad corregido: se usa SEGLIB.SG_TIEMPO_ANOS
+--      en lugar de YEAR(Current Date - Date(...)), que producía
+--      resultados incorrectos por aritmética de duraciones DB2.
+--   3. Fecha_Nacimiento centralizada en LATERAL FN (1 cálculo).
+--   4. Fecha_Ingreso centralizada en LATERAL FI (1 cálculo).
+--   5. Cedula_Empleado centralizada en LATERAL CE (1 cálculo).
+--   6. Código comentado eliminado (bloques de fechas vacaciones).
+-- Tablas base:
+--   NomEmp (T1)  Maestro de empleados
+--   NomDep (T2)  Departamentos
+--   NomCar (T3)  Cargos
+--   NomCat (T4)  Categorías
+--   NomCmc (T5)  Centros de costo de nómina
+--   NomCno (T6)  Conceptos
+--   NomNac (T7)  Nacionalidades
+--   NomUbi (T8)  Ubicaciones
+--   NomPro (T9)  Provincias
+--   CogCco (T10) Centros de costo contables
+-- ============================================================
+
+CREATE OR REPLACE VIEW VWNOM_MAESTRO_EMPLEADOS_V1 AS
+SELECT
+    -- Identificación del empleado
+    T1.EmpCve,
+    T1.EmpNom,
+    T1.EmpApe,
+
+    -- Cédula formateada (###-#######-#) centralizada en LATERAL CE
+    CE.Cedula_Empleado,
+
+    -- Clasificaciones
+    T1.CnoCve,  T6.CnoDes,
+    T1.DepCve,  T2.DepDes,
+    T1.CatCve,  T4.CatDes,
+    T1.CarCve,  T3.CarDes,
+    T1.UbiCve,  T8.UbiDes,
+
+    -- Datos personales
+    T1.EmpSex,
+    T1.NacCve,  T7.NacDes,
+    T1.EmpLna,
+    T1.EmpEsc,
+
+    -- Contacto
+    T1.EmpTe1, T1.EmpTd1,
+    T1.EmpTe2, T1.EmpTd2,
+    T1.EmpTe3, T1.EmpTd3,
+    T1.EmpDi1, T1.EmpDi2,
+    T1.EmpEma,
+    T1.EmpNd1, T1.EmpDd1,
+    T1.EmpNd2, T1.EmpDd2,
+
+    -- Datos laborales y salariales
+    T1.ProCve,  T9.ProDes,
+    T1.EmpTSa,
+    T1.EmpRnc,  T1.EmpRss,  T1.EmpPes,
+    T1.EmpEst,  T1.EmpCPe,  T1.EmpTez,
+    T1.EmpSba,  T1.EmpSbp,  T1.EmpSal,
+    T1.EmpSop,  T1.EmpShr,  T1.EmpFpg,
+    T1.BanCve,  T1.EmpCba,  T1.EmpTcb,
+    T1.EmpTip,  T1.EmpTsl,  T1.EmpEva,
+    T1.CtaCve,  T1.AuxCve,
+    T1.CcoCve,  T10.CcoDes,
+    T1.CmcCve,  T5.CmcDes,
+    T1.EmpSta,
+
+    -- Fecha de nacimiento centralizada en LATERAL FN
+    FN.Fecha_Nacimiento,
+
+    -- Edad en años usando SG_TIEMPO_ANOS (correcto para DB2 for i)
+    -- YEAR(CURRENT_DATE - FechaNac) produce resultados incorrectos
+    -- porque extrae solo la parte de años de una DURATION, sin
+    -- considerar si el cumpleaños del año actual ya ocurrió.
+    EA.ANOS                                     AS Anos_de_Edad,
+
+    -- Fecha de ingreso centralizada en LATERAL FI
+    FI.Fecha_Ingreso,
+
+    -- Antigüedad desglosada — funciones de tabla via CROSS JOIN LATERAL
+    A.ANOS                                      AS Anos_En_la_Empresa,
+    M.MESES                                     AS Meses_En_la_Empresa,
+    D.DIAS                                      AS Dias_En_la_Empresa,
+
+    -- Fechas opcionales con centinela DATE('1900-01-01') si inválidas
+    CASE
+        WHEN T1.EmpAfi IS NULL OR T1.EmpAfi = 0
+          OR T1.EmpMfi IS NULL OR T1.EmpMfi = 0
+          OR T1.EmpDfi IS NULL OR T1.EmpDfi = 0
+          OR T1.EmpAfi < 1900  OR T1.EmpAfi > 9999
+          OR T1.EmpMfi < 1     OR T1.EmpMfi > 12
+          OR T1.EmpDfi < 1     OR T1.EmpDfi > 31
+            THEN DATE('1900-01-01')
+        ELSE DATE(
+            TRIM(CHAR(T1.EmpAfi)) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpMfi)), 2) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpDfi)), 2))
+    END AS Fecha_Fijacion,
+
+    CASE
+        WHEN T1.EmpAva IS NULL OR T1.EmpAva = 0
+          OR T1.EmpMva IS NULL OR T1.EmpMva = 0
+          OR T1.EmpDva IS NULL OR T1.EmpDva = 0
+          OR T1.EmpAva < 1900  OR T1.EmpAva > 9999
+          OR T1.EmpMva < 1     OR T1.EmpMva > 12
+          OR T1.EmpDva < 1     OR T1.EmpDva > 31
+            THEN DATE('1900-01-01')
+        ELSE DATE(
+            TRIM(CHAR(T1.EmpAva)) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpMva)), 2) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpDva)), 2))
+    END AS Fecha_Inicio_Vacaciones,
+
+    CASE
+        WHEN T1.EmpAfv IS NULL OR T1.EmpAfv = 0
+          OR T1.EmpMfv IS NULL OR T1.EmpMfv = 0
+          OR T1.EmpDfv IS NULL OR T1.EmpDfv = 0
+          OR T1.EmpAfv < 1900  OR T1.EmpAfv > 9999
+          OR T1.EmpMfv < 1     OR T1.EmpMfv > 12
+          OR T1.EmpDfv < 1     OR T1.EmpDfv > 31
+            THEN DATE('1900-01-01')
+        ELSE DATE(
+            TRIM(CHAR(T1.EmpAfv)) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpMfv)), 2) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpDfv)), 2))
+    END AS Fecha_Fin_Vacaciones
+
+FROM NomEmp T1
+LEFT OUTER JOIN NomDep T2  ON T1.DepCve = T2.DepCve
+LEFT OUTER JOIN NomCar T3  ON T1.CarCve = T3.CarCve
+LEFT OUTER JOIN NomCat T4  ON T1.CatCve = T4.CatCve
+LEFT OUTER JOIN NomCmc T5  ON T1.CmcCve = T5.CmcCve
+LEFT OUTER JOIN NomCno T6  ON T1.CnoCve = T6.CnoCve
+LEFT OUTER JOIN NomNac T7  ON T1.NacCve = T7.NacCve
+LEFT OUTER JOIN NomUbi T8  ON T1.UbiCve = T8.UbiCve
+LEFT OUTER JOIN NomPro T9  ON T1.ProCve = T9.ProCve
+LEFT OUTER JOIN CogCco T10 ON T1.CcoCve = T10.CcoCve
+
+-- LATERAL CE: cédula formateada ###-#######-#
+-- (un solo CASE aplanado)
+-- La subconsulta interna se eliminó porque 
+-- rompía la correlación con T1.
+CROSS JOIN LATERAL (
+    SELECT
+        SUBSTR(CED_VAL, 1,  3) || '-' ||
+        SUBSTR(CED_VAL, 4,  7) || '-' ||
+        SUBSTR(CED_VAL, 11, 1) AS Cedula_Empleado
+    FROM SYSIBM.SYSDUMMY1,
+         LATERAL (VALUES (
+             CASE LENGTH(TRIM(CHAR(T1.EmpCed)))
+                 WHEN 9  THEN '00' || TRIM(CHAR(T1.EmpCed))
+                 WHEN 10 THEN '0'  || TRIM(CHAR(T1.EmpCed))
+                 ELSE         TRIM(CHAR(T1.EmpCed))
+             END
+         )) AS V(CED_VAL)
+) AS CE
+
+-- LATERAL FN: fecha de nacimiento construida una sola vez
+CROSS JOIN LATERAL (
+    SELECT DATE(
+        CONCAT(SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.EmpAna))),
+               TRIM(T1.EmpAna)) || '-' ||
+        CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.EmpMna))),
+               TRIM(T1.EmpMna)) || '-' ||
+        CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.EmpDna))),
+               TRIM(T1.EmpDna))
+    ) AS Fecha_Nacimiento
+    FROM SYSIBM.SYSDUMMY1
+) AS FN
+
+-- LATERAL EA: años de edad usando SG_TIEMPO_ANOS (correcto)
+CROSS JOIN LATERAL (
+    SELECT ANOS
+    FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(FN.Fecha_Nacimiento, CURRENT_DATE))
+) AS EA
+
+-- LATERAL FI: fecha de ingreso construida una sola vez
+CROSS JOIN LATERAL (
+    SELECT DATE(
+        CONCAT(SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.EmpAin))),
+               TRIM(T1.EmpAin)) || '-' ||
+        CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.EmpMin))),
+               TRIM(T1.EmpMin)) || '-' ||
+        CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.EmpDin))),
+               TRIM(T1.EmpDin))
+    ) AS Fecha_Ingreso
+    FROM SYSIBM.SYSDUMMY1
+) AS FI
+
+-- LATERAL A: años completos de antigüedad
+CROSS JOIN LATERAL (
+    SELECT ANOS
+    FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(FI.Fecha_Ingreso, CURRENT_DATE))
+) AS A
+
+-- LATERAL M: meses fraccionarios de antigüedad
+CROSS JOIN LATERAL (
+    SELECT MESES
+    FROM TABLE(SEGLIB.SG_TIEMPO_MESES(FI.Fecha_Ingreso, CURRENT_DATE))
+) AS M
+
+-- LATERAL D: días fraccionarios de antigüedad (IncluirDia = 1)
+CROSS JOIN LATERAL (
+    SELECT DIAS
+    FROM TABLE(SEGLIB.SG_TIEMPO_DIAS(FI.Fecha_Ingreso, CURRENT_DATE, 1))
+) AS D
+
+WHERE T1.EmpSta = 'A';

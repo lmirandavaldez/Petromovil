@@ -1,0 +1,42 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.IV_ULTIMO_PERIODO_CERRADO ()
+RETURNS TABLE (
+    ANO_UPC            INTEGER,
+    MES_UPC            INTEGER,
+    FECHA_INI_CERRADO  DATE,
+    FECHA_FIN_CERRADO  DATE,
+    FECHA_INI_SIG      DATE,
+    FECHA_FIN_SIG      DATE)
+LANGUAGE SQL
+BEGIN
+
+    RETURN
+        WITH PeriodoCerrado AS (
+            SELECT
+                AnoUpc,
+                NUMUPC,
+                /* Construir fecha base del periodo cerrado una sola vez */
+                DATE(
+                    TIMESTAMP_FORMAT(
+                        VARCHAR(AnoUpc) CONCAT '-' CONCAT
+                        VARCHAR_FORMAT(NUMUPC, '00') CONCAT '-01',
+                        'YYYY-MM-DD'
+                    )
+                ) AS FechaBase
+            FROM InvPar
+            WHERE ParCve = '@'
+        )
+        SELECT
+            AnoUpc                          AS ANO_UPC,
+            NUMUPC                          AS MES_UPC,
+            FechaBase                       AS FECHA_INI_CERRADO,
+            LAST_DAY(FechaBase)             AS FECHA_FIN_CERRADO,
+            ADD_MONTHS(FechaBase, 1)        AS FECHA_INI_SIG,
+            LAST_DAY(ADD_MONTHS(FechaBase, 1)) AS FECHA_FIN_SIG
+        FROM PeriodoCerrado;
+
+END;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.IV_ULTIMO_PERIODO_CERRADO TO PUBLIC;
+

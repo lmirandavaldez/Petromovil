@@ -1,0 +1,13 @@
+Create Or Replace View VWCXC_Cantidad_Cheques
+  As Select T1.CliCve,
+            Max(T9.FecYmd) As Fecha_Ultimo_Doc,
+            Sum(T1.UltCon) As Cantidad_Emitidos
+       From CxcUlt T1
+       Join CxcCdo T2
+         On (T1.CdoCve = T2.CdoCve)
+       Join SegFec T9
+         On (T1.UltAno = T9.FecAno)
+        And (T1.UltMes = T9.FecMes)
+        And (T1.UltDia = T9.FecDia)
+      Where (T2.CdoRel = '02')
+   Group By T1.CliCve

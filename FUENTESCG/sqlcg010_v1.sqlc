@@ -1,0 +1,42 @@
+Create Or Replace View VWCOG_Diario_General_3
+As Select T1.PerAno, T1.PerNum, T3.PerDes, T2.TdiDes,
+       T1.TdiCve, T1.DgeDoc,
+       T10.FecIso As Fecha_Documento,
+       T11.FecIso As Fecha_Aplicacion,
+       T8.DgeDes, T1.DgeSec, T1.CtaCve, T1.AuxCve,
+      (Case When T1.AuxCve = 0 Then T4.CtaDes Else T5.AuxNom End)
+      Descripcion, T1.CcoCve, T6.CcoDes, T1.DgeDe1,
+      (Case When T1.DgeOri = 1 Then T1.DgeVal Else 0 End) As Debito,
+      (Case When T1.DgeOri = 2 Then T1.DgeVal Else 0 End) As Credito,
+      T1.CfaCve, T7.CfaDes, T1.DgeTid, T1.DgeIde, T1.NcfNro,
+      T8.AplUsr, T9.UsrNom
+  From CogHdgd T1
+  Join CogTdi T2
+    On (T1.TdiCve = T2.TdiCve)
+  Join CogPer T3
+    On (T1.PerAno = T3.PerAno)
+   And (T1.PerNum = T3.PerNum)
+  Join CogCta T4
+    On (T1.CtaCve = T4.CtaCve)
+Left Outer Join CogAuxd T5
+    On (T1.AuxLis = T5.AuxLis)
+   And (T1.AuxCve = T5.AuxCve)
+Left Outer Join CogCco T6
+    On (T1.CcoCve = T6.CcoCve)
+Left Outer Join CxpCfa T7
+    On (T1.CfaCve = T7.CfaCve)
+Left Outer Join CogHdgh T8
+    On (T1.TdiCve = T8.TdiCve)
+   And (T1.PerAno = T8.PerAno)
+   And (T1.PerNum = T8.PerNum)
+   And (T1.DgeDoc = T8.DgeDoc)
+Left Outer Join SegUsr T9
+   On (T8.AplUsr = T9.UsrCve)
+Left Outer Join SegFec T10
+    On (T1.DgeAno = T10.FecAno)
+   And (T1.DgeMes = T10.FecMes)
+   And (T1.DgeDia = T10.FecDia)
+Left Outer Join SegFec T11
+    On (T8.AplAno = T11.FecAno)
+   And (T8.AplMes = T11.FecMes)
+   And (T8.AplDia = T11.FecDia)

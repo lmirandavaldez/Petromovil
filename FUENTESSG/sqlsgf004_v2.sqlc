@@ -1,0 +1,89 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Función  : SEGLIB.SG_TIEMPO_DIAS
+-- Propósito: Calcula los días restantes (fracción de mes) entre
+--            dos fechas, después de descontar años y meses completos.
+-- Versión  : 2.0 (función de tabla)
+-- Parámetros:
+--   FechaDes   DATE      Fecha de inicio (desde).
+--   FechaHas   DATE      Fecha de fin    (hasta).
+--   IncluirDia SMALLINT  1 = incluir el día final en el conteo
+--                        0 = excluir el día final (por defecto)
+-- Retorna tabla con columna:
+--   DIAS  INTEGER  Días fraccionarios cumplidos (0-30).
+--                  NULL  si alguno de los parámetros es NULL.
+--                  0     si FechaHas < FechaDes.
+-- Uso:
+--   SELECT * FROM TABLE(SEGLIB.SG_TIEMPO_DIAS(
+--       DATE('1964-07-23'),
+--       DATE('2026-07-23'),
+--       0
+--   )) AS x;
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_TIEMPO_DIAS (
+  FechaDes   DATE,
+  FechaHas   DATE,
+  IncluirDia SMALLINT  -- 1 = incluir día final, 0 = excluir
+)
+RETURNS TABLE (
+  DIAS INTEGER
+)
+LANGUAGE SQL
+DETERMINISTIC
+NO EXTERNAL ACTION
+RETURNS NULL ON NULL INPUT   -- Si cualquier parámetro es NULL, retorna tabla vacía
+BEGIN
+  DECLARE vAnos     INTEGER DEFAULT 0;
+  DECLARE vMeses    INTEGER DEFAULT 0;
+  DECLARE vDias     INTEGER DEFAULT 0;
+  DECLARE FechaBase  DATE;
+  DECLARE FechaBase2 DATE;
+
+  -- Protección: si la fecha final es anterior a la inicial
+  -- se devuelve 0 en lugar de propagar un resultado incorrecto.
+  IF FechaHas < FechaDes THEN
+    PIPE (0);
+    RETURN;
+  END IF;
+
+  -- Calcular años completos entre las dos fechas
+  SET vAnos = YEAR(FechaHas) - YEAR(FechaDes);
+  IF (MONTH(FechaHas) < MONTH(FechaDes))
+     OR (MONTH(FechaHas) = MONTH(FechaDes)
+     AND DAY(FechaHas) < DAY(FechaDes)) THEN
+    SET vAnos = vAnos - 1;
+  END IF;
+
+  -- Fecha base: avanzar FechaDes tantos meses como años completos
+  SET FechaBase = ADD_MONTHS(FechaDes, vAnos * 12);
+
+  -- Meses restantes entre FechaBase y FechaHas
+  SET vMeses = (YEAR(FechaHas) * 12 + MONTH(FechaHas))
+             - (YEAR(FechaBase) * 12 + MONTH(FechaBase));
+  IF DAY(FechaHas) < DAY(FechaBase) THEN
+    SET vMeses = vMeses - 1;
+  END IF;
+
+  -- Fecha base 2: avanzar FechaBase los meses restantes
+  SET FechaBase2 = ADD_MONTHS(FechaBase, vMeses);
+
+  -- Días fraccionarios entre FechaBase2 y FechaHas
+  SET vDias = FechaHas - FechaBase2;
+
+  -- Convención inclusiva: sumar 1 si se pide incluir el día final
+  IF IncluirDia = 1 THEN
+    SET vDias = vDias + 1;
+  END IF;
+
+  -- Seguridad: nunca retornar un valor negativo
+  IF vDias < 0 THEN
+    SET vDias = 0;
+  END IF;
+
+  PIPE (vDias);
+  RETURN;
+END;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_TIEMPO_DIAS TO PUBLIC;

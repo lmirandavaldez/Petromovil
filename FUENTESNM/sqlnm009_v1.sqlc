@@ -1,0 +1,22 @@
+Create Or Replace View VWNOM_ACUMULADOS_CLASE_TIPO_CONCEPTOS
+AS Select T1.CnoCve, T4.CnoDes, T1.TnoCve, T5.TnoDes,
+          T1.EmpCve, T2.EmpApe, T2.EmpNom, T2.UbiCve,
+          T6.UbiDes, T2.DepCve, T7.DepDes, T2.CarCve, T8.CarDes,
+          T2.CatCve, T9.CatDes, T1.CmcCve, T3.CmcDes, T3.CmcTip,
+          T1.CipAno, T1.CipNum,
+Sum(Case When T3.CmcTip = 1 Then T1.NgeImp Else 0 End) As Ingresos,
+Sum(Case When T3.CmcTip <> 1 Then T1.NgeImp Else 0 End) As Descuentos
+  From NomNgeh T1
+Left Outer Join NomEmp T2 On (T1.EmpCve = T2.EmpCve)
+Left Outer Join NomCmc T3 On (T1.CmcCve = T3.CmcCve)
+Left Outer Join NomCno T4 On (T1.CnoCve = T4.CnoCve)
+Left Outer Join NomTno T5 On (T1.TnoCve = T5.TnoCve)
+Left Outer Join NomUbi T6 On (T2.UbiCve = T6.UbiCve)
+Left Outer Join NomDep T7 On (T2.DepCve = T7.DepCve)
+Left Outer Join NomCar T8 On (T2.CarCve = T8.CarCve)
+Left Outer Join NomCat T9 On (T2.CatCve = T9.CatCve)
+Group By T1.CnoCve, T4.CnoDes, T1.TnoCve, T5.TnoDes,
+         T1.EmpCve, T2.EmpApe, T2.EmpNom, T2.UbiCve,
+         T6.UbiDes, T2.DepCve, T7.DepDes, T2.CarCve, T8.CarDes,
+         T2.CatCve, T9.CatDes, T1.CmcCve, T3.CmcDes, T3.CmcTip,
+         T1.CipAno, T1.CipNum

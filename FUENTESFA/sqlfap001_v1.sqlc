@@ -1,0 +1,162 @@
+-- Procedimiento para actualizar inactividad en fucturas compras 
+
+CREATE OR REPLACE PROCEDURE PRO_ACTUALIZAR_INACTIVIDAD(
+
+    IN P_ID_CLIENTE DECIMAL(7,0),
+
+    IN P_FECHA_COMPRA DATE
+
+)
+
+LANGUAGE SQL
+
+BEGIN
+
+    DECLARE V_FECHA_ULTIMA DATE;
+
+    DECLARE V_MESES_INACTIVO DECIMAL(10,0);
+
+    DECLARE V_EXISTE INT;
+
+    DECLARE V_FECHA_INGRESO DATE;
+
+
+
+    -- Verificar si el cliente existe en CLIENTE_INACTIVIDAD
+
+    SELECT COUNT(*) INTO V_EXISTE 
+
+    FROM CLIENTE_INACTIVIDAD 
+
+    WHERE ID_CLIENTE = P_ID_CLIENTE;
+
+
+
+    -- Obtener la fecha de ingreso desde la tabla CXCCLI si el cliente es nuevo
+
+    IF V_EXISTE = 0 THEN
+
+        SELECT DATE(CRETST) INTO V_FECHA_INGRESO
+
+        FROM CXCCLI
+
+        WHERE CLICVE = P_ID_CLIENTE;
+
+
+
+        -- Insertar el cliente con su primera compra y fecha de ingreso
+
+        INSERT INTO CLIENTE_INACTIVIDAD (
+
+            ID_CLIENTE, 
+
+            FECHA_INGRESO, 
+
+            FECHA_PRIMERA_COMPRA,
+
+            FECHA_ULTIMA_COMPRA, 
+
+            FECHA_ULTIMA_INACTIVIDAD, 
+
+            FECHA_REACTIVACION, 
+
+            MESES_INACTIVO, 
+
+            ES_NUEVO, 
+
+            ESTADO_CLIENTE
+
+        )
+
+        VALUES (
+
+            P_ID_CLIENTE, 
+
+            V_FECHA_INGRESO, 
+
+            P_FECHA_COMPRA, 
+
+            P_FECHA_COMPRA, 
+
+            P_FECHA_COMPRA, 
+
+            P_FECHA_COMPRA, 
+
+            0, 
+
+            CAST('S' AS CHAR(1)), 
+
+            CAST('ACTIVO' AS CHAR(10))
+
+        );
+
+
+
+    ELSE
+
+        -- Obtener la última fecha de compra registrada
+
+        SELECT FECHA_ULTIMA_COMPRA INTO V_FECHA_ULTIMA
+
+        FROM CLIENTE_INACTIVIDAD
+
+        WHERE ID_CLIENTE = P_ID_CLIENTE;
+
+
+
+        -- Calcular la inactividad
+
+        SET V_MESES_INACTIVO = MONTHS_BETWEEN(P_FECHA_COMPRA, V_FECHA_ULTIMA);
+
+
+
+        -- Actualizar los datos del cliente si existe
+
+        MERGE INTO CLIENTE_INACTIVIDAD AS CI
+
+        USING (SELECT P_ID_CLIENTE AS ID_CLIENTE, 
+
+                      P_FECHA_COMPRA AS FECHA 
+
+         FROM SYSIBM.SYSDUMMY1) AS SRC
+
+           ON CI.ID_CLIENTE = SRC.ID_CLIENTE
+
+         WHEN MATCHED THEN
+
+            UPDATE SET 
+
+                FECHA_ULTIMA_INACTIVIDAD = CASE 
+
+                    WHEN V_MESES_INACTIVO >= 36 THEN CI.FECHA_ULTIMA_COMPRA 
+
+                    ELSE CI.FECHA_ULTIMA_INACTIVIDAD 
+
+                END,
+
+                FECHA_ULTIMA_COMPRA = P_FECHA_COMPRA,
+
+                MESES_INACTIVO = V_MESES_INACTIVO,
+
+                ES_NUEVO = CASE 
+
+                    WHEN V_MESES_INACTIVO >= 36 THEN CAST('S' AS CHAR(1)) 
+
+                    ELSE CAST('N' AS CHAR(1)) 
+
+                END,
+
+                FECHA_REACTIVACION = CASE 
+
+                    WHEN V_MESES_INACTIVO >= 36 THEN P_FECHA_COMPRA 
+
+                    ELSE CI.FECHA_REACTIVACION 
+
+                END,
+
+                ESTADO_CLIENTE = CAST('ACTIVO' AS CHAR(10));
+
+    END IF;
+
+END;
+

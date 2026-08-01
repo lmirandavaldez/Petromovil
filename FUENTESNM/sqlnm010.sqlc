@@ -1,0 +1,266 @@
+-- =============================================================================
+-- Vista   : VWNOM_MAESTRO_EMPLEADOS_ACTIVOS_CANCELADOS
+-- Archivo : sqlnm010.sqlc
+-- Modulo  : Nomina (NM)
+-- Objeto  : Vista maestra de empleados activos y cancelados
+-- Version : 2 (v1 = original sin cambios en sqlnm010_v1.sqlc)
+-- Fecha   : 2025-07-11
+-- =============================================================================
+-- Descripcion:
+--   Expone todos los datos maestros de empleados independientemente de su
+--   estado (activo / cancelado). Incluye:
+--   - Datos personales: nombre, apellido, cedula formateada (XXX-XXXXXXX-X),
+--     sexo, telefonos, direcciones, correo electronico.
+--   - Datos laborales: departamento, cargo, categoria, ubicacion,
+--     centro de costo, modo de calculo, banco, cuenta bancaria.
+--   - Datos salariales: salario ordinario, sobresueldos, horas extras, etc.
+--   - Fechas calculadas: nacimiento, ingreso, fijacion, vacaciones (inicio
+--     y fin), salida de empresa.
+--   - Anos de edad (calculados a la fecha actual).
+--   - Anos laborados:
+--     Empleado activo    -> desde Fecha_Ingreso hasta Current Date.
+--     Empleado cancelado -> desde Fecha_Ingreso hasta Fecha_Salida.
+--
+-- Tablas fuente:
+--   NomEmp  (T1)  - Maestro de empleados
+--   NomDep  (T2)  - Departamentos
+--   NomCar  (T3)  - Cargos
+--   NomCat  (T4)  - Categorias
+--   NomCmc  (T5)  - Modos de calculo
+--   NomCno  (T6)  - Condicion de trabajo
+--   NomNac  (T7)  - Nacionalidades
+--   NomUbi  (T8)  - Ubicaciones
+--   NomPro  (T9)  - Profesiones
+--   CogCco  (T10) - Centros de costo
+--
+-- Notas tecnicas:
+--   Las fechas se almacenan como ano (EmpAxx), mes (EmpMxx) y dia (EmpDxx)
+--   en campos numericos separados. Se ensamblan en formato YYYY-MM-DD usando
+--   SUBSTRING para rellenar con ceros a la izquierda.
+--   La cedula (EmpCed) se normaliza a 11 digitos antes de formatear con
+--   guiones: pos 1-3, guion, pos 4-10, guion, pos 11.
+--   Todos los JOINs son LEFT OUTER para conservar empleados cuya tabla
+--   auxiliar aun no tenga registro.
+--   EmpSta: A=Activo, C=Cancelado
+-- =============================================================================
+Create Or Replace View VWNOM_MAESTRO_EMPLEADOS_ACTIVOS_CANCELADOS As
+Select
+    T1.EmpCve,
+    T1.EmpNom,
+    T1.EmpApe,
+    Substr(Case Length(Trim(Char(T1.EmpCed)))
+               When 9  Then Concat('00', Trim(Char(T1.EmpCed)))
+               When 10 Then Concat('0',  Trim(Char(T1.EmpCed)))
+               Else         Char(T1.EmpCed)
+           End,  1, 3) || '-' ||
+    Substr(Case Length(Trim(Char(T1.EmpCed)))
+               When 9  Then Concat('00', Trim(Char(T1.EmpCed)))
+               When 10 Then Concat('0',  Trim(Char(T1.EmpCed)))
+               Else         Char(T1.EmpCed)
+           End,  4, 7) || '-' ||
+    Substr(Case Length(Trim(Char(T1.EmpCed)))
+               When 9  Then Concat('00', Trim(Char(T1.EmpCed)))
+               When 10 Then Concat('0',  Trim(Char(T1.EmpCed)))
+               Else         Char(T1.EmpCed)
+           End, 11, 1)                   As Cedula_Empleado,
+    T1.CnoCve,
+    T6.CnoDes,
+    T1.DepCve,
+    T2.DepDes,
+    T1.CatCve,
+    T4.CatDes,
+    T1.CarCve,
+    T3.CarDes,
+    T1.UbiCve,
+    T8.UbiDes,
+    T1.EmpSex,
+    T1.EmpTe1,
+    T1.EmpTd1,
+    T1.EmpTe2,
+    T1.EmpTd2,
+    T1.EmpTe3,
+    T1.EmpTd3,
+    T1.EmpDi1,
+    T1.EmpDi2,
+    T1.EmpEma,
+    T1.EmpNd1,
+    T1.EmpDd1,
+    T1.EmpNd2,
+    T1.EmpDd2,
+    T1.ProCve,
+    T9.ProDes,
+    T1.NacCve,
+    T7.NacDes,
+    T1.EmpLna,
+    T1.EmpEsc,
+    T1.EmpTSa,
+    T1.EmpRnc,
+    T1.EmpRss,
+    T1.EmpPes,
+    T1.EmpEst,
+    T1.EmpCPe,
+    T1.EmpTez,
+    T1.EmpSba,
+    T1.EmpSbp,
+    T1.EmpSal,
+    T1.EmpSop,
+    T1.EmpShr,
+    T1.EmpFpg,
+    T1.BanCve,
+    T1.EmpCba,
+    T1.EmpTcb,
+    T1.EmpTip,
+    T1.EmpTsl,
+    T1.EmpEva,
+    T1.CtaCve,
+    T1.AuxCve,
+    T1.CcoCve,
+    T10.CcoDes,
+    T1.CmcCve,
+    T5.CmcDes,
+    T1.EmpSta,
+    Case
+        When T1.EmpAna Is Null Or T1.EmpAna = 0
+          Or T1.EmpMna Is Null Or T1.EmpMna = 0
+          Or T1.EmpDna Is Null Or T1.EmpDna = 0
+          Or T1.EmpAna < 1900  Or T1.EmpAna > 9999
+          Or T1.EmpMna < 1     Or T1.EmpMna > 12
+          Or T1.EmpDna < 1     Or T1.EmpDna > 31
+            Then Date('1900-01-01')
+        Else Date(
+            Trim(Char(T1.EmpAna)) || '-' ||
+            Right('00' || Trim(Char(T1.EmpMna)), 2) || '-' ||
+            Right('00' || Trim(Char(T1.EmpDna)), 2))
+    End As Fecha_Nacimiento,
+    Integer(Year(Current Date -
+        Case
+            When T1.EmpAna Is Null Or T1.EmpAna = 0
+              Or T1.EmpMna Is Null Or T1.EmpMna = 0
+              Or T1.EmpDna Is Null Or T1.EmpDna = 0
+              Or T1.EmpAna < 1900  Or T1.EmpAna > 9999
+              Or T1.EmpMna < 1     Or T1.EmpMna > 12
+              Or T1.EmpDna < 1     Or T1.EmpDna > 31
+                Then Date('1900-01-01')
+            Else Date(
+                Trim(Char(T1.EmpAna)) || '-' ||
+                Right('00' || Trim(Char(T1.EmpMna)), 2) || '-' ||
+                Right('00' || Trim(Char(T1.EmpDna)), 2))
+        End))
+        As Anos_de_Edad,
+    Case
+        When T1.EmpAin Is Null Or T1.EmpAin = 0
+          Or T1.EmpMin Is Null Or T1.EmpMin = 0
+          Or T1.EmpDin Is Null Or T1.EmpDin = 0
+          Or T1.EmpAin < 1900  Or T1.EmpAin > 9999
+          Or T1.EmpMin < 1     Or T1.EmpMin > 12
+          Or T1.EmpDin < 1     Or T1.EmpDin > 31
+            Then Date('1900-01-01')
+        Else Date(
+            Trim(Char(T1.EmpAin)) || '-' ||
+            Right('00' || Trim(Char(T1.EmpMin)), 2) || '-' ||
+            Right('00' || Trim(Char(T1.EmpDin)), 2))
+    End As Fecha_Ingreso,
+    T1.EmpAin,
+    Case
+        When T1.EmpAfi Is Null Or T1.EmpAfi = 0
+          Or T1.EmpMfi Is Null Or T1.EmpMfi = 0
+          Or T1.EmpDfi Is Null Or T1.EmpDfi = 0
+          Or T1.EmpAfi < 1900  Or T1.EmpAfi > 9999
+          Or T1.EmpMfi < 1     Or T1.EmpMfi > 12
+          Or T1.EmpDfi < 1     Or T1.EmpDfi > 31
+            Then Date('1900-01-01')
+        Else Date(
+            Trim(Char(T1.EmpAfi)) || '-' ||
+            Right('00' || Trim(Char(T1.EmpMfi)), 2) || '-' ||
+            Right('00' || Trim(Char(T1.EmpDfi)), 2))
+    End As Fecha_Fijacion,
+    Case
+        When T1.EmpAva Is Null Or T1.EmpAva = 0
+          Or T1.EmpMva Is Null Or T1.EmpMva = 0
+          Or T1.EmpDva Is Null Or T1.EmpDva = 0
+          Or T1.EmpAva < 1900  Or T1.EmpAva > 9999
+          Or T1.EmpMva < 1     Or T1.EmpMva > 12
+          Or T1.EmpDva < 1     Or T1.EmpDva > 31
+            Then Date('1900-01-01')
+        Else Date(
+            Trim(Char(T1.EmpAva)) || '-' ||
+            Right('00' || Trim(Char(T1.EmpMva)), 2) || '-' ||
+            Right('00' || Trim(Char(T1.EmpDva)), 2))
+    End As Fecha_Inicio_Vacaciones,
+    Case
+        When T1.EmpAfv Is Null Or T1.EmpAfv = 0
+          Or T1.EmpMfv Is Null Or T1.EmpMfv = 0
+          Or T1.EmpDfv Is Null Or T1.EmpDfv = 0
+          Or T1.EmpAfv < 1900  Or T1.EmpAfv > 9999
+          Or T1.EmpMfv < 1     Or T1.EmpMfv > 12
+          Or T1.EmpDfv < 1     Or T1.EmpDfv > 31
+            Then Date('1900-01-01')
+        Else Date(
+            Trim(Char(T1.EmpAfv)) || '-' ||
+            Right('00' || Trim(Char(T1.EmpMfv)), 2) || '-' ||
+            Right('00' || Trim(Char(T1.EmpDfv)), 2))
+    End As Fecha_Fin_Vacaciones,
+    Case
+        When T1.EmpAsa Is Null Or T1.EmpAsa = 0
+          Or T1.EmpMsa Is Null Or T1.EmpMsa = 0
+          Or T1.EmpDsa Is Null Or T1.EmpDsa = 0
+          Or T1.EmpAsa < 1900  Or T1.EmpAsa > 9999
+          Or T1.EmpMsa < 1     Or T1.EmpMsa > 12
+          Or T1.EmpDsa < 1     Or T1.EmpDsa > 31
+            Then Date('1900-01-01')
+        Else Date(
+            Trim(Char(T1.EmpAsa)) || '-' ||
+            Right('00' || Trim(Char(T1.EmpMsa)), 2) || '-' ||
+            Right('00' || Trim(Char(T1.EmpDsa)), 2))
+    End As Fecha_Salida_Empresa,
+    T1.EmpAsa,
+    AT.ANOS As Anos_Trabajo_Empresa
+From       NomEmp  T1
+Left Outer Join NomDep  T2  On T1.DepCve = T2.DepCve
+Left Outer Join NomCar  T3  On T1.CarCve = T3.CarCve
+Left Outer Join NomCat  T4  On T1.CatCve = T4.CatCve
+Left Outer Join NomCmc  T5  On T1.CmcCve = T5.CmcCve
+Left Outer Join NomCno  T6  On T1.CnoCve = T6.CnoCve
+Left Outer Join NomNac  T7  On T1.NacCve = T7.NacCve
+Left Outer Join NomUbi  T8  On T1.UbiCve = T8.UbiCve
+Left Outer Join NomPro  T9  On T1.ProCve = T9.ProCve
+Left Outer Join CogCco  T10 On T1.CcoCve = T10.CcoCve
+Cross Join Lateral (
+    Select Case
+        When T1.EmpAin Is Null Or T1.EmpAin = 0
+          Or T1.EmpMin Is Null Or T1.EmpMin = 0
+          Or T1.EmpDin Is Null Or T1.EmpDin = 0
+          Or T1.EmpAin < 1900  Or T1.EmpAin > 9999
+          Or T1.EmpMin < 1     Or T1.EmpMin > 12
+          Or T1.EmpDin < 1     Or T1.EmpDin > 31
+            Then Date('1900-01-01')
+        Else Date(
+            Trim(Char(T1.EmpAin)) || '-' ||
+            Right('00' || Trim(Char(T1.EmpMin)), 2) || '-' ||
+            Right('00' || Trim(Char(T1.EmpDin)), 2))
+    End As Fecha_Ingreso
+    From SYSIBM.SYSDUMMY1
+) As FI
+Cross Join Lateral (
+    Select Case
+        When T1.EmpAsa Is Null Or T1.EmpAsa = 0
+          Or T1.EmpMsa Is Null Or T1.EmpMsa = 0
+          Or T1.EmpDsa Is Null Or T1.EmpDsa = 0
+          Or T1.EmpAsa < 1900  Or T1.EmpAsa > 9999
+          Or T1.EmpMsa < 1     Or T1.EmpMsa > 12
+          Or T1.EmpDsa < 1     Or T1.EmpDsa > 31
+            Then Date('1900-01-01')
+        Else Date(
+            Trim(Char(T1.EmpAsa)) || '-' ||
+            Right('00' || Trim(Char(T1.EmpMsa)), 2) || '-' ||
+            Right('00' || Trim(Char(T1.EmpDsa)), 2))
+    End As Fecha_Salida
+    From SYSIBM.SYSDUMMY1
+) As FS
+Cross Join Lateral (
+    Select ANOS
+    From TABLE(SEGLIB.SG_TIEMPO_ANOS(
+        FI.Fecha_Ingreso,
+        Case When T1.EmpSta <> 'C' Then Current Date Else FS.Fecha_Salida End
+    ))
+) As AT

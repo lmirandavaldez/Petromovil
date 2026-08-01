@@ -1,0 +1,135 @@
+-- VERSIÓN ORIGINAL (respaldo) — ver sqlnm001x1.sqlc para v2.0
+-- PROBLEMAS CONOCIDOS:
+--   1. SQL0390: SG_TIEMPO_ANOS, SG_TIEMPO_MESES y SG_TIEMPO_DIAS
+--      son funciones de tabla; se usan como escalares en el SELECT.
+--   2. Anos_de_Edad usa YEAR(Current Date - Date(...)) que produce
+--      resultado incorrecto por aritmética de duraciones en DB2.
+--   3. Fecha_Nacimiento y Fecha_Ingreso se construyen múltiples veces.
+--   4. Cedula_Empleado repite el mismo CASE 3 veces.
+Create Or Replace View VWNOM_MAESTRO_EMPLEADOS_V1
+As Select T1.EmpCve, T1.EmpNom, T1.EmpApe,
+Substr(Case Length(Trim(Char(EmpCed)))
+       When 9  Then Concat('00',Trim(Char(EmpCed)))
+       When 10 Then Concat('0', Trim(Char(EmpCed)))
+       Else Char(EmpCed) End,1,3) || '-' ||
+Substr(Case Length(Trim(Char(EmpCed)))
+       When 9  Then Concat('00', Trim(Char(EmpCed)))
+       When 10 Then Concat('0',Trim(Char(EmpCed)))
+       Else Char(EmpCed) End,4,7) || '-' ||
+Substr(Case Length(Trim(Char(EmpCed)))
+       When 9  Then Concat('00',Trim(Char(EmpCed)))
+       When 10 Then Concat('0' , Trim(Char(EmpCed)))
+       Else Char(EmpCed) End,11,1) As Cedula_Empleado, T1.CnoCve,
+       T6.CnoDes, T1.DepCve, T2.DepDes, T1.CatCve, T4.CatDes,
+       T1.CarCve, T3.CarDes, T1.UbiCve, T8.UbiDes, T1.EmpSex,
+       T1.EmpTe1, T1.EmpTd1, T1.EmpTe2, T1.EmpTd2, T1.EmpTe3,
+       T1.EmpTd3, T1.EmpDi1, T1.EmpDi2, T1.EmpEma, T1.EmpNd1,
+       T1.EmpDd1, T1.EmpNd2, T1.EmpDd2, T1.ProCve, T9.ProDes,
+       T1.NacCve, T7.NacDes, T1.EmpLna, T1.EmpEsc, T1.EmpTSa,
+       T1.EmpRnc, T1.EmpRss, T1.EmpPes, T1.EmpEst, T1.EmpCPe,
+       T1.EmpTez, T1.EmpSba, T1.EmpSbp, T1.EmpSal, T1.EmpSop,
+       T1.EmpShr, T1.EmpFpg, T1.BanCve, T1.EmpCba, T1.EmpTcb,
+       T1.EmpTip, T1.EmpTsl, T1.EmpEva, T1.CtaCve, T1.AuxCve,
+       T1.CcoCve, T10.CcoDes, T1.CmcCve, T5.CmcDes, T1.EmpSta,
+ Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAna))),
+       Trim(T1.EmpAna)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T1.EmpMna))),
+         Trim(T1.EmpMna)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDna))),
+       Trim(T1.EmpDna))) As Fecha_Nacimiento,
+ Year(Current Date -
+  (Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAna))),
+       Trim(T1.EmpAna)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMna))),
+       Trim(T1.EmpMna)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDna))),
+       Trim(T1.EmpDna))))) As Anos_de_Edad,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+       Trim(T1.EmpAin)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+       Trim(T1.EmpMin)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+       Trim(T1.EmpDin))) As Fecha_Ingreso,
+  SG_TIEMPO_ANOS(
+    Date(
+      Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+             Trim(T1.EmpAin)) || '-' ||
+      Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+             Trim(T1.EmpMin)) || '-' ||
+      Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+             Trim(T1.EmpDin))), CURRENT_DATE) AS Anos_En_la_Empresa,
+
+  SG_TIEMPO_MESES(
+    Date(
+      Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+             Trim(T1.EmpAin)) || '-' ||
+      Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+             Trim(T1.EmpMin)) || '-' ||
+      Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+             Trim(T1.EmpDin))), CURRENT_DATE) AS Meses_En_la_Empresa,
+
+  SG_TIEMPO_DIAS(
+    Date(
+      Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+             Trim(T1.EmpAin)) || '-' ||
+      Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+             Trim(T1.EmpMin)) || '-' ||
+      Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+             Trim(T1.EmpDin))),
+    CURRENT_DATE, 1) AS Dias_En_la_Empresa,
+
+CASE
+  WHEN T1.EmpAfi IS NULL OR T1.EmpAfi = 0
+    OR T1.EmpMfi IS NULL OR T1.EmpMfi = 0
+    OR T1.EmpDfi IS NULL OR T1.EmpDfi = 0
+    OR T1.EmpAfi < 1900 OR T1.EmpAfi > 9999
+    OR T1.EmpMfi < 1    OR T1.EmpMfi > 12
+    OR T1.EmpDfi < 1    OR T1.EmpDfi > 31
+  THEN DATE('1900-01-01')
+  ELSE DATE(
+    TRIM(CHAR(T1.EmpAfi)) || '-' ||
+    RIGHT('00' || TRIM(CHAR(T1.EmpMfi)), 2) || '-' ||
+    RIGHT('00' || TRIM(CHAR(T1.EmpDfi)), 2)
+  )END AS Fecha_Fijacion,
+
+CASE
+  WHEN T1.EmpAva IS NULL OR T1.EmpAva = 0
+    OR T1.EmpMva IS NULL OR T1.EmpMva = 0
+    OR T1.EmpDva IS NULL OR T1.EmpDva = 0
+    OR T1.EmpAva < 1900 OR T1.EmpAva > 9999
+    OR T1.EmpMva < 1    OR T1.EmpMva > 12
+    OR T1.EmpDva < 1    OR T1.EmpDva > 31
+  THEN DATE('1900-01-01')
+  ELSE DATE(
+    TRIM(CHAR(T1.EmpAva)) || '-' ||
+    RIGHT('00' || TRIM(CHAR(T1.EmpMva)), 2) || '-' ||
+    RIGHT('00' || TRIM(CHAR(T1.EmpDva)), 2)
+  )
+END AS Fecha_Inicio_Vacaciones,
+
+CASE
+  WHEN T1.EmpAfv IS NULL OR T1.EmpAfv = 0
+    OR T1.EmpMfv IS NULL OR T1.EmpMfv = 0
+    OR T1.EmpDfv IS NULL OR T1.EmpDfv = 0
+    OR T1.EmpAfv < 1900 OR T1.EmpAfv > 9999
+    OR T1.EmpMfv < 1    OR T1.EmpMfv > 12
+    OR T1.EmpDfv < 1    OR T1.EmpDfv > 31
+  THEN DATE('1900-01-01')
+  ELSE DATE(
+    TRIM(CHAR(T1.EmpAfv)) || '-' ||
+    RIGHT('00' || TRIM(CHAR(T1.EmpMfv)), 2) || '-' ||
+    RIGHT('00' || TRIM(CHAR(T1.EmpDfv)), 2)
+  )
+END AS Fecha_Fin_Vacaciones
+
+   From NomEmp T1
+ Left Outer Join NomDep T2 On (T1.DepCve = T2.DepCve)
+ Left Outer Join NomCar T3 On (T1.CarCve = T3.CarCve)
+ Left Outer Join NomCat T4 On (T1.CatCve = T4.CatCve)
+ Left Outer Join NomCmc T5 On (T1.CmcCve = T5.CmcCve)
+ Left Outer Join NomCno T6 On (T1.CnoCve = T6.CnoCve)
+ Left Outer Join NomNac T7 On (T1.NacCve = T7.NacCve)
+ Left Outer Join NomUbi T8 On (T1.UbiCve = T8.UbiCve)
+ Left Outer Join NomPro T9 On (T1.ProCve = T9.ProCve)
+ Left Outer Join CogCco T10 On (T1.CcoCve = T10.CcoCve)
+ Where (T1.EmpSta = 'A')

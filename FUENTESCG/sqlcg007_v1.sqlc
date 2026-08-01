@@ -1,0 +1,9 @@
+Create Or Replace View VWCOG_Saldos_Cuentas_CentroCosto
+As Select PerAno, PerNum, CtaCve, CcoCve,
+       IfNull (Sum(BccBip), 0) As Balance_Inicial_Bcc,
+       IfNull (Sum(BccDeb), 0) As Debitos_Bcc,
+       IfNUll (Sum(BccCre), 0) As Creditos_Bcc,
+       IfNull (Sum(BccBal), 0) As Balance_Final_Bcc
+  From CogBcc
+ Where (CtaCve <> '    ')
+Group by PerAno, PerNum, CtaCve, CcoCve

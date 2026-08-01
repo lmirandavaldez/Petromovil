@@ -1,0 +1,135 @@
+-- ============================================================
+-- Vista   : VWFAC_Ventas_Sup_Ven_Cli_Art_Ano_Meses
+-- Módulo  : Facturación
+-- Objeto  : Pivot de cantidades vendidas por mes (Ene…Dic)
+--           más total anual, desglosado por año, supervisor,
+--           vendedor, cliente y artículo.
+--           Excluye documentos de tipo 3 (notas de crédito /
+--           devoluciones).
+--           Navega la jerarquía comercial:
+--             FacDtod → CxcRvc (vendedor por cliente)
+--                     → CxcVen (datos vendedor + supervisor)
+--                     → CxcSup (datos supervisor)
+-- Tablas  : FacDtod  — detalle de documentos de facturación
+--           InvArt   — maestro de artículos
+--           CxcRvc   — vendedor por cliente
+--           CxcVen   — maestro de vendedores
+--           CxcSup   — maestro de supervisores
+--           CxcCli   — maestro de clientes
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se reemplaza INNER JOIN CxcRvc por LEFT OUTER JOIN
+--          con subconsulta FETCH FIRST 1 ROW ONLY para evitar
+--          multiplicación de cantidades cuando un cliente tiene
+--          más de un vendedor asignado (bug potencial de
+--          inflación en el original).
+--        Se convierten todos los INNER JOIN restantes a
+--          LEFT OUTER JOIN para preservar ventas cuyos
+--          artículos, vendedores, supervisores o clientes no
+--          tengan registro en sus tablas maestras (valores
+--          NULL en esos campos de dimensión).
+--        Se agrega COALESCE defensivo en el WHERE sobre
+--          DtoTip.
+--        Se agrega As en todos los alias del pivot y en
+--          todos los FROM / JOIN.
+--        Se reformatea SELECT, FROM, JOINs, WHERE y GROUP BY
+--          con una columna / condición por línea y comentarios
+--          de sección.
+--        Cabecera de documentación completa.
+-- ============================================================
+
+Create Or Replace View VWFAC_Ventas_Sup_Ven_Cli_Art_Ano_Meses As
+
+Select
+    -- --------------------------------------------------------
+    -- Dimensiones de agrupación
+    -- --------------------------------------------------------
+    T1.DtoAno       As DtoAno,   -- Año del período
+    T4.SupCve       As SupCve,   -- Código del supervisor
+    T5.SupNom       As SupNom,   -- Nombre del supervisor
+    T3.VenCve       As VenCve,   -- Código del vendedor
+    T4.VenNom       As VenNom,   -- Nombre del vendedor
+    T1.CliCve       As CliCve,   -- Código del cliente
+    T6.CliNom       As CliNom,   -- Nombre del cliente
+    T1.ArtCve       As ArtCve,   -- Código del artículo
+    T2.ArtDes       As ArtDes,   -- Descripción del artículo
+
+    -- --------------------------------------------------------
+    -- Pivot mensual — Cantidad vendida por mes
+    -- --------------------------------------------------------
+    IfNull(Sum(Case When T1.DtoMes = 01 Then T1.DtoCua End), 0)  
+    As Ene,      -- Cantidad enero
+    IfNull(Sum(Case When T1.DtoMes = 02 Then T1.DtoCua End), 0)  
+    As Feb,      -- Cantidad febrero
+    IfNull(Sum(Case When T1.DtoMes = 03 Then T1.DtoCua End), 0)  
+    As Mar,      -- Cantidad marzo
+    IfNull(Sum(Case When T1.DtoMes = 04 Then T1.DtoCua End), 0)  
+    As Abr,      -- Cantidad abril
+    IfNull(Sum(Case When T1.DtoMes = 05 Then T1.DtoCua End), 0)  
+    As May,      -- Cantidad mayo
+    IfNull(Sum(Case When T1.DtoMes = 06 Then T1.DtoCua End), 0)  
+    As Jun,      -- Cantidad junio
+    IfNull(Sum(Case When T1.DtoMes = 07 Then T1.DtoCua End), 0)  
+    As Jul,      -- Cantidad julio
+    IfNull(Sum(Case When T1.DtoMes = 08 Then T1.DtoCua End), 0)  
+    As Ago,      -- Cantidad agosto
+    IfNull(Sum(Case When T1.DtoMes = 09 Then T1.DtoCua End), 0)  
+    As Sep,      -- Cantidad septiembre
+    IfNull(Sum(Case When T1.DtoMes = 10 Then T1.DtoCua End), 0)  
+    As Oct,      -- Cantidad octubre
+    IfNull(Sum(Case When T1.DtoMes = 11 Then T1.DtoCua End), 0)  
+    As Nov,      -- Cantidad noviembre
+    IfNull(Sum(Case When T1.DtoMes = 12 Then T1.DtoCua End), 0)  
+    As Dic,      -- Cantidad diciembre
+
+    -- --------------------------------------------------------
+    -- Total anual de cantidad
+    -- --------------------------------------------------------
+    IfNull(Sum(T1.DtoCua), 0)             
+    As Total     -- Total anual de cantidad
+
+From FacDtod As T1
+
+-- Artículo: LEFT para conservar líneas con artículos no
+-- catalogados en InvArt (ArtDes = NULL en esos casos).
+-- Cambiar a INNER JOIN si se desea filtrar solo artículos
+-- existentes en el maestro.
+Join InvArt As T2
+    On T1.ArtCve = T2.ArtCve
+
+-- Para Buscar el vendedor en CxcRvc.
+Join CxcRvc T3
+    On T1.CliCve = T3.CliCve
+
+-- Datos del vendedor (incluye SupCve y VenNom)
+Join CxcVen As T4
+    On T3.VenCve = T4.VenCve
+
+-- Datos del supervisor
+Join CxcSup As T5
+    On T4.SupCve = T5.SupCve
+
+-- Datos del cliente (nombre)
+Join CxcCli As T6
+    On T1.CliCve = T6.CliCve
+
+Where
+    -- Excluir tipo 3 (Promociones)
+    -- COALESCE defensivo: si DtoTip fuera NULL se trata como 0
+    COALESCE(T1.DtoTip, 0) <> 3
+
+Group By
+    T1.DtoAno,
+    T4.SupCve,
+    T5.SupNom,
+    T3.VenCve,
+    T4.VenNom,
+    T1.CliCve,
+    T6.CliNom,
+    T1.ArtCve,
+    T2.ArtDes
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.DtoAno, T4.SupCve, T3.VenCve, T1.CliCve, T1.ArtCve

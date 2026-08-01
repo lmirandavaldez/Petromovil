@@ -1,0 +1,100 @@
+Create Or Replace View VWNOM_MAESTRO_EMPLEADOS_ACTIVOS_CANCELADOS
+As Select T1.EmpCve, T1.EmpNom, T1.EmpApe,
+Substr(Case Length(Trim(Char(EmpCed)))
+       When 9  Then Concat('00',Trim(Char(EmpCed)))
+       When 10 Then Concat('0', Trim(Char(EmpCed)))
+       Else Char(EmpCed) End,1,3) || '-' ||
+Substr(Case Length(Trim(Char(EmpCed)))
+       When 9  Then Concat('00', Trim(Char(EmpCed)))
+       When 10 Then Concat('0',Trim(Char(EmpCed)))
+       Else Char(EmpCed) End,4,7) || '-' ||
+Substr(Case Length(Trim(Char(EmpCed)))
+       When 9  Then Concat('00',Trim(Char(EmpCed)))
+       When 10 Then Concat('0' , Trim(Char(EmpCed)))
+       Else Char(EmpCed) End,11,1) As Cedula_Empleado, T1.CnoCve,
+       T6.CnoDes, T1.DepCve, T2.DepDes, T1.CatCve, T4.CatDes,
+       T1.CarCve, T3.CarDes, T1.UbiCve, T8.UbiDes, T1.EmpSex,
+       T1.EmpTe1, T1.EmpTd1, T1.EmpTe2, T1.EmpTd2, T1.EmpTe3,
+       T1.EmpTd3, T1.EmpDi1, T1.EmpDi2, T1.EmpEma, T1.EmpNd1,
+       T1.EmpDd1, T1.EmpNd2, T1.EmpDd2, T1.ProCve, T9.ProDes,
+       T1.NacCve, T7.NacDes, T1.EmpLna, T1.EmpEsc, T1.EmpTSa,
+       T1.EmpRnc, T1.EmpRss, T1.EmpPes, T1.EmpEst, T1.EmpCPe,
+       T1.EmpTez, T1.EmpSba, T1.EmpSbp, T1.EmpSal, T1.EmpSop,
+       T1.EmpShr, T1.EmpFpg, T1.BanCve, T1.EmpCba, T1.EmpTcb,
+       T1.EmpTip, T1.EmpTsl, T1.EmpEva, T1.CtaCve, T1.AuxCve,
+       T1.CcoCve, T10.CcoDes, T1.CmcCve, T5.CmcDes, T1.EmpSta,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAna))),
+       Trim(T1.EmpAna)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T1.EmpMna))),
+         Trim(T1.EmpMna)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDna))),
+       Trim(T1.EmpDna))) As Fecha_Nacimiento,
+ Year(Current Date -
+  (Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAna))),
+       Trim(T1.EmpAna)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMna))),
+       Trim(T1.EmpMna)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDna))),
+       Trim(T1.EmpDna))))) As Anos_de_Edad,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+       Trim(T1.EmpAin)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+       Trim(T1.EmpMin)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+       Trim(T1.EmpDin))) As Fecha_Ingreso,
+       T1.EmpAin,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAfi))),
+       Trim(T1.EmpAfi)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMfi))),
+       Trim(T1.EmpMfi)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDfi))),
+       Trim(T1.EmpDfi))) As Fecha_Fijacion,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAva))),
+       Trim(T1.EmpAva)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMva))),
+       Trim(T1.EmpMva)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDva))),
+       Trim(T1.EmpDva))) As Fecha_Inicio_Vacaciones,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAfv))),
+       Trim(T1.EmpAfv)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMfv))),
+       Trim(T1.EmpMfv)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDfv))),
+       Trim(T1.EmpDfv))) As Fecha_Fin_Vacaciones,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAsa))),
+       Trim(T1.EmpAsa)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMsa))),
+       Trim(T1.EmpMsa)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDsa))),
+       Trim(T1.EmpDsa))) As Fecha_Salida_Empresa,
+       T1.EmpAsa,
+  Case When T1.empSta <> 'C' Then
+  Year(Current Date -
+ (Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+        Trim(T1.EmpAin)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+        Trim(T1.EmpMin)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+        Trim(T1.EmpDin))))) Else
+  Year(Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAsa))),
+       Trim(T1.EmpAsa)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMsa))),
+       Trim(T1.EmpMsa)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDsa))),
+       Trim(T1.EmpDsa)))  -
+ (Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+       Trim(T1.EmpAin)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+       Trim(T1.EmpMin)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+       Trim(T1.EmpDin))))) End  As Anos_Trabajo_Empresa
+  From NomEmp T1
+Left Outer Join NomDep T2 On (T1.DepCve = T2.DepCve)
+Left Outer Join NomCar T3 On (T1.CarCve = T3.CarCve)
+Left Outer Join NomCat T4 On (T1.CatCve = T4.CatCve)
+Left Outer Join NomCmc T5 On (T1.CmcCve = T5.CmcCve)
+Left Outer Join NomCno T6 On (T1.CnoCve = T6.CnoCve)
+Left Outer Join NomNac T7 On (T1.NacCve = T7.NacCve)
+Left Outer Join NomUbi T8 On (T1.UbiCve = T8.UbiCve)
+Left Outer Join NomPro T9 On (T1.ProCve = T9.ProCve)
+Left Outer Join CogCco T10 On (T1.CcoCve = T10.CcoCve)

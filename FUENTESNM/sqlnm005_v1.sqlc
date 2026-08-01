@@ -1,0 +1,30 @@
+-- VERSIÓN ORIGINAL (respaldo) — ver sqlnm005.sqlc para v2.0
+-- PROBLEMAS CONOCIDOS:
+--   1. Fecha_Nacimiento y Fecha_Cambio_Salario sin validación de
+--      campos NULL/0 — producen error en DATE() si los campos
+--      contienen valores inválidos.
+--   2. Nombre de vista con capitalización mixta.
+--   3. Sin cabecera de documentación.
+--   4. Capitalización SQL mixta.
+Create Or Replace View VWNOM_Historico_Cambio_Salario
+As Select T3.DepDes, T1.EmpCve, T2.EmpApe, T2.EmpNom,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T2.EmpAna))),
+       Trim(T2.EmpAna)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T2.EmpMna))),
+         Trim(T2.EmpMna)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T2.EmpDna))),
+       Trim(T2.EmpDna))) As Fecha_Nacimiento,
+T4.CarDes, T1.CseSan, T1.CseSac, T1.CsePva,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.CseAef))),
+       Trim(T1.CseAef)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T1.CseMef))),
+         Trim(T1.CseMef)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.CseDef))),
+       Trim(T1.CseDef))) As Fecha_Cambio_Salario
+  From NomCse T1
+  Join NomEmp T2
+    On (T1.EmpCve = T2.EmpCve)
+  Join NomDep T3
+    On (T2.DepCve = T3.DepCve)
+  Join NomCar T4
+    On (T2.CarCve = T4.CarCve)

@@ -1,0 +1,119 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Función  : SEGLIB.FA_FECHAS_CLIENTE
+-- Propósito: Devuelve un conjunto de fechas clave del historial
+--            de un cliente: fechas de creación/modificación en
+--            el maestro y fechas relevantes de sus compras, todo
+--            en un único acceso por tabla.
+-- Versión  : 2.0
+-- Parámetros:
+--   P_CODIGO_CLIENTE  INTEGER  Clave del cliente a consultar.
+--   P_FECHA_TOPE      DATE     Fecha límite de análisis (inclusive).
+--                              Define también el "período" como el
+--                              mes calendario de esta fecha.
+--   P_TIPO            CHAR(1)  Filtro de tipo de distribuidor:
+--                                'N' = solo distribuidores tipo 'N'
+--                                'T' = todos los distribuidores
+-- Retorna tabla con columnas (DATE; DATE('1900-01-01') si no existe):
+--   CODIGO_CLIENTE            INTEGER  Clave del cliente.
+--   FECHA_CREACION            DATE     Fecha de alta en CXCCLI.
+--   FECHA_MODIFICACION        DATE     Última modificación en CXCCLI.
+--   FECHA_ULTIMA_COMPRA       DATE     Última compra <= P_FECHA_TOPE.
+--   FECHA_COMPRA_PERIODO      DATE     Primera compra dentro del mes
+--                                      de P_FECHA_TOPE.
+--   FECHA_PRIMERA_COMPRA_HIST DATE     Primera compra de toda la
+--                                      historia hasta el último día
+--                                      del mes anterior a P_FECHA_TOPE.
+-- Notas:
+--   - Se usa DATE('1900-01-01') como centinela cuando no hay dato.
+--   - CXCCLI y FacDtoh se acceden cada uno en un único LATERAL,
+--     minimizando el número de scans.
+--   - Si algún parámetro es NULL retorna tabla vacía.
+-- Uso:
+--   SELECT * FROM TABLE(SEGLIB.FA_FECHAS_CLIENTE(
+--       1001,
+--       DATE('2026-07-23'),
+--       'N'
+--   )) AS x;
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.FA_FECHAS_CLIENTE (
+    P_CODIGO_CLIENTE INTEGER,
+    P_FECHA_TOPE     DATE,
+    P_TIPO           CHAR(1)     -- 'N' = solo DisTip N, 'T' = todos
+)
+RETURNS TABLE (
+    CODIGO_CLIENTE            INTEGER,
+    FECHA_CREACION            DATE,
+    FECHA_MODIFICACION        DATE,
+    FECHA_ULTIMA_COMPRA       DATE,
+    FECHA_COMPRA_PERIODO      DATE,
+    FECHA_PRIMERA_COMPRA_HIST DATE
+)
+LANGUAGE SQL
+NOT DETERMINISTIC           -- el resultado depende del estado de las tablas
+READS SQL DATA
+RETURNS NULL ON NULL INPUT  -- si cualquier parámetro es NULL retorna vacío
+RETURN
+    SELECT
+        P_CODIGO_CLIENTE                
+        AS CODIGO_CLIENTE,
+        -- Fechas de alta y modificación del maestro de clientes
+        COALESCE(CXC.FECHA_CREACION,     DATE('1900-01-01'))  
+        AS FECHA_CREACION,
+        COALESCE(CXC.FECHA_MODIFICACION, DATE('1900-01-01')) 
+        AS FECHA_MODIFICACION,
+
+        -- Fechas de compra calculadas en un único scan sobre FacDtoh
+        COALESCE(FAC.FECHA_ULTIMA_COMPRA,  
+        DATE('1900-01-01')) AS FECHA_ULTIMA_COMPRA,
+        COALESCE(FAC.FECHA_COMPRA_PERIODO,   
+        DATE('1900-01-01')) AS FECHA_COMPRA_PERIODO,
+        COALESCE(FAC.FECHA_PRIMERA_COMPRA_HIST, 
+        DATE('1900-01-01')) AS FECHA_PRIMERA_COMPRA_HIST
+
+    FROM SYSIBM.SYSDUMMY1
+
+    -- LATERAL: fechas de creación y modificación del cliente
+    -- (un único acceso a CXCCLI)
+    LEFT JOIN LATERAL (
+        SELECT
+            DATE(C.CreTst) AS FECHA_CREACION,
+            DATE(C.ModTst) AS FECHA_MODIFICACION
+        FROM CXCCLI C
+        WHERE C.CliCve = P_CODIGO_CLIENTE
+        FETCH FIRST 1 ROW ONLY
+    ) AS CXC ON 1 = 1
+
+    -- LATERAL: tres métricas de fecha en un único scan sobre FacDtoh
+    LEFT JOIN LATERAL (
+        SELECT
+            -- Última compra del cliente hasta P_FECHA_TOPE
+            MAX(CASE WHEN T9.FecIso <= P_FECHA_TOPE
+                     THEN T9.FecIso END) AS FECHA_ULTIMA_COMPRA,
+
+            -- Primera compra dentro del mes calendario de P_FECHA_TOPE
+            MIN(CASE WHEN T9.FecIso BETWEEN
+                          DATE(TO_CHAR(P_FECHA_TOPE, 'YYYY-MM') || '-01')
+                      AND P_FECHA_TOPE
+                     THEN T9.FecIso END) AS FECHA_COMPRA_PERIODO,
+
+            -- Primera compra de toda la historia hasta fin del mes anterior
+            -- ADD_MONTHS evita desbordamiento en meses cortos (ej. 31 → 28/29)
+            MIN(CASE WHEN T9.FecIso <= LAST_DAY(ADD_MONTHS(P_FECHA_TOPE, -1))
+                     THEN T9.FecIso END)  AS FECHA_PRIMERA_COMPRA_HIST
+
+        FROM FacDtoh T2
+        JOIN SegDis T3  ON T2.DisCve = T3.DisCve
+        JOIN SegFec T9  ON T2.DtoAno = T9.FecAno
+                       AND T2.DtoMes = T9.FecMes
+                       AND T2.DtoDia = T9.FecDia
+        WHERE T2.CliCve  = P_CODIGO_CLIENTE
+          AND T2.DtoSta  = 'A'
+          AND T2.DtoTip  NOT IN (2, 8)
+          -- 'N' filtra solo distribuidores tipo N; 'T' incluye todos
+          AND (P_TIPO = 'T' OR T3.DisTip = 'N')
+    ) AS FAC ON 1 = 1;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_FECHAS_CLIENTE TO PUBLIC;

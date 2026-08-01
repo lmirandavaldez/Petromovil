@@ -1,0 +1,29 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- Para Sustituir el Programa SG7002
+
+-- Crear función tabla: devuelve DIA_NUM (1..7, Domingo=1) y DIA_NOM (español)
+CREATE OR REPLACE FUNCTION SEGLIB.SG_DIA_SEMANA (
+  Fecha DATE
+)
+RETURNS TABLE (DIA_NUM INTEGER, DIA_NOM VARCHAR(10))
+LANGUAGE SQL
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN
+  RETURN
+    SELECT
+      DAYOFWEEK(Fecha) AS DIA_NUM,
+      CASE DAYOFWEEK(Fecha)
+        WHEN 1 THEN 'Domingo'
+        WHEN 2 THEN 'Lunes'
+        WHEN 3 THEN 'Martes'
+        WHEN 4 THEN 'Miercoles'
+        WHEN 5 THEN 'Jueves'
+        WHEN 6 THEN 'Viernes'
+        WHEN 7 THEN 'Sabado'
+      END AS DIA_NOM
+    FROM SYSIBM.SYSDUMMY1;
+END;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_DIA_SEMANA TO PUBLIC;
+

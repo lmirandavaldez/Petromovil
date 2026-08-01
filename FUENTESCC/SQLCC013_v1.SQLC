@@ -1,0 +1,30 @@
+  Create Or Replace View VWCXC_Notas_Credito_Administrativas
+  AS Select T1.CliCve, T1.NctNum, T1.DisCve, T1.VenCve,
+            T9.FecYmd As Fecha_Nota_Credito,
+            T1.PerAno As Periodo_Contable_NC,
+            T1.PerNum As Numero_Periodo_Contable_Nc, T1.NctObs, T1.NctTip,
+            T1.RatCve, T1.NctVdp, T1.NctTim, T1.NctTas, T1.NctVml,
+            T1.NctVI1, T1.NctVi2, T1.NctTre, T1.NctDpr,
+            T1.NcfNro As Comprobante_Nota_Credito,
+            T2.DisCve As Distrito_Documento, T2.CdoCve, T2.DocNum,
+            T3.DocFec, T2.PerAno As Periodo_Contable_Doc,
+            T2.PerNum As Numero_Periodo_Contable_Doc,
+            T3.NcfNro As Comprobante_Modificado,
+            T2.NctVtr, T2.Ncttml, T2.NctVto, T2.NctMi1, T2.NctMi2
+       From CxcNchh T1
+       Join CxcNchd T2
+         On (T1.CliCve = T2.CliCve)
+        And (T1.NctNum = T2.NctNum)
+        And (T1.DisCve = T2.DisTra)
+       Join CxcHncf T3
+         On (T2.CliCve = T3.CliCve)
+        And (T2.CdoCve = T3.CdoCve)
+        And (T2.DocNum = T3.DocNum)
+        And (T2.PerAno = T3.PerAno)
+        And (T2.PerNum = T3.PerNum)
+        And (T2.DisCve = T3.DisCve)
+       Join SegFec T9
+         On (T1.NctAtr = T9.FecAno)
+        And (T1.NctMtr = T9.FecMes)
+        And (T1.NctDtr = T9.FecDia)
+      Where (T1.NctTip Not In(3, 5, 6))

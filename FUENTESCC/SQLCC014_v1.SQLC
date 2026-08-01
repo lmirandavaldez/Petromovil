@@ -1,0 +1,25 @@
+  Create Or Replace View VWCXC_Notas_Debito_Administrativas
+  As Select T1.DisCve, T1.DndNro, T1.DndFec, T1.CliCve, T1.VenCve,
+            T1.PerAno As Periodo_Contable_ND,
+            T1.PerNum As Numero_Periodo_Contable_ND, T1.DndObs, T1.DndTip,
+            T1.RatCve, T1.DndTas, T1.DndVal, T1.DndVml, T1.DndMdo, T1.DndMdl,
+            T1.DndVI1, T1.DndVi2,
+            T1.NcfNro As Comprobante_Nota_Debito,
+            T2.DisCve As Distrito_Documento, T2.CdoCve, T2.DocNum,
+            T3.DocFec, T2.PerAno As Periodo_Contable_Doc,
+            T2.PerNum As Numero_Periodo_Contable_Doc,
+            T3.NcfNro As Comprobante_Modificado,
+            T2.DndVtr, T2.DndTml, T2.DndVto, T2.DndMi1, T2.DndMi2
+       From CxcNdhh T1
+       Join CxcNdhd T2
+         On (T1.CliCve = T2.CliCve)
+        And (T1.DndNro = T2.DndNro)
+        And (T1.DisCve = T2.DisTra)
+       Join CxcHncf T3
+         On (T2.CliCve = T3.CliCve)
+        And (T2.CdoCve = T3.CdoCve)
+        And (T2.DocNum = T3.DocNum)
+        And (T2.PerAno = T3.PerAno)
+        And (T2.PerNum = T3.PerNum)
+        And (T2.DisCve = T3.DisCve)
+      Where (T1.DndTip In(1))

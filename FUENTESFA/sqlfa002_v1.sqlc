@@ -1,0 +1,12 @@
+Create Or Replace View VWFAC_Fec_Ult_Doc_Ven_Cli_Art
+As Select T3.VenCve, T1.CliCve, T2.ArtCve, T4.CatCve, T4.ArtPpr,
+Max(T9.FecYmd) As DtoFec
+    From CxcCli T1
+Left Outer Join FacDtod T2 On(T1.CliCve = T2.CliCve)
+Left Outer Join CxcRvc T3 On(T1.CliCve = T3.CliCve)
+Left Outer Join InvArt T4 On(T2.ArtCve = T4.ArtCve)
+    Join SegFec T9 On(T2.DtoAno = T9.FecAno)
+                  And(T2.DtoMes = T9.FecMes)
+                  And(T2.DtoDia = T9.FecDia)
+   Where (T2.DtoTip = 1 Or T2.DtoTip > 3)
+Group By T3.VenCve, T1.CliCve, T2.ArtCve, T4.CatCve, T4.ArtPpr

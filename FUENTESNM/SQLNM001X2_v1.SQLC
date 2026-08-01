@@ -1,0 +1,54 @@
+-- VERSIÓN ORIGINAL (respaldo) — ver SQLNM001X2.SQLC para v2.0
+-- PROBLEMA: llama SG_TIEMPO_ANOS, SG_TIEMPO_MESES y SG_TIEMPO_DIAS
+--           como funciones escalares, pero son funciones de tabla.
+--           Esto produce SQL0390 al compilar la vista.
+Create Or Replace View VWNOM_MAESTRO_EMPLEADOS_V2 (
+EmpCve, EmpNom, EmpApe, Fecha_Ingreso,
+  Anos_En_la_Empresa, Meses_En_la_Empresa, Dias_En_la_Empresa
+) AS
+ Select T1.EmpCve, T1.EmpNom, T1.EmpApe,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+       Trim(T1.EmpAin)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+       Trim(T1.EmpMin)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+       Trim(T1.EmpDin))) As Fecha_Ingreso,
+-- Llamadas a las funciones escalares: pasar Fecha_Ingreso y CURRENT_DATE
+  SG_TIEMPO_ANOS(
+    Date(
+      Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+             Trim(T1.EmpAin)) || '-' ||
+      Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+             Trim(T1.EmpMin)) || '-' ||
+      Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+             Trim(T1.EmpDin))
+    ),
+    CURRENT_DATE
+  ) AS Anos_En_la_Empresa,
+
+  SG_TIEMPO_MESES(
+    Date(
+      Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+             Trim(T1.EmpAin)) || '-' ||
+      Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+             Trim(T1.EmpMin)) || '-' ||
+      Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+             Trim(T1.EmpDin))
+    ),
+    CURRENT_DATE
+  ) AS Meses_En_la_Empresa,
+
+  SG_TIEMPO_DIAS(
+    Date(
+      Concat(Substring('0000',0,5-Length(Trim(T1.EmpAin))),
+             Trim(T1.EmpAin)) || '-' ||
+      Concat(Substring('00',0,3-Length(Trim(T1.EmpMin))),
+             Trim(T1.EmpMin)) || '-' ||
+      Concat(Substring('00',0,3-Length(trim(T1.EmpDin))),
+             Trim(T1.EmpDin))
+    ),
+    CURRENT_DATE,
+    1  -- IncluirDia = 1 para replicar SG7006
+  ) AS Dias_En_la_Empresa
+   From NomEmp T1
+  Where (T1.EmpSta = 'A')

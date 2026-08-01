@@ -1,0 +1,170 @@
+-- ===========================================================
+-- Proc.   : PRO_ACTUALIZAR_INACTIVIDAD
+-- Módulo  : Facturación
+-- Objeto  : Mantiene el registro de inactividad de clientes
+--           en la tabla CLIENTE_INACTIVIDAD.
+--           Si el cliente no existe lo inserta con su fecha
+--           de ingreso (CXCCLI.CRETST) y la fecha de compra
+--           como primera compra, marcándolo como ES_NUEVO='S'.
+--           Si el cliente ya existe, calcula los meses entre
+--           la última compra y la nueva; si la inactividad es
+--           >= 36 meses, actualiza FECHA_ULTIMA_INACTIVIDAD,
+--           marca ES_NUEVO='S' y registra FECHA_REACTIVACION.
+--           En todos los casos actualiza FECHA_ULTIMA_COMPRA
+--           y ESTADO_CLIENTE = 'ACTIVO'.
+-- Tabla   : CLIENTE_INACTIVIDAD — registro de inactividad
+--           CXCCLI               — maestro de clientes
+-- Paráms  : P_ID_CLIENTE   DECIMAL(7,0) — código del cliente
+--           P_FECHA_COMPRA DATE         — fecha de la compra
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se corrige typo en comentario inicial:
+--          'fucturas' → 'futuras'.
+--        Se agrega SPECIFIC para identificar la firma.
+--        Se agrega CONTINUE HANDLER FOR NOT FOUND en el
+--          SELECT INTO de CXCCLI para manejar el caso en
+--          que el cliente no exista en el maestro
+--          (V_FECHA_INGRESO queda NULL de forma controlada).
+--        Se agregan DEFAULT en las declaraciones de fecha
+--          para dejar claro el valor inicial.
+--        Se eliminan las líneas en blanco dobles que
+--          duplicaban el tamaño del archivo sin aporte.
+--        Se reformatea respetando 80 columnas.
+--        Se documenta cada sección con comentarios claros.
+--        Cabecera de documentación completa.
+-- ===========================================================
+CL: CHGCURLIB  CURLIB("FACLIB.V2") ;
+
+CREATE OR REPLACE PROCEDURE "FACLIB.V2".PRO_ACTUALIZAR_INACTIVIDAD (
+    -- Código del cliente a actualizar
+    IN P_ID_CLIENTE   DECIMAL(7,0),
+    -- Fecha de la nueva compra
+    IN P_FECHA_COMPRA DATE
+)
+SPECIFIC          PRO_ACTUALIZAR_INACTIVIDAD
+LANGUAGE          SQL
+CALLED ON NULL INPUT    -- Se invoca aunque lleguen NULLs
+
+BEGIN
+
+    -- -------------------------------------------------------
+    -- Variables de trabajo
+    -- -------------------------------------------------------
+    DECLARE V_FECHA_ULTIMA   DATE    DEFAULT NULL;
+    DECLARE V_FECHA_INGRESO  DATE    DEFAULT NULL;
+    DECLARE V_MESES_INACTIVO DECIMAL(10,0) DEFAULT 0;
+    DECLARE V_EXISTE         INT     DEFAULT 0;
+
+    -- Handler para SELECT INTO sin filas (cliente no existe
+    -- en CXCCLI): V_FECHA_INGRESO queda NULL
+    DECLARE CONTINUE HANDLER FOR NOT FOUND
+        BEGIN END;
+
+    -- -------------------------------------------------------
+    -- Verificar si el cliente ya existe en CLIENTE_INACTIVIDAD
+    -- -------------------------------------------------------
+    SELECT COUNT(*)
+      INTO V_EXISTE
+      FROM CLIENTE_INACTIVIDAD
+     WHERE ID_CLIENTE = P_ID_CLIENTE;
+
+    IF V_EXISTE = 0 THEN
+
+        -- ---------------------------------------------------
+        -- Cliente nuevo: obtener fecha de ingreso desde CXCCLI
+        -- CRETST = timestamp de creación del registro
+        -- ---------------------------------------------------
+        SELECT DATE(CRETST)
+          INTO V_FECHA_INGRESO
+          FROM CXCCLI
+         WHERE CLICVE = P_ID_CLIENTE;
+
+        -- Insertar el cliente con su primera compra
+        INSERT INTO CLIENTE_INACTIVIDAD (
+            ID_CLIENTE,
+            FECHA_INGRESO,
+            FECHA_PRIMERA_COMPRA,
+            FECHA_ULTIMA_COMPRA,
+            FECHA_ULTIMA_INACTIVIDAD,
+            FECHA_REACTIVACION,
+            MESES_INACTIVO,
+            ES_NUEVO,
+            ESTADO_CLIENTE
+        )
+        VALUES (
+            P_ID_CLIENTE,
+            V_FECHA_INGRESO,         -- fecha creación en CXCCLI
+            P_FECHA_COMPRA,          -- primera compra = compra actual
+            P_FECHA_COMPRA,          -- última compra  = compra actual
+            P_FECHA_COMPRA,          -- sin inactividad previa
+            P_FECHA_COMPRA,          -- sin reactivación previa
+            0,                       -- 0 meses inactivo
+            CAST('S' AS CHAR(1)),    -- ES_NUEVO: 'S'=Sí
+            CAST('ACTIVO' AS CHAR(10))
+        );
+
+    ELSE
+
+        -- ---------------------------------------------------
+        -- Cliente existente: calcular meses de inactividad
+        -- MONTHS_BETWEEN(fecha_nueva, fecha_anterior)
+        -- ---------------------------------------------------
+        SELECT FECHA_ULTIMA_COMPRA
+          INTO V_FECHA_ULTIMA
+          FROM CLIENTE_INACTIVIDAD
+         WHERE ID_CLIENTE = P_ID_CLIENTE;
+
+        -- Meses transcurridos desde la última compra
+        SET V_MESES_INACTIVO =
+            MONTHS_BETWEEN(P_FECHA_COMPRA, V_FECHA_ULTIMA);
+
+        -- ---------------------------------------------------
+        -- Actualizar registro existente vía MERGE
+        -- Umbral de inactividad: >= 36 meses (3 años)
+        -- ---------------------------------------------------
+        MERGE INTO CLIENTE_INACTIVIDAD AS CI
+        USING (
+            SELECT P_ID_CLIENTE   AS ID_CLIENTE,
+                   P_FECHA_COMPRA AS FECHA
+              FROM SYSIBM.SYSDUMMY1
+        ) AS SRC
+           ON CI.ID_CLIENTE = SRC.ID_CLIENTE
+        WHEN MATCHED THEN
+            UPDATE SET
+                -- Si inactivo >= 36 meses: guardar fecha anterior
+                -- como última inactividad; si no, no cambia
+                FECHA_ULTIMA_INACTIVIDAD = CASE
+                    WHEN V_MESES_INACTIVO >= 36
+                        THEN CI.FECHA_ULTIMA_COMPRA
+                    ELSE CI.FECHA_ULTIMA_INACTIVIDAD
+                END,
+
+                -- Siempre actualizar con la fecha de compra actual
+                FECHA_ULTIMA_COMPRA = P_FECHA_COMPRA,
+
+                -- Guardar los meses calculados
+                MESES_INACTIVO = V_MESES_INACTIVO,
+
+                -- Si inactivo >= 36 meses: marcar como cliente nuevo
+                ES_NUEVO = CASE
+                    WHEN V_MESES_INACTIVO >= 36
+                        THEN CAST('S' AS CHAR(1))
+                    ELSE CAST('N' AS CHAR(1))
+                END,
+
+                -- Si inactivo >= 36 meses: registrar reactivación
+                FECHA_REACTIVACION = CASE
+                    WHEN V_MESES_INACTIVO >= 36
+                        THEN P_FECHA_COMPRA
+                    ELSE CI.FECHA_REACTIVACION
+                END,
+
+                -- Siempre marcar como activo al recibir una compra
+                ESTADO_CLIENTE = CAST('ACTIVO' AS CHAR(10));
+
+    END IF;
+
+END;

@@ -1,0 +1,32 @@
+Create Or Replace View VWCOG_Diario_General
+As Select T1.PerAno, T1.PerNum, T3.PerDes, T2.TdiDes,
+       T1.TdiCve || '-' ||
+Concat(Substring('0000000',0,7-Length(Trim(T1.DgeDoc))),
+       Trim(T1.DgeDoc)) As Numero_Documento,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.DgeAno))),
+       Trim(T1.DgeAno)) || '-' ||
+Concat(Substring('00',0,3-Length(Trim(T1.DgeMes))),
+       Trim(T1.DgeMes)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.DgeDia))),
+       Trim(T1.DgeDia))) As Fecha_Documento, T1.DgeSec,
+       T1.CtaCve, T1.AuxCve,
+      (Case When T1.AuxCve = 0 Then T4.CtaDes Else T5.AuxNom End)
+      Descripcion, T1.CcoCve, T6.CcoDes, T1.DgeDe1,
+   (Case When T1.DgeOri = 1 Then T1.DgeVal Else 0 End) As Debito,
+   (Case When T1.DgeOri = 2 Then T1.DgeVal Else 0 End) As Credito,
+   T1.CfaCve, T7.CfaDes, T1.DgeTid, T1.DgeIde, T1.NcfNro
+  From CogHdgd T1
+  Join CogTdi T2
+    On (T1.TdiCve = T2.TdiCve)
+  Join CogPer T3
+    On (T1.PerAno = T3.PerAno)
+   And (T1.PerNum = T3.PerNum)
+  Join CogCta T4
+    On (T1.CtaCve = T4.CtaCve)
+Left Outer Join CogAuxd T5
+    On (T1.AuxLis = T5.AuxLis)
+   And (T1.AuxCve = T5.AuxCve)
+Left Outer Join CogCco T6
+    On (T1.CcoCve = T6.CcoCve)
+Left Outer Join CxpCfa T7
+    On (T1.CfaCve = T7.CfaCve)

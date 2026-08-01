@@ -1,0 +1,59 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- Para Sustituir el Programa SG7006
+-- VERSIÓN ORIGINAL (respaldo) — ver sqlsgf004.sqlc para v2.0
+
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_TIEMPO_DIAS (
+  FechaDes DATE,
+  FechaHas DATE,
+  IncluirDia SMALLINT  -- 1 = incluir día final,
+                       -- 0 = excluir
+)
+RETURNS INTEGER
+LANGUAGE SQL
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN
+  DECLARE vAnos INTEGER;
+  DECLARE vMeses INTEGER;
+  DECLARE vDias INTEGER;
+  DECLARE FechaBase DATE;
+  DECLARE FechaBase2 DATE;
+
+  -- años completos
+  SET vAnos = YEAR(FechaHas) - YEAR(FechaDes);
+  IF (MONTH(FechaHas) < MONTH(FechaDes))
+     OR (MONTH(FechaHas) = MONTH(FechaDes)
+     AND DAY(FechaHas) < DAY(FechaDes)) THEN
+    SET vAnos = vAnos - 1;
+  END IF;
+
+  -- fecha base tras quitar años
+  SET FechaBase = ADD_MONTHS(FechaDes, vAnos * 12);
+
+  -- meses restantes
+  SET vMeses = (YEAR(FechaHas) * 12 + MONTH(FechaHas))
+               - (YEAR(FechaBase) * 12 + MONTH(FechaBase));
+  IF DAY(FechaHas) < DAY(FechaBase) THEN
+    SET vMeses = vMeses - 1;
+  END IF;
+
+  -- fecha base tras quitar años y meses
+  SET FechaBase2 = ADD_MONTHS(FechaBase, vMeses);
+
+  -- días restantes
+  SET vDias = FechaHas - FechaBase2;
+
+  IF IncluirDia = 1 THEN
+    SET vDias = vDias + 1; -- convención inclusiva (como SG7006)
+  END IF;
+
+  IF vDias < 0 THEN
+    SET vDias = 0;
+  END IF;
+
+  RETURN vDias;
+END;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_TIEMPO_DIAS TO PUBLIC;

@@ -1,0 +1,5 @@
+Create Or Replace View VWCXC_Supervisores_Vendedores
+As Select T1.SupCve, T1.SupNom, T2.VenCve, T2.VenNom, T2.VenSta
+  From CxcSup T1
+  Join CxcVen T2
+    On (T1.SupCve = T2.SupCve)
