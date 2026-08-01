@@ -1,0 +1,341 @@
+-- ==============================================================
+-- Modulo    : Activos Fijos
+-- Programa  : SQLAF001
+-- Objeto    : VWAFI_Activos_Fijos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista maestra de activos fijos. Consolida en una sola
+--   consulta los datos del activo junto con sus clasificaciones
+--   (categoria, grupo, tipo), valores contables y de balance,
+--   cuentas contables, centro de costo, proveedor, distribucion
+--   y moneda.
+--
+--   Las fechas se almacenan en campos separados de ano, mes y
+--   dia (AfiAad/AfiMad/AfiDad, etc.) y se convierten a tipo
+--   DATE mediante construccion de cadena ISO YYYY-MM-DD usando
+--   CONCAT, SUBSTRING y TRIM con relleno de ceros a la
+--   izquierda. Se devuelven cuatro fechas calculadas:
+--     Fecha_Adquisicion    : ano/mes/dia de adquisicion
+--     Fecha_De_Instalacion : ano/mes/dia de instalacion
+--     Fecha_Estimada_Baja  : ano/mes/dia estimado de baja
+--     Fecha_De_Baja        : ano/mes/dia real de baja
+--
+--   Todos los joins son LEFT OUTER para preservar activos
+--   aunque no tengan todos los datos maestros completos
+--   (balance, grupo, categoria, tipo, cuenta, etc.).
+--
+--   Nota: la clasificacion sigue la jerarquia:
+--     Activo (AcfAfi)
+--       -> Grupo (AcfGaf)  -> Categoria (AcfCaf)
+--       -> Tipo  (AcfTaf)
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   AfiCve   Clave del activo fijo              (AcfAfi)
+--   AfiDes   Descripcion del activo fijo        (AcfAfi)
+--   CafCve   Clave de categoria                 (AcfGaf)
+--   CafDes   Descripcion de categoria           (AcfCaf)
+--   CafPde   Porcentaje de depreciacion         (AcfCaf)
+--   CafPda   Porcentaje de depreciacion acum.   (AcfCaf)
+--   CafEdi   Edicion/version de categoria       (AcfCaf)
+--   GafCve   Clave del grupo                    (AcfAfi)
+--   GafDes   Descripcion del grupo              (AcfGaf)
+--   TafCve   Clave del tipo de activo           (AcfAfi)
+--   TafDes   Descripcion del tipo de activo     (AcfTaf)
+--   DisCve   Clave de la distribucion           (AcfAfi)
+--   DisDes   Descripcion de la distribucion     (SegDis)
+--   AfiCad   Codigo de adquisicion              (AcfAfi)
+--   AfiCin   Codigo de instalacion              (AcfAfi)
+--   AfiCos   Costo original del activo          (AcfAfi)
+--   BafCos   Costo en balance                   (AcfBaf)
+--   BafDac   Depreciacion acumulada contable    (AcfBaf)
+--   BafDme   Depreciacion del mes               (AcfBaf)
+--   BafVli   Valor en libros inicial            (AcfBaf)
+--   BafVla   Valor en libros actual             (AcfBaf)
+--   BafAcl   Ajuste contable al libros          (AcfBaf)
+--   BafDad   Depreciacion acum. declarada       (AcfBaf)
+--   BafDmd   Depreciacion mes declarada         (AcfBaf)
+--   BafVld   Valor en libros declarado          (AcfBaf)
+--   BafVmc   Valor de mercado / comercial       (AcfBaf)
+--   BafDMc   Depreciacion mercado corriente     (AcfBaf)
+--   BafAcd   Ajuste contable declarado          (AcfBaf)
+--   BafAno   Ano del balance                    (AcfBaf)
+--   BafMes   Mes del balance                    (AcfBaf)
+--   AfiVde   Valor de desecho                   (AcfAfi)
+--   AfiVua   Vida util en anos                  (AcfAfi)
+--   AfiVum   Vida util en meses                 (AcfAfi)
+--   MonCve   Clave de moneda                    (AcfAfi)
+--   MonSim   Simbolo de moneda                  (SegMon)
+--   SecTas   Tasa de cambio / sector            (AcfAfi)
+--   AfiLoc   Ubicacion fisica del activo        (AcfAfi)
+--   AfiSnb   Numero de serie / placa            (AcfAfi)
+--   AfiMod   Modelo del activo                  (AcfAfi)
+--   GafCga   Cuenta contable del grupo          (AcfAfi)
+--   CtaDes   Descripcion de la cuenta contable  (CogCta)
+--   CcoCve   Clave del centro de costo          (AcfAfi)
+--   CcoDes   Descripcion del centro de costo    (CogCco)
+--   ProCve   Clave del proveedor                (AcfAfi)
+--   ProNom   Nombre del proveedor               (CxpPro)
+--   Fecha_Adquisicion    Fecha ISO de adquisicion    (calc.)
+--   Fecha_De_Instalacion Fecha ISO de instalacion    (calc.)
+--   Fecha_Estimada_Baja  Fecha ISO estimada de baja  (calc.)
+--   Fecha_De_Baja        Fecha ISO real de baja      (calc.)
+--   AfiSta   Estatus del activo                 (AcfAfi)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   AcfAfi  T1   Maestro de activos fijos (tabla base)
+--   AcfBaf  T2   Balance del activo fijo
+--   AcfGaf  T3   Grupos de activos fijos
+--   AcfCaf  T4   Categorias de activos fijos
+--   AcfTaf  T5   Tipos de activos fijos
+--   CogCta  T6   Plan de cuentas contables
+--   CogCco  T7   Centros de costo
+--   CxpPro  T8   Proveedores de cuentas por pagar
+--   SegDis  T9   Distribuciones
+--   SegMon  T10  Monedas
+-- --------------------------------------------------------------
+-- Logica de conversion de fecha (patron repetido 4 veces):
+--   Los campos de fecha se almacenan separados en:
+--     AfiAxx (ano  CHAR), AfiMxx (mes CHAR), AfiDxx (dia CHAR)
+--   La conversion a DATE construye la cadena YYYY-MM-DD:
+--     CONCAT(relleno_ceros_ano, Ano) || '-' ||
+--     CONCAT(relleno_ceros_mes, Mes) || '-' ||
+--     CONCAT(relleno_ceros_dia, Dia)
+--   donde el relleno usa SUBSTRING('0000', 0, N-LENGTH(TRIM(x)))
+--   para agregar ceros a la izquierda segun la longitud esperada.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. La logica de conversion de fecha se repite 4 veces con
+--      el mismo patron. En DB2 for i se puede encapsular en una
+--      funcion escalar para reducir duplicacion y mantenimiento:
+--        CREATE FUNCTION F_FechaAMD(ano CHAR, mes CHAR, dia CHAR)
+--        RETURNS DATE ...
+--   2. Verificar que los campos de ano/mes/dia no contengan
+--      valores '0000','00','00' que generarian una fecha
+--      invalida (0000-00-00) al hacer el DATE(). Considerar
+--      agregar CASE WHEN para devolver NULL en ese caso:
+--        CASE WHEN AfiAad = '0000' THEN NULL
+--             ELSE DATE(...) END
+--   3. Verificar indice en AcfAfi(AfiCve) y AcfBaf(AfiCve)
+--      ya que es el campo de union entre la tabla base y el
+--      balance; sin indice el LEFT JOIN puede ser costoso.
+--   4. AcfCaf (T4) se une a traves de AcfGaf (T3) usando
+--      T3.CafCve. Si un activo tiene grupo pero la categoria
+--      no existe en AcfCaf, los campos CafDes/CafPde/etc.
+--      seran NULL. Documentar este comportamiento.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWAFI_Activos_Fijos AS
+SELECT
+    -- Identificacion del activo
+    T1.AfiCve,
+    T1.AfiDes,
+    -- Categoria (via grupo)
+    T3.CafCve,
+    T4.CafDes,
+    T4.CafPde,
+    T4.CafPda,
+    T4.CafEdi,
+    -- Grupo
+    T1.GafCve,
+    T3.GafDes,
+    -- Tipo de activo
+    T1.TafCve,
+    T5.TafDes,
+    -- Distribucion
+    T1.DisCve,
+    T9.DisDes,
+    -- Codigos de referencia
+    T1.AfiCad,
+    T1.AfiCin,
+    -- Costo original
+    T1.AfiCos,
+    -- Balance del activo (AcfBaf)
+    T2.BafCos,
+    T2.BafDac,
+    T2.BafDme,
+    T2.BafVli,
+    T2.BafVla,
+    T2.BafAcl,
+    T2.BafDad,
+    T2.BafDmd,
+    T2.BafVld,
+    T2.BafVmc,
+    T2.BafDMc,
+    T2.BafAcd,
+    T2.BafAno,
+    T2.BafMes,
+    -- Valores del activo
+    T1.AfiVde,
+    T1.AfiVua,
+    T1.AfiVum,
+    -- Moneda
+    T1.MonCve,
+    T10.MonSim,
+    T1.SecTas,
+    -- Datos fisicos
+    T1.AfiLoc,
+    T1.AfiSnb,
+    T1.AfiMod,
+    -- Cuenta contable y centro de costo
+    T1.GafCga,
+    T6.CtaDes,
+    T1.CcoCve,
+    T7.CcoDes,
+    -- Proveedor
+    T1.ProCve,
+    T8.ProNom,
+
+    -- Fecha de adquisicion: primero intenta SegFec (T11),
+    -- si no existe usa la conversion DATE(CONCAT...) como
+    -- respaldo con los campos separados AfiAad/AfiMad/AfiDad
+    COALESCE(
+        T11.FecIso,
+        DATE(
+            CONCAT(
+                SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.AfiAad))),
+                TRIM(T1.AfiAad)
+            ) || '-' ||
+            CONCAT(
+                SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiMad))),
+                TRIM(T1.AfiMad)
+            ) || '-' ||
+            CONCAT(
+                SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiDad))),
+                TRIM(T1.AfiDad)
+            )
+        )
+    ) AS Fecha_Adquisicion,
+
+    -- Fecha de instalacion: primero intenta SegFec (T12),
+    -- si no existe usa los campos AfiAin/AfiMin/AfiDin
+    COALESCE(
+        T12.FecIso,
+        DATE(
+            CONCAT(
+                SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.AfiAin))),
+                TRIM(T1.AfiAin)
+            ) || '-' ||
+            CONCAT(
+                SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiMin))),
+                TRIM(T1.AfiMin)
+            ) || '-' ||
+            CONCAT(
+                SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiDin))),
+                TRIM(T1.AfiDin)
+            )
+        )
+    ) AS Fecha_De_Instalacion,
+
+    -- Fecha estimada de baja: primero intenta SegFec (T13),
+    -- si no existe usa los campos AfiAde/AfiMde/AfiDde
+    COALESCE(
+        T13.FecIso,
+        DATE(
+            CONCAT(
+                SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.AfiAde))),
+                TRIM(T1.AfiAde)
+            ) || '-' ||
+            CONCAT(
+                SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiMde))),
+                TRIM(T1.AfiMde)
+            ) || '-' ||
+            CONCAT(
+                SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiDde))),
+                TRIM(T1.AfiDde)
+            )
+        )
+    ) AS Fecha_Estimada_Baja,
+
+    -- Fecha real de baja: primero intenta SegFec (T14),
+    -- si no existe usa los campos AfiAba/AfiMba/AfiDba
+    COALESCE(
+        T14.FecIso,
+        DATE(
+            CONCAT(
+                SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.AfiAba))),
+                TRIM(T1.AfiAba)
+            ) || '-' ||
+            CONCAT(
+                SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiMba))),
+                TRIM(T1.AfiMba)
+            ) || '-' ||
+            CONCAT(
+                SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiDba))),
+                TRIM(T1.AfiDba)
+            )
+        )
+    ) AS Fecha_De_Baja,
+
+    -- Estatus del activo
+    T1.AfiSta
+
+FROM AcfAfi T1
+
+-- Balance del activo fijo
+LEFT OUTER JOIN AcfBaf T2
+    ON  T1.AfiCve = T2.AfiCve
+
+-- Grupo del activo (aporta CafCve y GafDes)
+LEFT OUTER JOIN AcfGaf T3
+    ON  T1.GafCve = T3.GafCve
+
+-- Categoria (via grupo T3.CafCve)
+LEFT OUTER JOIN AcfCaf T4
+    ON  T3.CafCve = T4.CafCve
+
+-- Tipo de activo
+LEFT OUTER JOIN AcfTaf T5
+    ON  T1.TafCve = T5.TafCve
+
+-- Cuenta contable del grupo
+LEFT OUTER JOIN CogCta T6
+    ON  T1.GafCga = T6.CtaCve
+
+-- Centro de costo
+LEFT OUTER JOIN CogCco T7
+    ON  T1.CcoCve = T7.CcoCve
+
+-- Proveedor
+LEFT OUTER JOIN CxpPro T8
+    ON  T1.ProCve = T8.ProCve
+
+-- Distribucion
+LEFT OUTER JOIN SegDis T9
+    ON  T1.DisCve = T9.DisCve
+
+-- Moneda
+LEFT OUTER JOIN SegMon T10
+    ON  T1.MonCve = T10.MonCve
+
+-- Fecha de adquisicion (AfiAad / AfiMad / AfiDad)
+LEFT OUTER JOIN SegFec T11
+    ON  T1.AfiAad = T11.FecAno
+    AND T1.AfiMad = T11.FecMes
+    AND T1.AfiDad = T11.FecDia
+
+-- Fecha de instalacion (AfiAin / AfiMin / AfiDin)
+LEFT OUTER JOIN SegFec T12
+    ON  T1.AfiAin = T12.FecAno
+    AND T1.AfiMin = T12.FecMes
+    AND T1.AfiDin = T12.FecDia
+
+-- Fecha estimada de baja (AfiAde / AfiMde / AfiDde)
+LEFT OUTER JOIN SegFec T13
+    ON  T1.AfiAde = T13.FecAno
+    AND T1.AfiMde = T13.FecMes
+    AND T1.AfiDde = T13.FecDia
+
+-- Fecha real de baja (AfiAba / AfiMba / AfiDba)
+LEFT OUTER JOIN SegFec T14
+    ON  T1.AfiAba = T14.FecAno
+    AND T1.AfiMba = T14.FecMes
+    AND T1.AfiDba = T14.FecDia;

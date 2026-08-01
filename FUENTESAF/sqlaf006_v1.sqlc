@@ -1,0 +1,16 @@
+Create Or Replace View VWAFI_Resumen_Historico_Grupos_Saldo_Decreciente
+As Select T1.PerAno, T1.PerNum, T1.GafCve, T3.GafDes, T3.GafCaf,
+      Sum(T1.AfiCos) As Total_Costo_Adquisicion,
+      Sum(T2.BafCos) As Total_Costo_Variable,
+      Sum(T2.BafDad) As Depreciacion_Acumulada,
+      Sum(T2.BafDmd) As Depreciacion_Mensual,
+      Sum(T2.BafVld) As Valor_En_Libro
+  From AcfHafi T1
+Left Outer Join AcfHbaf T2
+    On (T1.PerAno = T2.PerAno)
+   And (T1.PerNum = T2.PerNum)
+   And (T1.AfiCve = T2.AfiCve)
+Left Outer Join AcfGaf T3
+    On (T1.GafCve = T3.GafCve)
+  Where (T1.AfiSta <> 'B')
+Group By T1.PerAno, T1.PerNum, T1.GafCve, T3.GafDes, T3.GafCaf

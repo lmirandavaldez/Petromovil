@@ -1,0 +1,115 @@
+-- ==============================================================
+-- Modulo    : Activos Fijos
+-- Programa  : SQLAF005
+-- Objeto    : VWAFI_Resumen_Historico_Grupos_Linea_Recta
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que resume los valores contables historicos de activos
+--   fijos agrupados por periodo y grupo, usando el metodo de
+--   depreciacion de linea recta.
+--
+--   Es la version historica de
+--   VWAFI_Resumen_Grupos_Linea_Recta (SQLAF002). Agrega las
+--   dimensiones de periodo (PerAno, PerNum) al GROUP BY y usa
+--   las tablas historicas AcfHafi y AcfHBaf en lugar de las
+--   tablas vigentes AcfAfi y AcfBaf.
+--
+--   Presenta por cada combinacion de periodo y grupo: total
+--   de costo de adquisicion, costo variable del balance
+--   historico, depreciacion acumulada contable, depreciacion
+--   mensual contable y valor en libros inicial, sumando todos
+--   los activos no dados de baja en ese periodo.
+--
+--   Filtro: se excluyen activos con estatus 'B' (Baja).
+--
+--   El join a AcfGaf es sobre la tabla vigente; si un grupo
+--   fue eliminado o renombrado, GafDes y GafCaf podrian no
+--   corresponder al valor del periodo historico.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   PerAno                  Ano del periodo historico  (AcfHafi)
+--   PerNum                  Numero del periodo         (AcfHafi)
+--   GafCve                  Clave del grupo            (AcfHafi)
+--   GafDes                  Descripcion del grupo      (AcfGaf)
+--   GafCaf                  Categoria del grupo        (AcfGaf)
+--   Total_Costo_Adquisicion Suma de AfiCos             (AcfHafi)
+--   Total_Costo_Variable    Suma de BafCos             (AcfHBaf)
+--   Depreciacion_Acumulada  Suma de BafDac             (AcfHBaf)
+--   Depreciacion_Mensual    Suma de BafDme             (AcfHBaf)
+--   Valor_En_Libro          Suma de BafVli             (AcfHBaf)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   AcfHafi  T1  Historico maestro de activos (tabla base)
+--               Filtro: AfiSta <> 'B' (excluye baja)
+--   AcfHBaf  T2  Historico balance del activo
+--               (clave: PerAno + PerNum + AfiCve)
+--   AcfGaf   T3  Grupos de activos fijos (vigente)
+-- --------------------------------------------------------------
+-- Relacion con otras vistas del modulo:
+--   SQLAF002 : resumen vigente  + linea recta  (sin periodo)
+--   SQLAF004 : resumen vigente  + saldo decr.  (sin periodo)
+--   SQLAF005 : resumen historico + linea recta  (con periodo)
+--   SQLAF006 : resumen historico + saldo decr.  (con periodo)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Los campos de suma de AcfHBaf pueden ser NULL si un
+--      activo no tiene balance historico registrado. Aplicar
+--      COALESCE(SUM(...), 0) garantiza resultado numerico.
+--   2. El join a AcfHBaf usa tres campos (PerAno+PerNum+AfiCve)
+--      Verificar indice compuesto en AcfHBaf para esa clave;
+--      sin el, el join sobre tablas historicas sera costoso.
+--   3. AcfGaf (T3) es la tabla vigente. Si un grupo fue
+--      modificado o eliminado, GafDes y GafCaf podrian no
+--      corresponder al valor del periodo historico. Evaluar
+--      si se requiere una tabla historica de grupos.
+--   4. Verificar indice en AcfHafi(PerAno, PerNum, GafCve,
+--      AfiSta) para soportar el filtro y el GROUP BY.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWAFI_Resumen_Historico_Grupos_Linea_Recta AS
+SELECT
+    -- Periodo historico
+    T1.PerAno,
+    T1.PerNum,
+    -- Grupo
+    T1.GafCve,
+    T3.GafDes,
+    T3.GafCaf,
+
+    -- Totales de costo y balance de linea recta por periodo
+    COALESCE(SUM(T1.AfiCos), 0) AS Total_Costo_Adquisicion,
+    COALESCE(SUM(T2.BafCos), 0) AS Total_Costo_Variable,
+    COALESCE(SUM(T2.BafDac), 0) AS Depreciacion_Acumulada,
+    COALESCE(SUM(T2.BafDme), 0) AS Depreciacion_Mensual,
+    COALESCE(SUM(T2.BafVli), 0) AS Valor_En_Libro
+
+FROM AcfHafi T1
+
+-- Historico balance del activo (clave: PerAno+PerNum+AfiCve)
+LEFT OUTER JOIN AcfHBaf T2
+    ON  T1.PerAno = T2.PerAno
+    AND T1.PerNum = T2.PerNum
+    AND T1.AfiCve = T2.AfiCve
+
+-- Grupo del activo (tabla vigente)
+LEFT OUTER JOIN AcfGaf T3
+    ON  T1.GafCve = T3.GafCve
+
+-- Solo activos no dados de baja
+WHERE T1.AfiSta <> 'B'
+
+GROUP BY
+    T1.PerAno,
+    T1.PerNum,
+    T1.GafCve,
+    T3.GafDes,
+    T3.GafCaf;

@@ -1,0 +1,56 @@
+Create Or Replace View VWAFI_Activos_Fijos
+As Select T1.AfiCve, T1.AfiDes, T3.CafCve, T4.CafDes, T4.CafPde,
+       T4.CafPda, T4.CafEdi, T1.GafCve, T3.GafDes, T1.TafCve,
+       T5.TafDes, T1.DisCve, T9.DisDes, T1.AfiCad, T1.AfiCin,
+       T1.AfiCos, T2.BafCos, T2.BafDac, T2.BafDme, T2.BafVli,
+       T2.BafVla, T2.BafAcl,
+       T2.BafDad, T2.BafDmd, T2.BafVld, T2.BafVmc, T2.BafDMc,
+       T2.BafAcd,
+       T2.BafAno, T2.BafMes, T1.AfiVde,
+       T1.AfiVua, T1.AfiVum, T1.MonCve, T10.MonSim, T1.SecTas,
+       T1.AfiLoc, T1.AfiSnb, T1.AfiMod, T1.GafCga, T6.CtaDes,
+       T1.CcoCve, T7.CcoDes, T1.ProCve, T8.ProNom,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.AfiAad))),
+       Trim(T1.AfiAad)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T1.AfiMad))),
+         Trim(T1.AfiMad)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.AfiDad))),
+       Trim(T1.AfiDad))) As Fecha_Adquisicion,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.AfiAin))),
+       Trim(T1.AfiAin)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T1.AfiMin))),
+         Trim(T1.AfiMin)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.AfiDin))),
+       Trim(T1.AfiDin))) As Fecha_De_Instalacion,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.AfiAde))),
+       Trim(T1.AfiAde)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T1.AfiMde))),
+         Trim(T1.AfiMde)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.AfiDde))),
+       Trim(T1.AfiDde))) As Fecha_Estimada_Baja,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.AfiAba))),
+       Trim(T1.AfiAba)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T1.AfiMba))),
+         Trim(T1.AfiMba)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.AfiDba))),
+       Trim(T1.AfiDba))) As Fecha_De_Baja,
+       T1.AfiSta
+  From AcfAfi T1
+Left Outer Join AcfBaf T2
+    On (T1.AfiCve = T2.AfiCve)
+Left Outer Join AcfGaf T3
+    On (T1.GafCve = T3.GafCve)
+Left Outer Join AcfCaf T4
+    On (T3.CafCve = T4.CafCve)
+Left Outer Join AcfTaf T5
+    On (T1.TafCve = T5.TafCve)
+Left Outer Join CogCta T6
+    On (T1.GafCga = T6.CtaCve)
+Left Outer Join CogCco T7
+    On (T1.CcoCve = T7.CcoCve)
+Left Outer Join CxpPro T8
+    On (T1.ProCve = T8.ProCve)
+Left Outer Join SegDis T9
+    On (T1.DisCve = T9.DisCve)
+Left Outer Join SegMon T10
+    On (T1.MonCve = T10.MonCve)

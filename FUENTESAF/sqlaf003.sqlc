@@ -1,0 +1,243 @@
+-- ==============================================================
+-- Modulo    : Activos Fijos
+-- Programa  : SQLAF003
+-- Objeto    : VWAFI_Activos_Fijos_Historico
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista historica de activos fijos. Presenta los datos del
+--   activo para cada periodo contable registrado en las tablas
+--   historicas AcfhAfi y AcfhBaf.
+--
+--   Es la version historica de VWAFI_Activos_Fijos (SQLAF001).
+--   Las diferencias principales son:
+--     - Tabla base: AcfhAfi (historico) en lugar de AcfAfi
+--     - Balance:    AcfhBaf (historico) en lugar de AcfBaf
+--     - Clave del balance incluye PerAno + PerNum + AfiCve
+--     - Se agregan los campos de periodo: PerAno y PerNum
+--     - Las fechas vienen como campos directos tipo DATE
+--       (AfiFad, AfiFde, AfiFin, AfiFba) en lugar de campos
+--       separados de ano/mes/dia como en SQLAF001
+--
+--   Las tablas de clasificacion (AcfGaf, AcfCaf, AcfTaf) y
+--   las tablas de apoyo (CogCta, CogCco, CxpPro, SegDis,
+--   SegMon) son las mismas tablas vigentes (no historicas).
+--
+--   Todos los joins son LEFT OUTER para conservar registros
+--   historicos aunque los maestros vigentes hayan cambiado
+--   o eliminado la clasificacion del activo.
+--
+--   Nota sobre fechas:
+--     Los campos AfiFad, AfiFde, AfiFin y AfiFba son de tipo
+--     DATE en la tabla historica; no requieren conversion.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   PerAno   Ano del periodo historico          (AcfhAfi)
+--   PerNum   Numero del periodo historico       (AcfhAfi)
+--   AfiCve   Clave del activo fijo              (AcfhAfi)
+--   AfiDes   Descripcion del activo fijo        (AcfhAfi)
+--   CafCve   Clave de categoria                 (AcfGaf)
+--   CafDes   Descripcion de categoria           (AcfCaf)
+--   CafPde   Porcentaje de depreciacion         (AcfCaf)
+--   CafPda   Porcentaje de depreciacion acum.   (AcfCaf)
+--   CafEdi   Edicion/version de categoria       (AcfCaf)
+--   GafCve   Clave del grupo                    (AcfhAfi)
+--   GafDes   Descripcion del grupo              (AcfGaf)
+--   TafCve   Clave del tipo de activo           (AcfhAfi)
+--   TafDes   Descripcion del tipo de activo     (AcfTaf)
+--   DisCve   Clave de la distribucion           (AcfhAfi)
+--   DisDes   Descripcion de la distribucion     (SegDis)
+--   AfiCad   Codigo de adquisicion              (AcfhAfi)
+--   AfiCin   Codigo de instalacion              (AcfhAfi)
+--   AfiCos   Costo original del activo          (AcfhAfi)
+--   BafCos   Costo en balance historico         (AcfhBaf)
+--   BafDac   Depreciacion acumulada contable    (AcfhBaf)
+--   BafDme   Depreciacion del mes               (AcfhBaf)
+--   BafVli   Valor en libros inicial            (AcfhBaf)
+--   BafVla   Valor en libros actual             (AcfhBaf)
+--   BafAcl   Ajuste contable al libros          (AcfhBaf)
+--   BafDad   Depreciacion acum. declarada       (AcfhBaf)
+--   BafDmd   Depreciacion mes declarada         (AcfhBaf)
+--   BafVld   Valor en libros declarado          (AcfhBaf)
+--   BafVmc   Valor de mercado / comercial       (AcfhBaf)
+--   BafDMc   Depreciacion mercado corriente     (AcfhBaf)
+--   BafAcd   Ajuste contable declarado          (AcfhBaf)
+--   BafAno   Ano del balance historico          (AcfhBaf)
+--   BafMes   Mes del balance historico          (AcfhBaf)
+--   AfiVde   Valor de desecho                   (AcfhAfi)
+--   AfiVua   Vida util en anos                  (AcfhAfi)
+--   AfiVum   Vida util en meses                 (AcfhAfi)
+--   MonCve   Clave de moneda                    (AcfhAfi)
+--   MonSim   Simbolo de moneda                  (SegMon)
+--   SecTas   Tasa de cambio / sector            (AcfhAfi)
+--   AfiLoc   Ubicacion fisica del activo        (AcfhAfi)
+--   AfiSnb   Numero de serie / placa            (AcfhAfi)
+--   AfiMod   Modelo del activo                  (AcfhAfi)
+--   GafCga   Cuenta contable del grupo          (AcfhAfi)
+--   CtaDes   Descripcion de la cuenta contable  (CogCta)
+--   CcoCve   Clave del centro de costo          (AcfhAfi)
+--   CcoDes   Descripcion del centro de costo    (CogCco)
+--   ProCve   Clave del proveedor                (AcfhAfi)
+--   ProNom   Nombre del proveedor               (CxpPro)
+--   AfiFad   Fecha de adquisicion (DATE)        (AcfhAfi)
+--   AfiFde   Fecha estimada de baja (DATE)      (AcfhAfi)
+--   AfiFin   Fecha de instalacion (DATE)        (AcfhAfi)
+--   AfiFba   Fecha real de baja (DATE)          (AcfhAfi)
+--   AfiSta   Estatus del activo                 (AcfhAfi)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   AcfhAfi  T1   Historico maestro de activos (tabla base)
+--   AcfhBaf  T2   Historico balance del activo
+--                 (clave: PerAno + PerNum + AfiCve)
+--   AcfGaf   T3   Grupos de activos (vigente)
+--   AcfCaf   T4   Categorias de activos (vigente)
+--   AcfTaf   T5   Tipos de activos (vigente)
+--   CogCta   T6   Plan de cuentas contables
+--   CogCco   T7   Centros de costo
+--   CxpPro   T8   Proveedores de cuentas por pagar
+--   SegDis   T9   Distribuciones
+--   SegMon   T10  Monedas
+-- --------------------------------------------------------------
+-- Diferencias con VWAFI_Activos_Fijos (SQLAF001):
+--   SQLAF001 : tablas vigentes AcfAfi/AcfBaf, sin periodo,
+--              fechas calculadas desde campos ano/mes/dia
+--   SQLAF003 : tablas historicas AcfhAfi/AcfhBaf, con periodo
+--              PerAno+PerNum, fechas tipo DATE directas
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. El join a AcfhBaf usa tres campos (PerAno+PerNum+AfiCve)
+--      Verificar que exista un indice compuesto en AcfhBaf
+--      para esa combinacion de campos; sin el, el join sobre
+--      tablas historicas de alto volumen sera costoso.
+--   2. Las tablas de clasificacion (AcfGaf, AcfCaf, AcfTaf)
+--      son las vigentes, no las historicas. Si se elimino o
+--      cambio un grupo/categoria en el maestro vigente, los
+--      campos GafDes, CafDes, TafDes podrian ser NULL o
+--      reflejar el valor actual en lugar del historico.
+--      Evaluar si se requieren tablas historicas de catalotos.
+--   3. Si AfiFad, AfiFde, AfiFin o AfiFba pueden ser NULL
+--      en AcfhAfi, considerar COALESCE para devolver una
+--      fecha tope: COALESCE(T1.AfiFad, DATE('2039-12-31')).
+--   4. Considerar agregar indice en AcfhAfi(PerAno, PerNum)
+--      para filtros frecuentes por periodo en consultas
+--      consumidoras de esta vista.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWAFI_Activos_Fijos_Historico AS
+SELECT
+    -- Periodo historico
+    T1.PerAno,
+    T1.PerNum,
+    -- Identificacion del activo
+    T1.AfiCve,
+    T1.AfiDes,
+    -- Categoria (via grupo)
+    T3.CafCve,
+    T4.CafDes,
+    T4.CafPde,
+    T4.CafPda,
+    T4.CafEdi,
+    -- Grupo
+    T1.GafCve,
+    T3.GafDes,
+    -- Tipo de activo
+    T1.TafCve,
+    T5.TafDes,
+    -- Distribucion
+    T1.DisCve,
+    T9.DisDes,
+    -- Codigos de referencia
+    T1.AfiCad,
+    T1.AfiCin,
+    -- Costo original
+    T1.AfiCos,
+    -- Balance historico (AcfhBaf)
+    T2.BafCos,
+    T2.BafDac,
+    T2.BafDme,
+    T2.BafVli,
+    T2.BafVla,
+    T2.BafAcl,
+    T2.BafDad,
+    T2.BafDmd,
+    T2.BafVld,
+    T2.BafVmc,
+    T2.BafDMc,
+    T2.BafAcd,
+    T2.BafAno,
+    T2.BafMes,
+    -- Valores del activo
+    T1.AfiVde,
+    T1.AfiVua,
+    T1.AfiVum,
+    -- Moneda
+    T1.MonCve,
+    T10.MonSim,
+    T1.SecTas,
+    -- Datos fisicos
+    T1.AfiLoc,
+    T1.AfiSnb,
+    T1.AfiMod,
+    -- Cuenta contable y centro de costo
+    T1.GafCga,
+    T6.CtaDes,
+    T1.CcoCve,
+    T7.CcoDes,
+    -- Proveedor
+    T1.ProCve,
+    T8.ProNom,
+    -- Fechas tipo DATE (almacenadas directamente en AcfhAfi)
+    T1.AfiFad,
+    T1.AfiFde,
+    T1.AfiFin,
+    T1.AfiFba,
+    -- Estatus del activo
+    T1.AfiSta
+
+FROM AcfhAfi T1
+
+-- Historico balance del activo (clave: PerAno+PerNum+AfiCve)
+LEFT OUTER JOIN AcfhBaf T2
+    ON  T1.PerAno = T2.PerAno
+    AND T1.PerNum = T2.PerNum
+    AND T1.AfiCve = T2.AfiCve
+
+-- Grupo del activo vigente (aporta CafCve y GafDes)
+LEFT OUTER JOIN AcfGaf T3
+    ON  T1.GafCve = T3.GafCve
+
+-- Categoria vigente (via grupo T3.CafCve)
+LEFT OUTER JOIN AcfCaf T4
+    ON  T3.CafCve = T4.CafCve
+
+-- Tipo de activo vigente
+LEFT OUTER JOIN AcfTaf T5
+    ON  T1.TafCve = T5.TafCve
+
+-- Cuenta contable del grupo
+LEFT OUTER JOIN CogCta T6
+    ON  T1.GafCga = T6.CtaCve
+
+-- Centro de costo
+LEFT OUTER JOIN CogCco T7
+    ON  T1.CcoCve = T7.CcoCve
+
+-- Proveedor
+LEFT OUTER JOIN CxpPro T8
+    ON  T1.ProCve = T8.ProCve
+
+-- Distribucion
+LEFT OUTER JOIN SegDis T9
+    ON  T1.DisCve = T9.DisCve
+
+-- Moneda
+LEFT OUTER JOIN SegMon T10
+    ON  T1.MonCve = T10.MonCve;

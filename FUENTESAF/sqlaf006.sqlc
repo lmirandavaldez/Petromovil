@@ -1,0 +1,127 @@
+-- ==============================================================
+-- Modulo    : Activos Fijos
+-- Programa  : SQLAF006
+-- Objeto    : VWAFI_Resumen_Historico_Grupos_Saldo_Decreciente
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que resume los valores contables historicos de activos
+--   fijos agrupados por periodo y grupo, usando el metodo de
+--   depreciacion de saldo decreciente.
+--
+--   Es la version de saldo decreciente de
+--   VWAFI_Resumen_Historico_Grupos_Linea_Recta (SQLAF005).
+--   La estructura es identica pero usa los campos declarados
+--   del balance historico:
+--     BafDad : depreciacion acumulada declarada (vs BafDac)
+--     BafDmd : depreciacion mensual declarada   (vs BafDme)
+--     BafVld : valor en libros declarado        (vs BafVli)
+--
+--   Presenta por cada combinacion de periodo y grupo: total
+--   de costo de adquisicion, costo variable del balance
+--   historico, depreciacion acumulada declarada, depreciacion
+--   mensual declarada y valor en libros declarado, sumando
+--   todos los activos no dados de baja en ese periodo.
+--
+--   Filtro: se excluyen activos con estatus 'B' (Baja).
+--
+--   El join a AcfGaf es sobre la tabla vigente; si un grupo
+--   fue eliminado o renombrado, GafDes y GafCaf podrian no
+--   corresponder al valor del periodo historico.
+--
+--   Nota: en el original la tabla historica de balance se
+--   referencia como AcfHbaf (b minuscula). Se conserva el
+--   nombre original para no alterar la logica; verificar
+--   la escritura exacta del nombre de la tabla fisica.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   PerAno                  Ano del periodo historico  (AcfHafi)
+--   PerNum                  Numero del periodo         (AcfHafi)
+--   GafCve                  Clave del grupo            (AcfHafi)
+--   GafDes                  Descripcion del grupo      (AcfGaf)
+--   GafCaf                  Categoria del grupo        (AcfGaf)
+--   Total_Costo_Adquisicion Suma de AfiCos             (AcfHafi)
+--   Total_Costo_Variable    Suma de BafCos             (AcfHbaf)
+--   Depreciacion_Acumulada  Suma de BafDad (declarada) (AcfHbaf)
+--   Depreciacion_Mensual    Suma de BafDmd (declarada) (AcfHbaf)
+--   Valor_En_Libro          Suma de BafVld (declarado) (AcfHbaf)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   AcfHafi  T1  Historico maestro de activos (tabla base)
+--               Filtro: AfiSta <> 'B' (excluye baja)
+--   AcfHbaf  T2  Historico balance del activo
+--               (clave: PerAno + PerNum + AfiCve)
+--   AcfGaf   T3  Grupos de activos fijos (vigente)
+-- --------------------------------------------------------------
+-- Relacion con otras vistas del modulo:
+--   SQLAF002 : resumen vigente   + linea recta   (sin periodo)
+--   SQLAF004 : resumen vigente   + saldo decr.   (sin periodo)
+--   SQLAF005 : resumen historico + linea recta   (con periodo)
+--   SQLAF006 : resumen historico + saldo decr.   (con periodo)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Los campos de suma de AcfHbaf pueden ser NULL si un
+--      activo no tiene balance historico registrado. Aplicar
+--      COALESCE(SUM(...), 0) garantiza resultado numerico.
+--   2. Verificar la escritura exacta del nombre de la tabla:
+--      en SQLAF005 se usa AcfHBaf (B mayuscula) y aqui se
+--      usa AcfHbaf (b minuscula). DB2 for i no distingue
+--      mayusculas pero es conveniente uniformar el nombre
+--      en todos los fuentes para evitar confusion.
+--   3. El join a AcfHbaf usa tres campos (PerAno+PerNum+AfiCve)
+--      Verificar indice compuesto en AcfHbaf para esa clave.
+--   4. AcfGaf (T3) es la tabla vigente. Si un grupo fue
+--      modificado o eliminado, GafDes y GafCaf podrian no
+--      corresponder al valor historico del periodo.
+--   5. Evaluar si los valores BafDad/BafDmd/BafVld estan
+--      correctamente poblados en la tabla historica; si un
+--      activo usaba solo linea recta, estos campos podrian
+--      ser cero distorsionando el resumen de saldo decreciente.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWAFI_Resumen_Historico_Grupos_Saldo_Decreciente AS
+SELECT
+    -- Periodo historico
+    T1.PerAno,
+    T1.PerNum,
+    -- Grupo
+    T1.GafCve,
+    T3.GafDes,
+    T3.GafCaf,
+
+    -- Totales de costo y balance declarado por periodo
+    COALESCE(SUM(T1.AfiCos), 0) AS Total_Costo_Adquisicion,
+    COALESCE(SUM(T2.BafCos), 0) AS Total_Costo_Variable,
+    COALESCE(SUM(T2.BafDad), 0) AS Depreciacion_Acumulada,
+    COALESCE(SUM(T2.BafDmd), 0) AS Depreciacion_Mensual,
+    COALESCE(SUM(T2.BafVld), 0) AS Valor_En_Libro
+
+FROM AcfHafi T1
+
+-- Historico balance del activo (clave: PerAno+PerNum+AfiCve)
+LEFT OUTER JOIN AcfHbaf T2
+    ON  T1.PerAno = T2.PerAno
+    AND T1.PerNum = T2.PerNum
+    AND T1.AfiCve = T2.AfiCve
+
+-- Grupo del activo (tabla vigente)
+LEFT OUTER JOIN AcfGaf T3
+    ON  T1.GafCve = T3.GafCve
+
+-- Solo activos no dados de baja
+WHERE T1.AfiSta <> 'B'
+
+GROUP BY
+    T1.PerAno,
+    T1.PerNum,
+    T1.GafCve,
+    T3.GafDes,
+    T3.GafCaf;

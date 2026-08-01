@@ -1,0 +1,8 @@
+Create Or Replace View VWAFI_Resumen_Origen_Tran
+As Select T1.AfiCve, T2.MafOri,
+          Sum(T1.FhtVal) As Monto_Tran_Linea,
+          Sum(T1.FhtVtd) As Monto_Tran_Descr
+     From AcfAfht T1
+     Join AcfMaf T2
+       On (T1.MafCve = T2.MafCve)
+ Group by T1.AfiCve, T2.MafOri

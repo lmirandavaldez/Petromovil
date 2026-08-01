@@ -1,0 +1,105 @@
+-- ==============================================================
+-- Modulo    : Activos Fijos
+-- Programa  : SQLAF004
+-- Objeto    : VWAFI_Resumen_Grupos_Saldo_Decreciente
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que resume los valores contables de activos fijos
+--   agrupados por grupo, usando el metodo de depreciacion
+--   de saldo decreciente (doble declive o similar).
+--
+--   Es la variante de saldo decreciente de
+--   VWAFI_Resumen_Grupos_Linea_Recta (SQLAF002). La estructura
+--   es identica pero usa los campos declarados del balance:
+--     BafDad : depreciacion acumulada declarada (vs BafDac)
+--     BafDmd : depreciacion mensual declarada   (vs BafDme)
+--     BafVld : valor en libros declarado        (vs BafVli)
+--
+--   Presenta por cada grupo el total de costo de adquisicion,
+--   costo variable del balance, depreciacion acumulada
+--   declarada, depreciacion mensual declarada y valor en libros
+--   declarado, sumando todos los activos no dados de baja.
+--
+--   Filtro: se excluyen activos con estatus 'B' (Baja).
+--
+--   Los joins son LEFT OUTER para conservar activos aunque
+--   no tengan balance (AcfBaf) registrado; SUM() trata NULL
+--   como cero en el contexto de agregacion.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   GafCve                  Clave del grupo            (AcfAfi)
+--   GafDes                  Descripcion del grupo      (AcfGaf)
+--   GafCaf                  Categoria del grupo        (AcfGaf)
+--   Total_Costo_Adquisicion Suma de AfiCos             (AcfAfi)
+--   Total_Costo_Variable    Suma de BafCos             (AcfBaf)
+--   Depreciacion_Acumulada  Suma de BafDad (declarada) (AcfBaf)
+--   Depreciacion_Mensual    Suma de BafDmd (declarada) (AcfBaf)
+--   Valor_En_Libro          Suma de BafVld (declarado) (AcfBaf)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   AcfAfi  T1  Maestro de activos fijos (tabla base)
+--              Filtro: AfiSta <> 'B' (excluye dados de baja)
+--   AcfBaf  T2  Balance del activo fijo
+--   AcfGaf  T3  Grupos de activos fijos
+-- --------------------------------------------------------------
+-- Diferencias con VWAFI_Resumen_Grupos_Linea_Recta (SQLAF002):
+--   SQLAF002 usa: BafDac (acum. contable), BafDme (mes),
+--                 BafVli (valor libros inicial)
+--   SQLAF004 usa: BafDad (acum. declarada), BafDmd (mes decl.),
+--                 BafVld (valor libros declarado)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Los campos de suma de AcfBaf pueden ser NULL si un
+--      activo no tiene balance registrado. Aplicar
+--      COALESCE(SUM(...), 0) garantiza resultado numerico.
+--   2. El filtro AfiSta <> 'B' excluye bajas pero incluye
+--      todos los demas estados. Documentar el dominio de
+--      AfiSta para aclarar que grupos se incluyen en el
+--      resumen (activos, inactivos, en mantenimiento, etc.).
+--   3. Verificar indices en AcfAfi(GafCve, AfiSta) y
+--      AcfBaf(AfiCve) para optimizar el GROUP BY y el JOIN.
+--   4. Evaluar si los valores BafDad/BafDmd/BafVld estan
+--      correctamente poblados para todos los activos; si un
+--      activo usa solo el metodo de linea recta, estos campos
+--      podrian ser cero o NULL, distorsionando el resumen.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWAFI_Resumen_Grupos_Saldo_Decreciente AS
+SELECT
+    T1.GafCve,
+    T3.GafDes,
+    T3.GafCaf,
+
+    -- Totales de costo y balance declarado por grupo
+    COALESCE(SUM(T1.AfiCos), 0) AS Total_Costo_Adquisicion,
+    COALESCE(SUM(T2.BafCos), 0) AS Total_Costo_Variable,
+    COALESCE(SUM(T2.BafDad), 0) AS Depreciacion_Acumulada,
+    COALESCE(SUM(T2.BafDmd), 0) AS Depreciacion_Mensual,
+    COALESCE(SUM(T2.BafVld), 0) AS Valor_En_Libro
+
+FROM AcfAfi T1
+
+-- Balance del activo fijo
+LEFT OUTER JOIN AcfBaf T2
+    ON  T1.AfiCve = T2.AfiCve
+
+-- Grupo del activo
+LEFT OUTER JOIN AcfGaf T3
+    ON  T1.GafCve = T3.GafCve
+
+-- Solo activos no dados de baja
+WHERE T1.AfiSta <> 'B'
+
+GROUP BY
+    T1.GafCve,
+    T3.GafDes,
+    T3.GafCaf;

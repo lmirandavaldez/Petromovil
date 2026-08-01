@@ -1,0 +1,99 @@
+-- ==============================================================
+-- Modulo    : Activos Fijos
+-- Programa  : SQLAF002
+-- Objeto    : VWAFI_Resumen_Grupos_Linea_Recta
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que resume los valores contables de activos fijos
+--   agrupados por grupo, usando el metodo de depreciacion
+--   de linea recta.
+--
+--   Presenta por cada grupo el total de costo de adquisicion,
+--   costo variable del balance, depreciacion acumulada,
+--   depreciacion mensual y valor en libros, sumando todos los
+--   activos activos (no dados de baja) del grupo.
+--
+--   Filtro: se excluyen los activos con estatus 'B' (Baja).
+--   Solo se consideran activos en estado distinto de baja,
+--   independientemente de si estan activos, en mantenimiento
+--   u otro estado.
+--
+--   Los joins son LEFT OUTER para conservar activos aunque
+--   no tengan balance (AcfBaf) registrado; en ese caso los
+--   campos de suma de balance apareceran como NULL, que
+--   SUM() trata como cero.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   GafCve                  Clave del grupo        (AcfAfi)
+--   GafDes                  Descripcion del grupo  (AcfGaf)
+--   GafCaf                  Categoria del grupo    (AcfGaf)
+--   Total_Costo_Adquisicion Suma de AfiCos         (AcfAfi)
+--   Total_Costo_Variable    Suma de BafCos         (AcfBaf)
+--   Depreciacion_Acumulada  Suma de BafDac         (AcfBaf)
+--   Depreciacion_Mensual    Suma de BafDme         (AcfBaf)
+--   Valor_En_Libro          Suma de BafVli         (AcfBaf)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   AcfAfi  T1  Maestro de activos fijos (tabla base)
+--              Filtro: AfiSta <> 'B' (excluye dados de baja)
+--   AcfBaf  T2  Balance del activo fijo
+--   AcfGaf  T3  Grupos de activos fijos
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Los campos de suma de AcfBaf pueden ser NULL si un
+--      activo no tiene balance registrado. Considerar
+--      COALESCE(SUM(T2.BafCos), 0) para garantizar que el
+--      resultado sea siempre numerico y no NULL.
+--   2. El filtro AfiSta <> 'B' excluye bajas pero no
+--      discrimina otros estados. Documentar el dominio
+--      completo de AfiSta (ej: 'A'=Activo, 'I'=Inactivo,
+--      'M'=Mantenimiento, 'B'=Baja) para aclarar que se
+--      incluye en el resumen.
+--   3. Verificar indices en AcfAfi(GafCve, AfiSta) y
+--      AcfBaf(AfiCve) para optimizar el GROUP BY y el JOIN
+--      cuando el volumen de activos sea alto.
+--   4. GafCaf proviene de AcfGaf (T3); si un activo tiene
+--      grupo pero el grupo no existe en AcfGaf, GafDes y
+--      GafCaf seran NULL y el GROUP BY agrupara esos activos
+--      en una fila con GafDes = NULL.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWAFI_Resumen_Grupos_Linea_Recta AS
+SELECT
+    T1.GafCve,
+    T3.GafDes,
+    T3.GafCaf,
+
+    -- Totales de costo y balance por grupo
+    COALESCE(SUM(T1.AfiCos), 0) AS Total_Costo_Adquisicion,
+    COALESCE(SUM(T2.BafCos), 0) AS Total_Costo_Variable,
+    COALESCE(SUM(T2.BafDac), 0) AS Depreciacion_Acumulada,
+    COALESCE(SUM(T2.BafDme), 0) AS Depreciacion_Mensual,
+    COALESCE(SUM(T2.BafVli), 0) AS Valor_En_Libro
+
+FROM AcfAfi T1
+
+-- Balance del activo fijo
+LEFT OUTER JOIN AcfBaf T2
+    ON  T1.AfiCve = T2.AfiCve
+
+-- Grupo del activo
+LEFT OUTER JOIN AcfGaf T3
+    ON  T1.GafCve = T3.GafCve
+
+-- Solo activos no dados de baja
+WHERE T1.AfiSta <> 'B'
+
+GROUP BY
+    T1.GafCve,
+    T3.GafDes,
+    T3.GafCaf;

@@ -1,0 +1,81 @@
+-- ==============================================================
+-- Modulo    : Activos Fijos
+-- Programa  : SQLAF009
+-- Objeto    : VWAFI_Resumen_Origen_Tran
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que resume los montos de transacciones de activos
+--   fijos agrupados por activo y origen del movimiento
+--   contable (MafOri).
+--
+--   Consolida el historial de transacciones contables de la
+--   tabla AcfAfht, uniendo con AcfMaf para obtener el origen
+--   del tipo de movimiento contable. Por cada combinacion de
+--   activo y origen devuelve:
+--     Monto_Tran_Linea  : suma del valor de la transaccion
+--                         en metodo de linea recta (FhtVal)
+--     Monto_Tran_Descr  : suma del valor de la transaccion
+--                         en metodo de saldo decreciente
+--                         (FhtVtd)
+--
+--   El JOIN es INNER: solo se incluyen transacciones cuyo
+--   tipo de movimiento contable existe en AcfMaf. Las
+--   transacciones sin tipo de movimiento registrado no
+--   apareceran en el resultado.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   AfiCve          Clave del activo fijo          (AcfAfht)
+--   MafOri          Origen del movimiento contable (AcfMaf)
+--   Monto_Tran_Linea Suma de FhtVal (linea recta)  (AcfAfht)
+--   Monto_Tran_Descr Suma de FhtVtd (saldo decr.)  (AcfAfht)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   AcfAfht  T1  Historial de transacciones contables
+--               del activo fijo (tabla base)
+--   AcfMaf   T2  Tipos de movimientos contables de
+--               activos fijos (aporta MafOri)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. El JOIN a AcfMaf es INNER: las transacciones sin
+--      tipo de movimiento registrado se excluyen del resultado.
+--      Si puede haber transacciones huerfanas, cambiar a
+--      LEFT OUTER JOIN para preservarlas; en ese caso MafOri
+--      seria NULL para esas filas.
+--   2. Aplicar COALESCE(SUM(...), 0) para garantizar que los
+--      montos sean siempre numericos y no NULL cuando no hay
+--      transacciones para una combinacion AfiCve/MafOri.
+--   3. Verificar indices en AcfAfht(AfiCve, MafCve) y
+--      AcfMaf(MafCve) para optimizar el JOIN y el GROUP BY.
+--   4. Considerar agregar la descripcion del origen
+--      (AcfMaf.MafDes o similar) al SELECT para facilitar
+--      la interpretacion del campo MafOri en los reportes
+--      consumidores de esta vista.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWAFI_Resumen_Origen_Tran AS
+SELECT
+    T1.AfiCve,
+    T2.MafOri,
+
+    -- Montos por metodo de depreciacion
+    COALESCE(SUM(T1.FhtVal), 0) AS Monto_Tran_Linea,
+    COALESCE(SUM(T1.FhtVtd), 0) AS Monto_Tran_Descr
+
+FROM AcfAfht T1
+
+-- Tipo de movimiento contable: aporta el origen (MafOri)
+JOIN AcfMaf T2
+    ON  T1.MafCve = T2.MafCve
+
+GROUP BY
+    T1.AfiCve,
+    T2.MafOri;
