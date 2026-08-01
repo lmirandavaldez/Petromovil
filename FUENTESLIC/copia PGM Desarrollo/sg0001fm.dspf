@@ -1,0 +1,84 @@
+     A*%%TS  SD  20260128  211905  MEYKER      REL-V7R4M0  5770-WDS
+     A*%%EC
+     A                                      DSPSIZ(24 80 *DS3)
+     A                                      PRINT
+     A                                      ALTHELP(CA01)
+     A                                      HELP
+     A                                      CF21(21 'Prompt')
+     A          R SG000101                  SFL
+     A*%%TS  SD  20210512  123814  MEYKER      REL-V7R4M0  5770-WDS
+     A            OPC            1Y 0B 11  3EDTCDE(Z)
+     A                                      VALUES(1)
+     A                                      CHECK(AB)
+     A            PUECVE    R        O 11  8REFFLD(OCOPUEF/PUECVE *LIBL/OCOPUE)
+     A            PUEDES    R        O 11 14REFFLD(OCOPUEF/PUEDES *LIBL/OCOPUE)
+     A            PAICVE    R        O 11 46REFFLD(OCOPUEF/PAICVE *LIBL/OCOPUE)
+     A            PAIDES    R        O 11 51REFFLD(OCOPAIF/PAIDES *LIBL/OCOPAI)
+     A          R SG000102                  SFLCTL(SG000101)
+     A*%%TS  SD  20260128  211905  MEYKER      REL-V7R4M0  5770-WDS
+     A                                      CF03(03 'Salir')
+     A                                      CF12(12 'Anterior')
+     A                                      CF05(05 'Renovar')
+     A                                      CF07(07 'Inicio')
+     A                                      CF08(08 'Final')
+     A                                      OVERLAY
+     A N51                                  ERASE(SG000101)
+     A                                      SFLCSRRRN(&LINE)
+     A  51                                  SFLDSP
+     A  50                                  SFLDSPCTL
+     A  52                                  SFLCLR
+     A  22                                  SFLEND(*MORE)
+     A                                      SFLSIZ(9999)
+     A                                      SFLPAG(0010)
+     A            LINE           5S 0H
+     A            LIN            4S 0H      SFLRCDNBR(CURSOR)
+     A            NOMCIA        40A  O  1  2DSPATR(HI)
+     A                                  1 52USER
+     A                                  1 70DATE
+     A                                      EDTCDE(Y)
+     A                                  2  2'Orden de Compras'
+     A                                  2 70TIME
+     A                                  3  2'SG0001'
+     A                                      COLOR(GRN)
+     A                                  3 28'Consulta seleccion Puertos'
+     A                                      DSPATR(HI)
+     A            WSID          10A  O  3 70
+     A                                  5  2'Descripción. . .'
+     A            NOMBRE        30A  B  5 19
+     A                                  7  3'Teclee opcion, pulse intro'
+     A                                      COLOR(BLU)
+     A                                  8  7'1=Seleccionar'
+     A                                      COLOR(BLU)
+     A                                 10  2'Opc'
+     A                                      DSPATR(HI)
+     A                                 10  7'Código'
+     A                                      COLOR(WHT)
+     A                                 10 18'Nombre del Puerto'
+     A                                      COLOR(WHT)
+     A                                 10 49'P a i s  O r i g e n'
+     A                                      DSPATR(HI)
+     A*  91/06/20  12:23:16    JTIBURCIO   REL-R03M00  5728-PW1
+     A          R SG000103
+     A*%%TS  SD  20060418  170326  JTIBURCIO   REL-V5R3M0  5722-WDS
+     A                                      CF03(03 'Salir')
+     A                                      CF12(12 'Anterior')
+     A                                      CF05(05 'Renueva')
+     A                                      CF14(14 'Listar ordenes')
+     A                                      OVERLAY
+     A            MDT           78A  O 23  2COLOR(BLU)
+     A*
+     A          R MSGSFL                    SFL
+     A*%%TS  SD  20060418  170128  JTIBURCIO   REL-V5R3M0  5722-WDS
+     A                                      SFLMSGRCD(24)
+     A            MSGKEY                    SFLMSGKEY
+     A            @MSGQ                     SFLPGMQ(10)
+     A          R MSGCTL                    SFLCTL(MSGSFL)
+     A*%%TS  SD  20060418  170128  JTIBURCIO   REL-V5R3M0  5722-WDS
+     A                                      OVERLAY
+     A                                      SFLDSP
+     A                                      SFLDSPCTL
+     A  80                                  SFLINZ
+     A  80                                  SFLEND
+     A                                      SFLSIZ(0005)
+     A                                      SFLPAG(0001)
+     A            @MSGQ                     SFLPGMQ(10)
