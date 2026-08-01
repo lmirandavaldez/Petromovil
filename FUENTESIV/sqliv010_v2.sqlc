@@ -1,0 +1,79 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIV010
+-- Objeto    : VWINV_Categorias_Precios_Regulados
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que devuelve el catalogo de categorias que tienen al
+--   menos un articulo con precio regulado y en estatus activo.
+--
+--   Un articulo se considera de precio regulado cuando su campo
+--   ArtPpr = 'S' (precio regulado = Si). Solo se consideran
+--   articulos activos (ArtSta = 'A').
+--
+--   El GROUP BY sobre CatCve y CatDes elimina las categorias
+--   duplicadas cuando varios articulos de la misma categoria
+--   cumplen los filtros, devolviendo una fila unica por
+--   categoria.
+--
+--   El JOIN es INNER: si una categoria no tiene articulos
+--   activos con precio regulado, no aparece en el resultado.
+--   Esto es correcto dado el proposito de la vista (mostrar
+--   solo las categorias que efectivamente tienen ese tipo de
+--   articulos).
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   CatCve   Clave de la categoria           (InvArt)
+--   CatDes   Descripcion de la categoria     (InvCat)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvArt  T1  Maestro de articulos
+--              Filtros: ArtPpr = 'S' (precio regulado)
+--                       ArtSta = 'A' (articulo activo)
+--   InvCat  T2  Catalogo de categorias
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar DISTINCT en lugar de GROUP BY cuando no hay
+--      agregaciones: SELECT DISTINCT T1.CatCve, T2.CatDes
+--      expresa mas claramente la intencion de eliminar
+--      duplicados sin implicar una agregacion.
+--   2. Considerar si la vista debe incluir el conteo de
+--      articulos regulados por categoria (COUNT(*) AS
+--      ArtRegulados) para facilitar reportes de supervision.
+--   3. Verificar indice en InvArt(ArtPpr, ArtSta, CatCve)
+--      para optimizar el filtrado y agrupamiento cuando el
+--      maestro de articulos tenga alto volumen de registros.
+--   4. Si ArtPpr puede tener valores distintos de 'S' y 'N',
+--      documentar el dominio completo del campo para evitar
+--      filtros incorrectos en consultas derivadas.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2025-07-07  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWINV_Categorias_Precios_Regulados AS
+SELECT
+    T1.CatCve,
+    T2.CatDes
+
+FROM InvArt T1
+
+-- Catalogo de categorias
+JOIN InvCat T2
+    ON  T1.CatCve = T2.CatCve
+
+-- Solo articulos con precio regulado y en estatus activo
+WHERE T1.ArtPpr = 'S'
+  AND T1.ArtSta = 'A'
+
+-- Una fila por categoria (elimina duplicados por multiples
+-- articulos de la misma categoria que cumplen el filtro)
+GROUP BY
+    T1.CatCve,
+    T2.CatDes;

@@ -1,0 +1,108 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIV005
+-- Objeto    : VWINV_Existencias_Al_Cierre
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista de existencias al cierre de periodo contable de
+--   inventario. Presenta por distribucion, almacen y articulo
+--   las cantidades y costos registrados al momento del cierre
+--   mensual (ano y mes de ultimo periodo cerrado).
+--
+--   La tabla base es InvCme (cierre mensual de existencias),
+--   enriquecida con las descripciones de distribucion, almacen
+--   y articulo mediante INNER JOIN. Solo se muestran registros
+--   que existan en todas las tablas maestras (sin LEFT OUTER).
+--
+--   Campos de cantidad en InvCme:
+--     CmeCen : existencia al cierre (cantidad inicial del mes)
+--     CmeCsa : cantidad de salidas acumuladas en el periodo
+--     CmeCfi : existencia final al cierre del periodo
+--
+--   Campos de costo en InvCme:
+--     ArtCpl : costo promedio ultimo al cierre
+--     ArtCul : costo ultimo al cierre
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   DisCve   Clave de la distribucion        (InvCme)
+--   DisDes   Descripcion de la distribucion  (SegDis)
+--   AlmCve   Clave del almacen               (InvCme)
+--   AlmDes   Descripcion del almacen         (InvAlm)
+--   ArtCve   Clave del articulo              (InvCme)
+--   ArtDes   Descripcion del articulo        (InvArt)
+--   AnoUpc   Ano del periodo cerrado         (InvCme)
+--   NumUpc   Numero de mes del periodo       (InvCme)
+--   CmeCen   Existencia inicial al cierre    (InvCme)
+--   CmeCsa   Salidas acumuladas del periodo  (InvCme)
+--   CmeCfi   Existencia final al cierre      (InvCme)
+--   ArtCpl   Costo promedio ultimo al cierre (InvCme)
+--   ArtCul   Costo ultimo al cierre          (InvCme)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvCme   T1  Cierre mensual de existencias (tabla base)
+--   SegDis   T2  Distribuciones
+--   InvAlm   T3  Almacenes (clave compuesta: DisCve + AlmCve)
+--   InvArt   T4  Maestro de articulos
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Evaluar si los JOIN deben ser INNER o LEFT OUTER segun
+--      la integridad referencial de InvCme: si puede haber
+--      registros de cierre cuyo articulo o almacen fue
+--      eliminado, cambiar a LEFT OUTER preservaria el historial
+--      evitando perdida de registros en la vista.
+--   2. Agregar columna calculada CmeCfi - CmeCen + CmeCsa
+--      como CmeVariacion para facilitar auditorias de cierre
+--      sin calcularla en cada consulta consumidora.
+--   3. Verificar indice compuesto en InvCme(DisCve, AlmCve,
+--      ArtCve, AnoUpc, NumUpc) para soporte de filtros por
+--      periodo y ubicacion.
+--   4. Considerar agregar AnoUpc y NumUpc al inicio del SELECT
+--      si los consumidores filtran frecuentemente por periodo,
+--      ya que facilita el particionamiento logico de la vista.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWINV_Existencias_Al_Cierre AS
+SELECT
+    -- Distribucion
+    T1.DisCve,
+    T2.DisDes,
+    -- Almacen
+    T1.AlmCve,
+    T3.AlmDes,
+    -- Articulo
+    T1.ArtCve,
+    T4.ArtDes,
+    -- Periodo de cierre
+    T1.AnoUpc,
+    T1.NumUpc,
+    -- Cantidades al cierre
+    T1.CmeCen,
+    T1.CmeCsa,
+    T1.CmeCfi,
+    -- Costos al cierre
+    T1.ArtCpl,
+    T1.ArtCul
+
+FROM InvCme T1
+
+-- Descripcion de la distribucion
+JOIN SegDis T2
+    ON  T1.DisCve = T2.DisCve
+
+-- Descripcion del almacen (clave compuesta)
+JOIN InvAlm T3
+    ON  T1.DisCve = T3.DisCve
+    AND T1.AlmCve = T3.AlmCve
+
+-- Descripcion del articulo
+JOIN InvArt T4
+    ON  T1.ArtCve = T4.ArtCve;

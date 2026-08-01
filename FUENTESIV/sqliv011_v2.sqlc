@@ -1,0 +1,144 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIV011
+-- Objeto    : VWINV_Exis_Distrito_Almacen_Articulo
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que calcula las existencias acumuladas de inventario
+--   por distribucion, almacen y articulo, a partir del total
+--   historico de transacciones en InvTrad.
+--
+--   Agrupa todas las transacciones y clasifica cada movimiento
+--   como entrada o salida segun TmoOri de InvTmo:
+--
+--     Entradas:
+--       TmoOri = 1                         -> Entrada directa
+--       TmoOri = 3 AND TmoCdt = '  '       -> Transferencia
+--                                             entrada
+--     Salidas:
+--       TmoOri = 2                         -> Salida directa
+--       TmoOri = 3 AND TmoCdt <> '  '      -> Transferencia
+--                                             salida (negativa)
+--
+--   Las salidas se acumulan como valores negativos (TraCan*-1).
+--
+--   La existencia se calcula como:
+--     Existencia = Entradas - Salidas
+--   donde Salidas es un valor negativo (TraCan * -1).
+--   Esto equivale a: Entradas + |Salidas|, lo que representa
+--   la suma acumulada de todos los movimientos con su signo.
+--
+--   Nota: la vista no filtra por periodo ni por estatus de
+--   transaccion; acumula TODO el historial de InvTrad.
+--
+--   Precedencia de operadores OR/AND:
+--     AND tiene mayor precedencia que OR, equivalente a:
+--       TmoOri = 1 OR (TmoOri = 3 AND TmoCdt = '  ')
+--       TmoOri = 2 OR (TmoOri = 3 AND TmoCdt <> '  ')
+--     En esta version se agregan parentesis explicitos.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   DisCve     Clave de la distribucion      (InvTrad)
+--   AlmCve     Clave del almacen             (InvTrad)
+--   ArtCve     Clave del articulo            (InvTrad)
+--   Entradas   Total entradas acumuladas     (calculado)
+--   Salidas    Total salidas acumuladas *-1  (calculado)
+--   Existencia Existencia = Entradas-Salidas (calculado)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvTrad  T1  Transacciones de inventario (tabla base)
+--   InvTmo   T2  Tipos de movimiento (TmoOri, TmoCdt)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Sustituir IFNULL por COALESCE: estandar SQL ANSI,
+--      portable entre motores. Ya aplicado en esta version.
+--   2. Agregar parentesis explicitos en CASE para documentar
+--      la precedencia OR/AND. Ya aplicado en esta version.
+--   3. El campo Existencia recalcula las expresiones de
+--      Entradas y Salidas una segunda vez. Usar una CTE para
+--      calcularlas una sola vez y referenciarlas en el SELECT
+--      externo mejora la legibilidad y evita inconsistencias:
+--        WITH Mov AS (SELECT ..., SUM(Entradas), SUM(Salidas))
+--        SELECT ..., Entradas, Salidas, Entradas - Salidas
+--   4. La vista acumula TODO el historial sin filtro de fecha.
+--      Para consultas operativas considerar agregar un filtro
+--      de periodo o convertir en Table Function con parametros
+--      de fecha para reducir el volumen procesado.
+--   5. Agregar DisCve, AlmCve en el ORDER BY o en un indice
+--      compuesto InvTrad(DisCve, AlmCve, ArtCve, TmoCve) para
+--      optimizar el GROUP BY en tablas de alto volumen.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWINV_Exis_Distrito_Almacen_Articulo AS
+SELECT
+    T1.DisCve,
+    T1.AlmCve,
+    T1.ArtCve,
+
+    -- Entradas: TmoOri=1 o TmoOri=3 con TmoCdt en blanco
+    COALESCE(
+        SUM(
+            CASE
+                WHEN T2.TmoOri = 1
+                  OR (T2.TmoOri = 3 AND T2.TmoCdt = '  ')
+                THEN T1.TraCan
+                ELSE 0
+            END
+        ), 0
+    ) AS Entradas,
+
+    -- Salidas: TmoOri=2 o TmoOri=3 con TmoCdt no en blanco
+    COALESCE(
+        SUM(
+            CASE
+                WHEN T2.TmoOri = 2
+                  OR (T2.TmoOri = 3 AND T2.TmoCdt <> '  ')
+                THEN T1.TraCan * -1
+                ELSE 0
+            END
+        ), 0
+    ) AS Salidas,
+
+    -- Existencia: suma algebraica Entradas - Salidas
+    -- (Salidas es negativo, por lo que Entradas - Salidas
+    --  equivale a acumular todos los movimientos con signo)
+    COALESCE(
+        SUM(
+            CASE
+                WHEN T2.TmoOri = 1
+                  OR (T2.TmoOri = 3 AND T2.TmoCdt = '  ')
+                THEN T1.TraCan
+                ELSE 0
+            END
+        ), 0
+    ) -
+    COALESCE(
+        SUM(
+            CASE
+                WHEN T2.TmoOri = 2
+                  OR (T2.TmoOri = 3 AND T2.TmoCdt <> '  ')
+                THEN T1.TraCan * -1
+                ELSE 0
+            END
+        ), 0
+    ) AS Existencia
+
+FROM InvTrad T1
+
+-- Tipo de movimiento: determina si es entrada o salida
+JOIN InvTmo T2
+    ON  T1.TmoCve = T2.TmoCve
+
+GROUP BY
+    T1.DisCve,
+    T1.AlmCve,
+    T1.ArtCve;

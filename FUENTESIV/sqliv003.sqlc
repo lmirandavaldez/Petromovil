@@ -1,0 +1,105 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIV003
+-- Objeto    : VWINV_Historico_Costos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista del historico de costos de articulos de inventario.
+--   Presenta para cada registro de costo historico (InvCosh)
+--   los datos del articulo, la fecha ISO del costo, el costo
+--   promedio ultimo y los componentes de precio (impuestos,
+--   margenes y comisiones) vigentes en esa fecha.
+--
+--   La tabla de componentes de precio InvCpr se une por rango
+--   de fechas: el registro de InvCosh es valido si la fecha
+--   de ultima actualizacion (CosFua) cae dentro del periodo
+--   CprFis (fecha inicio) y CprFfs (fecha fin) de InvCpr.
+--
+--   Todos los joins son LEFT OUTER para conservar los registros
+--   historicos aunque no exista articulo, componente de precio
+--   o fecha correspondiente en las tablas maestras.
+--
+--   Nota sobre mayusculas/minusculas:
+--     En el original, el campo Cpri03 tiene la 'i' en minuscula
+--     mientras los demas usan mayuscula (CprI01, CprI02). Se
+--     conserva el nombre original para no alterar la logica;
+--     verificar en la tabla fisica si el nombre correcto es
+--     CprI03 o Cpri03.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   ArtCve              Clave del articulo          (InvCosh)
+--   ArtDes              Descripcion del articulo    (InvArt)
+--   ArtPpr              Precio promedio             (InvArt)
+--   FecIso              Fecha ISO del costo         (SegFec)
+--   CosCpl              Costo promedio ultimo hist. (InvCosh)
+--   CprPml              Precio maximo al publico    (InvCpr)
+--   Imp_Ley_112_00      Impuesto Ley 112-00         (InvCpr)
+--   Imp_Ley_495_06      Impuesto Ley 495-06         (InvCpr)
+--   Imp_Ley_557_05      Impuesto Ley 557-05         (InvCpr)
+--   Margen_Distribuidor Margen del distribuidor     (InvCpr)
+--   Margen_Detallista   Margen del detallista       (InvCpr)
+--   Comision_Transporte Comision de transporte      (InvCpr)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvCosh  T1  Historico de costos del articulo
+--   InvArt   T2  Maestro de articulos
+--   InvCpr   T3  Componentes de precio por rango de fechas
+--   SegFec   T9  Tabla de fechas (FecYmd -> FecIso)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Sustituir IFNULL por COALESCE: estandar SQL ANSI,
+--      portable entre motores.
+--   2. Verificar el nombre del campo Cpri03 (i minuscula)
+--      contra la definicion fisica de InvCpr; puede ser un
+--      error tipografico que pase desapercibido si el motor
+--      no distingue mayusculas en nombres de campo.
+--   3. El join BETWEEN en InvCpr puede ser costoso si la tabla
+--      tiene muchos rangos por articulo. Verificar indice en
+--      (ArtCve, CprFis, CprFfs) para optimizar el acceso.
+--   4. Si CosFua puede no existir en SegFec (fechas no
+--      registradas), el campo FecIso retornara NULL. Evaluar
+--      si conviene aplicar COALESCE(T9.FecIso, ...) o
+--      documentar el comportamiento para los consumidores.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWINV_Historico_Costos AS
+SELECT
+    -- Identificacion del articulo
+    T1.ArtCve,
+    T2.ArtDes,
+    T2.ArtPpr,
+    -- Fecha y costo historico
+    T9.FecIso,
+    T1.CosCpl,
+    -- Componentes de precio vigentes en la fecha del costo
+    T3.CprPml,
+    COALESCE(T3.CprI01, 0) AS Imp_Ley_112_00,
+    COALESCE(T3.CprI02, 0) AS Imp_Ley_495_06,
+    COALESCE(T3.Cpri03, 0) AS Imp_Ley_557_05,
+    COALESCE(T3.CprM01, 0) AS Margen_Distribuidor,
+    COALESCE(T3.CprM02, 0) AS Margen_Detallista,
+    COALESCE(T3.CprC01, 0) AS Comision_Transporte
+
+FROM InvCosh T1
+
+-- Maestro de articulos: descripcion y precio promedio
+LEFT OUTER JOIN InvArt T2
+    ON  T1.ArtCve = T2.ArtCve
+
+-- Componentes de precio vigentes en la fecha del costo
+LEFT OUTER JOIN InvCpr T3
+    ON  T1.ArtCve  = T3.ArtCve
+    AND T1.CosFua BETWEEN T3.CprFis AND T3.CprFfs
+
+-- Tabla de fechas: convierte FecYmd a fecha ISO
+LEFT OUTER JOIN SegFec T9
+    ON  T1.CosFua = T9.FecYmd;

@@ -1,0 +1,47 @@
+CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.IV_CONV_UNIDADES
+(
+    codart   CHAR(20),
+    existe   DECIMAL(12,2),
+    almven   CHAR(1)
+)
+RETURNS TABLE
+(
+    cantidad_entera DECIMAL(12,0),
+    cantidad_suelta DECIMAL(12,2)
+)
+LANGUAGE SQL
+RETURN
+    WITH Datos AS (
+        SELECT
+            CASE
+                WHEN AlmVen = 'A' THEN Artcua
+                WHEN AlmVen = 'V' THEN ArtCuv
+                ELSE ArtCuv
+            END AS Unidad,
+            Artrpd
+        FROM Invart
+        WHERE ArtCve = CodArt
+    ),
+    Norm AS (
+        SELECT
+            CASE WHEN Unidad = 0 THEN 1 ELSE Unidad END AS UnidadNorm,
+            ArtRpd
+        FROM Datos
+    )
+    SELECT
+        CASE
+            WHEN ArtRpd = 'N' AND UnidadNorm <> 1
+                THEN CAST(FLOOR(existe / UnidadNorm) AS DECIMAL(12,0))
+            ELSE CAST(existe AS DECIMAL(12,0))
+        END AS cantidad_entera,
+
+        CASE
+            WHEN ArtRpd = 'N' AND UnidadNorm <> 1
+                THEN existe - (FLOOR(existe / UnidadNorm) * UnidadNorm)
+            ELSE 0
+        END AS cantidad_suelta
+    FROM Norm;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.IV_CONV_UNIDADES TO PUBLIC;

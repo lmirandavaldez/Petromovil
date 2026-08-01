@@ -1,0 +1,15 @@
+Create Or Replace View VWINV_Transacciones_Entradas_Salidas
+As Select
+T1.DisCve, T1.AlmCve, T1.ArtCve, T9.FecFam,
+IfNull (Sum(Case When T2.TmoOri = 1 Or T2.TmoOri = 3 And
+T2.TmoCdt = '  ' Then T1.TraCan Else 0 End), 0) As Entradas,
+IfNull (Sum(Case When T2.TmoOri = 2 Or T2.TmoOri = 3 And
+T2.TmoCdt <> '  ' Then T1.TraCan * -1 Else 0 End), 0) As Salidas
+  From InvTrad T1
+  Join InvTmo T2
+    On (T1.TmoCve = T2.TmoCve)
+  Join SegFec T9
+    On (T1.TraAtr = T9.FecAno)
+   And (T1.TraMtr = T9.FecMes)
+   And (T1.TraDtr = T9.FecDia)
+Group By T1.DisCve, T1.AlmCve, T1.ArtCve, T9.FecFam

@@ -1,0 +1,8 @@
+Create Or Replace View VWINV_Categorias_Precios_Regulados
+As Select T1.CatCve, T2.CatDes
+     From InvArt T1
+     Join InvCat T2
+       On (T1.CatCve = T2.CatCve)
+    Where (T1.ArtPpr = 'S')
+      And (T1.ArtSta = 'A')
+ Group By T1.CatCve, T2.CatDes

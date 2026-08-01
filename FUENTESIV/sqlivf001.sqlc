@@ -1,4 +1,50 @@
---CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIVF001
+-- Objeto    : SEGLIB.IV_CONV_UNIDADES
+-- Tipo      : Funcion de tabla SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Convierte una existencia expresada en unidades sueltas a su
+--   representacion en cantidad entera y cantidad suelta, segun
+--   la unidad de empaque configurada para el articulo.
+--
+--   La unidad de empaque se selecciona dependiendo del tipo de
+--   almacen indicado en el parametro AlmVen:
+--     'A' -> Usa la cantidad de empaque para almacen (ArtCua)
+--     'V' -> Usa la cantidad de empaque para ventas (ArtCuv)
+--   Si AlmVen no es 'A' ni 'V', se aplica ArtCuv por defecto.
+--
+--   Si el articulo esta marcado como repedido ('N' en ArtRpd)
+--   y la unidad de empaque es mayor a 1, la funcion calcula:
+--     - cantidad_entera : paquetes completos (FLOOR)
+--     - cantidad_suelta : unidades sobrantes (modulo)
+--   En cualquier otro caso devuelve la existencia como entera
+--   y cero como suelta.
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+--   codart  CHAR(20)       Clave del articulo
+--   existe  DECIMAL(12,2)  Existencia en unidades sueltas
+--   almven  CHAR(1)        Tipo: 'A' = Almacen, 'V' = Ventas
+-- --------------------------------------------------------------
+-- Retorna (tabla):
+--   cantidad_entera  DECIMAL(12,0)  Paquetes o unidades enteras
+--   cantidad_suelta  DECIMAL(12,2)  Unidades sobrantes
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   INVART  Maestro de articulos (ArtCve, ArtCua, ArtCuv,
+--           ArtRpd)
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Creacion inicial
+-- ==============================================================
+
+-- CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 
 CREATE OR REPLACE FUNCTION SEGLIB.IV_CONV_UNIDADES
 (
@@ -13,6 +59,8 @@ RETURNS TABLE
 )
 LANGUAGE SQL
 RETURN
+    -- CTE Datos: obtiene la unidad de empaque y el indicador
+    --            de repedido segun el tipo de almacen/ventas.
     WITH Datos AS (
         SELECT
             CASE
@@ -24,22 +72,33 @@ RETURN
         FROM Invart
         WHERE ArtCve = CodArt
     ),
+    -- CTE Norm: normaliza la unidad evitando division por cero.
+    --           Si Unidad = 0 se sustituye por 1.
     Norm AS (
         SELECT
-            CASE WHEN Unidad = 0 THEN 1 ELSE Unidad END AS UnidadNorm,
+            CASE
+                WHEN Unidad = 0 THEN 1
+                ELSE Unidad
+            END AS UnidadNorm,
             ArtRpd
         FROM Datos
     )
+    -- Calculo final: descompone la existencia en enteros y
+    -- sueltos unicamente cuando el articulo es repedido y la
+    -- unidad de empaque es mayor a 1.
     SELECT
         CASE
             WHEN ArtRpd = 'N' AND UnidadNorm <> 1
-                THEN CAST(FLOOR(existe / UnidadNorm) AS DECIMAL(12,0))
+                THEN CAST(
+                         FLOOR(existe / UnidadNorm)
+                         AS DECIMAL(12,0))
             ELSE CAST(existe AS DECIMAL(12,0))
         END AS cantidad_entera,
 
         CASE
             WHEN ArtRpd = 'N' AND UnidadNorm <> 1
-                THEN existe - (FLOOR(existe / UnidadNorm) * UnidadNorm)
+                THEN existe
+                     - (FLOOR(existe / UnidadNorm) * UnidadNorm)
             ELSE 0
         END AS cantidad_suelta
     FROM Norm;

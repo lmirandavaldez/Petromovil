@@ -1,0 +1,121 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIV004
+-- Objeto    : VWINV_Transacciones_Entradas_Salidas_Articulos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que resume las entradas y salidas de inventario por
+--   articulo y fecha ISO. Es una variante simplificada de
+--   VWINV_Transacciones_Entradas_Salidas (SQLIV002); omite
+--   las dimensiones de distribucion y almacen para obtener
+--   el movimiento consolidado por articulo y dia.
+--
+--   Clasifica cada transaccion de InvTrad como entrada o
+--   salida segun el tipo de movimiento de InvTmo (TmoOri):
+--
+--     Entradas:
+--       TmoOri = 1                         -> Entrada directa
+--       TmoOri = 3 AND TmoCdt = '  '       -> Transferencia
+--                                             entrada
+--     Salidas:
+--       TmoOri = 2                         -> Salida directa
+--       TmoOri = 3 AND TmoCdt <> '  '      -> Transferencia
+--                                             salida (negativa)
+--
+--   Las salidas se acumulan como valores negativos (TraCan*-1).
+--   La fecha se agrupa por FecIso (fecha ISO YYYY-MM-DD) de
+--   SegFec, a diferencia de SQLIV002 que agrupa por FecFam.
+--
+--   Precedencia de operadores OR/AND:
+--     AND tiene mayor precedencia que OR, por lo tanto:
+--       TmoOri = 1 OR (TmoOri = 3 AND TmoCdt = '  ')
+--       TmoOri = 2 OR (TmoOri = 3 AND TmoCdt <> '  ')
+--     En esta version se agregan parentesis explicitos para
+--     hacer visible esa precedencia sin ambiguedad.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   ArtCve   Clave del articulo             (InvTrad)
+--   FecIso   Fecha ISO de la transaccion    (SegFec)
+--   Entradas Suma de entradas en TraCan     (calculado)
+--   Salidas  Suma de salidas en TraCan *-1  (calculado)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvTrad  T1  Transacciones de inventario
+--   InvTmo   T2  Tipos de movimiento (TmoOri, TmoCdt)
+--   SegFec   T9  Tabla de fechas (FecAno, FecMes, FecDia,
+--                FecIso)
+-- --------------------------------------------------------------
+-- Diferencias con VWINV_Transacciones_Entradas_Salidas:
+--   SQLIV002 agrupa por DisCve, AlmCve, ArtCve, FecFam
+--   SQLIV004 agrupa solo por ArtCve, FecIso (consolidado
+--            a nivel articulo-dia)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Sustituir IFNULL por COALESCE: estandar SQL ANSI,
+--      portable entre motores.
+--   2. Agregar parentesis explicitos en las condiciones CASE
+--      para documentar la precedencia OR/AND. Ya aplicado
+--      en esta version.
+--   3. Verificar indices en InvTrad(ArtCve, TmoCve) y en
+--      SegFec(FecAno, FecMes, FecDia) para evitar full scan
+--      en tablas de alto volumen.
+--   4. Si se necesita filtrar por periodo, considerar crear
+--      una funcion de tabla (Table Function) en lugar de
+--      vista, para recibir fechas como parametros y reducir
+--      el volumen procesado.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWINV_Transacciones_Entradas_Salidas_Articulos
+AS
+SELECT
+    T1.ArtCve,
+    T9.FecIso,
+
+    -- Entradas: TmoOri=1 o TmoOri=3 con TmoCdt en blanco
+    COALESCE(
+        SUM(
+            CASE
+                WHEN T2.TmoOri = 1
+                  OR (T2.TmoOri = 3 AND T2.TmoCdt = '  ')
+                THEN T1.TraCan
+                ELSE 0
+            END
+        ), 0
+    ) AS Entradas,
+
+    -- Salidas: TmoOri=2 o TmoOri=3 con TmoCdt no en blanco
+    COALESCE(
+        SUM(
+            CASE
+                WHEN T2.TmoOri = 2
+                  OR (T2.TmoOri = 3 AND T2.TmoCdt <> '  ')
+                THEN T1.TraCan * -1
+                ELSE 0
+            END
+        ), 0
+    ) AS Salidas
+
+FROM InvTrad T1
+
+-- Tipo de movimiento: determina si es entrada o salida
+JOIN InvTmo T2
+    ON  T1.TmoCve = T2.TmoCve
+
+-- Tabla de fechas: convierte AAAAMMDD a fecha ISO
+JOIN SegFec T9
+    ON  T1.TraAtr = T9.FecAno
+    AND T1.TraMtr = T9.FecMes
+    AND T1.TraDtr = T9.FecDia
+
+GROUP BY
+    T1.ArtCve,
+    T9.FecIso;

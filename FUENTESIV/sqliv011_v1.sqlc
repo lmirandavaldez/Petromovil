@@ -1,0 +1,15 @@
+Create Or Replace View VWINV_Exis_Distrito_Almacen_Articulo
+As Select
+T1.DisCve, T1.AlmCve, T1.ArtCve,
+IfNull (Sum(Case When T2.TmoOri = 1 Or T2.TmoOri = 3 And
+T2.TmoCdt = '  ' Then T1.TraCan Else 0 End), 0) As Entradas,
+IfNull (Sum(Case When T2.TmoOri = 2 Or T2.TmoOri = 3 And
+T2.TmoCdt <> '  ' Then T1.TraCan * -1 Else 0 End), 0) As Salidas,
+IfNull (Sum(Case When T2.TmoOri = 1 Or T2.TmoOri = 3 And
+T2.TmoCdt = '  ' Then T1.TraCan Else 0 End), 0) -
+IfNull (Sum(Case When T2.TmoOri = 2 Or T2.TmoOri = 3 And
+T2.TmoCdt <> '  ' Then T1.TraCan * -1 Else 0 End), 0) As Existencia
+  From InvTrad T1
+  Join InvTmo T2
+    On (T1.TmoCve = T2.TmoCve)
+Group By T1.DisCve, T1.AlmCve, T1.ArtCve

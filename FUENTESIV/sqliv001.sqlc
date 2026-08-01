@@ -1,0 +1,134 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIV001
+-- Objeto    : VWINV_Maestro_Articulos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista del maestro de articulos de inventario. Consolida
+--   en una sola consulta los datos del articulo junto con las
+--   descripciones de sus clasificaciones (tipo de item,
+--   categoria, subcategoria, marca) y su unidad de medida
+--   alterna.
+--
+--   Todos los joins son LEFT OUTER para preservar los articulos
+--   aunque alguna tabla de clasificacion no tenga el registro
+--   correspondiente.
+--
+--   Nota: InvDad (T2) se une pero ninguno de sus campos se
+--   proyecta en el SELECT. Su presencia permite filtros
+--   externos sobre columnas de esa tabla sin alterar la vista.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   TiiCve   Clave del tipo de item         (InvArt)
+--   TiiDes   Descripcion del tipo de item   (InvTii)
+--   CatCve   Clave de categoria             (InvArt)
+--   CatDes   Descripcion de categoria       (InvCat)
+--   ScaCve   Clave de subcategoria          (InvArt)
+--   ScaDes   Descripcion de subcategoria    (InvSca)
+--   MarCve   Clave de marca                 (InvArt)
+--   MarDes   Descripcion de marca           (InvMar)
+--   ArtCve   Clave del articulo             (InvArt)
+--   ArtDes   Descripcion del articulo       (InvArt)
+--   ArtPre   Precio del articulo            (InvArt)
+--   ArtUal   Unidad alterna del articulo    (InvArt)
+--   UndDes   Descripcion de la unidad       (InvUnd)
+--   ArtCua   Cantidad de empaque almacen    (InvArt)
+--   ArtMer   Merma                          (InvArt)
+--   ArtCpl   Costo promedio ultimo          (InvArt)
+--   ArtCul   Costo ultimo                   (InvArt)
+--   ArtCst   Costo estandar                 (InvArt)
+--   ArtCmi   Costo minimo                   (InvArt)
+--   ArtCma   Costo maximo                   (InvArt)
+--   ArtCre   Costo de reposicion            (InvArt)
+--   ArtPpr   Precio promedio                (InvArt)
+--   ArtSta   Estatus del articulo           (InvArt)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvArt  T1  Maestro de articulos (tabla base)
+--   InvDad  T2  Datos adicionales del articulo (sin campos)
+--   InvTii  T3  Tipos de item
+--   InvCat  T4  Categorias
+--   InvMar  T5  Marcas
+--   InvUnd  T6  Unidades de medida
+--   InvSca  T7  Subcategorias
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. InvDad (T2) se une pero no aporta campos al SELECT;
+--      si no se usa para filtros externos, eliminar el join
+--      para reducir el costo de la consulta.
+--   2. El join a InvSca usa dos columnas (CatCve y ScaCve),
+--      lo cual es correcto si ScaCve no es unica por si sola.
+--      Verificar que el indice compuesto exista en InvSca.
+--   3. Considerar agregar GRANT SELECT ON VIEW para controlar
+--      el acceso a los datos de costos (ArtCst, ArtCmi, etc.)
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWINV_Maestro_Articulos AS
+SELECT
+    -- Clasificacion: tipo de item
+    T1.TiiCve,
+    T3.TiiDes,
+    -- Clasificacion: categoria
+    T1.CatCve,
+    T4.CatDes,
+    -- Clasificacion: subcategoria
+    T1.ScaCve,
+    T7.ScaDes,
+    -- Clasificacion: marca
+    T1.MarCve,
+    T5.MarDes,
+    -- Identificacion y descripcion del articulo
+    T1.ArtCve,
+    T1.ArtDes,
+    T1.ArtPre,
+    -- Unidad de medida alterna
+    T1.ArtUal,
+    T6.UndDes,
+    -- Parametros de empaque y costos
+    T1.ArtCua,
+    T1.ArtMer,
+    T1.ArtCpl,
+    T1.ArtCul,
+    T1.ArtCst,
+    T1.ArtCmi,
+    T1.ArtCma,
+    T1.ArtCre,
+    T1.ArtPpr,
+    -- Estatus
+    T1.ArtSta
+
+FROM InvArt T1
+
+-- Datos adicionales del articulo (sin campos proyectados)
+LEFT OUTER JOIN InvDad T2
+    ON  T1.ArtCve = T2.ArtCve
+
+-- Tipo de item
+LEFT OUTER JOIN InvTii T3
+    ON  T1.TiiCve = T3.TiiCve
+
+-- Categoria
+LEFT OUTER JOIN InvCat T4
+    ON  T1.CatCve = T4.CatCve
+
+-- Marca
+LEFT OUTER JOIN InvMar T5
+    ON  T1.MarCve = T5.MarCve
+
+-- Unidad de medida alterna
+LEFT OUTER JOIN InvUnd T6
+    ON  T1.ArtUal = T6.UndCve
+
+-- Subcategoria (clave compuesta: categoria + subcategoria)
+LEFT OUTER JOIN InvSca T7
+    ON  T1.CatCve = T7.CatCve
+    AND T1.ScaCve = T7.ScaCve;

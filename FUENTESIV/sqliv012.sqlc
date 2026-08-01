@@ -1,0 +1,134 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIV012
+-- Objeto    : VWINV_Existencia_Articulo
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista que calcula las existencias acumuladas de inventario
+--   consolidadas por articulo, sumando todos los movimientos
+--   de todas las distribuciones y almacenes.
+--
+--   Es una variante simplificada de
+--   VWINV_Exis_Distrito_Almacen_Articulo (SQLIV011): omite
+--   las dimensiones de distribucion y almacen para obtener
+--   la existencia total por articulo en toda la empresa.
+--
+--   Clasifica cada movimiento como entrada o salida segun
+--   TmoOri de InvTmo:
+--
+--     Entradas:
+--       TmoOri = 1                         -> Entrada directa
+--       TmoOri = 3 AND TmoCdt = '  '       -> Transferencia
+--                                             entrada
+--     Salidas:
+--       TmoOri = 2                         -> Salida directa
+--       TmoOri = 3 AND TmoCdt <> '  '      -> Transferencia
+--                                             salida
+--
+--   Ambos campos (Entradas y Salidas) se devuelven en POSITIVO.
+--   La Existencia se calcula como: Entradas - Salidas.
+--
+--   Implementacion con CTE (Mov):
+--     La CTE acumula TraCan en positivo para entradas y usa
+--     ABS(SUM(TraCan * -1)) para salidas, garantizando valor
+--     positivo. El SELECT externo calcula Existencia sin
+--     recalcular los SUM(CASE...).
+--
+--   Nota: la vista acumula TODO el historial de InvTrad sin
+--   filtro de periodo ni de distribucion/almacen.
+--
+--   Precedencia de operadores OR/AND:
+--     AND tiene mayor precedencia que OR, equivalente a:
+--       TmoOri = 1 OR (TmoOri = 3 AND TmoCdt = '  ')
+--       TmoOri = 2 OR (TmoOri = 3 AND TmoCdt <> '  ')
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   ArtCve     Clave del articulo             (InvTrad)
+--   Entradas   Total entradas acumuladas (+)  (calculado)
+--   Salidas    Total salidas acumuladas  (+)  (calculado)
+--   Existencia Existencia = Entradas-Salidas  (calculado)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvTrad  T1  Transacciones de inventario (tabla base)
+--   InvTmo   T2  Tipos de movimiento (TmoOri, TmoCdt)
+-- --------------------------------------------------------------
+-- Diferencias con VWINV_Exis_Distrito_Almacen_Articulo:
+--   SQLIV011 agrupa por DisCve + AlmCve + ArtCve
+--   SQLIV012 agrupa solo por ArtCve (existencia consolidada
+--            de toda la empresa para ese articulo)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. La vista acumula TODO el historial sin filtro de fecha
+--      ni de ubicacion. Para consultas operativas considerar
+--      convertir en Table Function con parametros de fecha,
+--      distribucion o almacen para limitar el volumen.
+--   2. Verificar indice en InvTrad(ArtCve, TmoCve) para
+--      optimizar el GROUP BY en tablas de alto volumen.
+--   3. Si se necesita existencia por almacen y por articulo
+--      simultaneamente, usar SQLIV011 en lugar de esta vista
+--      para evitar consolidar dimensiones innecesariamente.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion, CTE, salidas en
+--                           positivo con ABS(),
+--                           Existencia = Entradas - Salidas
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWINV_Existencia_Articulo AS
+
+-- CTE Mov: calcula Entradas y Salidas ambas en positivo.
+-- Entradas : SUM(TraCan) de movimientos de entrada
+-- Salidas  : ABS(SUM(TraCan * -1)) para valor positivo
+-- El SELECT externo obtiene Existencia = Entradas - Salidas.
+WITH Mov AS (
+    SELECT
+        T1.ArtCve,
+
+        -- Entradas en positivo (TraCan de movimientos entrada)
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN T2.TmoOri = 1
+                      OR (T2.TmoOri = 3 AND T2.TmoCdt = '  ')
+                    THEN T1.TraCan
+                    ELSE 0
+                END
+            ), 0
+        ) AS Entradas,
+
+        -- Salidas en positivo: ABS del acumulado negativo
+        ABS(
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN T2.TmoOri = 2
+                          OR (T2.TmoOri = 3 AND T2.TmoCdt <> '  ')
+                        THEN T1.TraCan * -1
+                        ELSE 0
+                    END
+                ), 0
+            )
+        ) AS Salidas
+
+    FROM InvTrad T1
+
+    -- Tipo de movimiento: determina si es entrada o salida
+    JOIN InvTmo T2
+        ON  T1.TmoCve = T2.TmoCve
+
+    GROUP BY
+        T1.ArtCve
+)
+-- SELECT final: proyecta los campos y calcula Existencia
+SELECT
+    ArtCve,
+    Entradas,
+    Salidas,
+    Entradas - Salidas AS Existencia
+FROM Mov;

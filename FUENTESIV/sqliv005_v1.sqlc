@@ -1,0 +1,13 @@
+Create Or Replace View VWINV_Existencias_Al_Cierre
+As Select
+       T1.DisCve, T2.DisDes, T1.AlmCve, T3.AlmDes, T1.ArtCve,
+       T4.ArtDes, T1.AnoUpc, T1.NumUpc,
+       T1.CmeCen, T1.CmeCsa, T1.CmeCfi, T1.ArtCpl, T1.ArtCul
+  From InvCme T1
+  Join SegDis T2
+    On (T1.DisCve = T2.DisCve)
+  Join InvAlm T3
+    On (T1.DisCve = T3.DisCve)
+   And (T1.AlmCve = T3.AlmCve)
+  Join InvArt T4
+    On (T1.ArtCve = T4.ArtCve)

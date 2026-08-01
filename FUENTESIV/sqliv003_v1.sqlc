@@ -1,0 +1,18 @@
+Create Or Replace View VWINV_Historico_Costos
+As Select
+       T1.ArtCve, T2.ArtDes, T2.ArtPpr, T9.FecIso, T1.CosCpl,
+       T3.CprPml,
+       IfNull(T3.CprI01, 0) As Imp_Ley_112_00,
+       IfNull(T3.CprI02, 0) As Imp_Ley_495_06,
+       IfNull(T3.Cpri03, 0) As Imp_Ley_557_05,
+       IfNull(T3.CprM01, 0) As Margen_Distribuidor,
+       IfNull(T3.CprM02, 0) As Margen_Detallista,
+       IfNull(T3.CprC01, 0) As Comision_Transporte
+  From InvCosh T1
+Left Outer Join InvArt T2
+    On (T1.ArtCve = T2.ArtCve)
+Left Outer Join InvCpr T3
+    On (T1.ArtCve = T3.ArtCve)
+   And (T1.CosFua Between T3.CprFis And T3.CprFfs)
+Left Outer Join SegFec T9
+    On (T1.CosFua = T9.FecYmd)

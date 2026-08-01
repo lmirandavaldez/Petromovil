@@ -1,0 +1,22 @@
+Create Or Replace View VWINV_Articulos_Costos
+As Select
+T1.TiiCve, T3.TiiDes, T1.CatCve, T4.CatDes, T1.ScaCve, T7.ScaDes,
+T1.MarCve, T5.MarDes,
+       T2.CmeArt, T1.ArtCve, T1.ArtDes, T1.ArtPre, T1.ArtUal,
+       T6.UndDes, T1.ArtCua, T1.ArtMer, T1.ArtCpl, T1.ArtCul,
+       T1.ArtCst, T1.ArtCmi, T1.ArtCma, T1.ArtCre, T2.ArtPdp,
+       T1.ArtSta
+  From InvArt T1
+Left Outer Join InvDad T2
+  On(T1.ArtCve = T2.ArtCve)
+Left Outer Join InvTii T3
+  On (T1.TiiCve = T3.TiiCve)
+Left Outer Join InvCat T4
+  On (T1.CatCve = T4.CatCve)
+Left Outer Join InvMar T5
+  On (T1.MarCve = T5.MarCve)
+Left Outer Join InvUnd T6
+  On (T1.ArtUal = T6.UndCve)
+Left Outer Join InvSca T7
+  On (T1.CatCve = T7.CatCve)
+ And (T1.ScaCve = T7.ScaCve)

@@ -1,3 +1,64 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIVF003
+-- Objeto    : SEGLIB.IV_ENTRADAS_SALIDAS
+-- Tipo      : Funcion de tabla SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Calcula el resumen de entradas y salidas de un articulo en
+--   un periodo y ubicacion dados. Devuelve ocho columnas con
+--   totales separados por tipo de movimiento (E/S) y unidad
+--   de medida (tradicional, cex y CRP).
+--
+--   La clasificacion entrada/salida se basa en InvTmo:
+--     TmoOri = 1                          -> Entrada
+--     TmoOri = 2                          -> Salida
+--     TmoOri = 3 AND TmoCdt = ' '         -> Entrada
+--     TmoOri = 3 AND TmoCdt <> ' '        -> Salida
+--
+--   TraCex_Corregido unifica la cantidad en la unidad base
+--   del articulo:
+--     Si la unidad de transaccion (TraUnd) coincide con la
+--     unidad alternativa del articulo (ArtUal), multiplica
+--     TraCan por ArtCua.
+--     De lo contrario usa el factor de conversion UalCon
+--     (o ArtCua como respaldo) de la tabla InvUal.
+--
+--   Las salidas se acumulan como valores negativos (*-1).
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+--   P_ARTCVE  CHAR(20)       Clave del articulo
+--   P_DISCVE  DECIMAL(3,0)   Clave de la distribucion
+--   P_ALMCVE  DECIMAL(2,0)   Clave del almacen
+--   P_FECINI  DATE           Fecha inicial del periodo
+--   P_FECFIN  DATE           Fecha final del periodo
+-- --------------------------------------------------------------
+-- Retorna (tabla):
+--   ENTRADAS_ALM_TRAD  DECIMAL(15,4)  Entradas en unid. trad.
+--   ENTRADAS_CEX_TRAD  DECIMAL(15,4)  Entradas en CEX trad.
+--   ENTRADAS_CEX       DECIMAL(15,4)  Entradas en CEX corregido
+--   ENTRADAS_CRP       DECIMAL(15,4)  Entradas en unid. CRP
+--   SALIDAS_ALM_TRAD   DECIMAL(15,4)  Salidas en unid. trad.
+--   SALIDAS_CEX_TRAD   DECIMAL(15,4)  Salidas en CEX trad.
+--   SALIDAS_CEX        DECIMAL(15,4)  Salidas en CEX corregido
+--   SALIDAS_CRP        DECIMAL(15,4)  Salidas en unid. CRP
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   INVTRAD  Transacciones de inventario
+--   INVART   Maestro de articulos
+--   INVUAL   Factores de conversion de unidades alternas
+--   INVTMO   Tipos de movimiento (entrada/salida)
+--   SEGFEC   Tabla de fechas (conversion a fecha ISO)
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Creacion inicial
+-- ==============================================================
+
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 
 CREATE OR REPLACE FUNCTION SEGLIB.IV_ENTRADAS_SALIDAS
@@ -27,54 +88,95 @@ BEGIN
 
     RETURN
     SELECT
-        COALESCE(SUM(CASE WHEN R.TipoMov = 'E' THEN R.TraCan           
-        ELSE 0 END), 0) AS ENTRADAS_ALM_TRAD,
-        COALESCE(SUM(CASE WHEN R.TipoMov = 'E' THEN R.TraCex           
-        ELSE 0 END), 0) AS ENTRADAS_CEX_TRAD,
-        COALESCE(SUM(CASE WHEN R.TipoMov = 'E' THEN R.TraCex_Corregido 
-        ELSE 0 END), 0) AS ENTRADAS_CEX,
-        COALESCE(SUM(CASE WHEN R.TipoMov = 'E' THEN R.TraCud          
-        ELSE 0 END), 0) AS ENTRADAS_CRP,
-        COALESCE(SUM(CASE WHEN R.TipoMov = 'S' THEN R.TraCan
-        * -1 ELSE 0 END), 0) AS SALIDAS_ALM_TRAD,
-        COALESCE(SUM(CASE WHEN R.TipoMov = 'S' THEN R.TraCex
-        * -1 ELSE 0 END), 0) AS SALIDAS_CEX_TRAD,
-        COALESCE(SUM(CASE WHEN R.TipoMov = 'S' THEN R.TraCex_Corregido
-        * -1 ELSE 0 END), 0) AS SALIDAS_CEX,
-        COALESCE(SUM(CASE WHEN R.TipoMov = 'S' THEN R.TraCud           
-        * -1 ELSE 0 END), 0) AS SALIDAS_CRP
+        -- Entradas: cantidad tradicional de almacen
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'E'
+                          THEN R.TraCan
+                          ELSE 0 END), 0) AS ENTRADAS_ALM_TRAD,
+
+        -- Entradas: cantidad CEX tradicional
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'E'
+                          THEN R.TraCex
+                          ELSE 0 END), 0) AS ENTRADAS_CEX_TRAD,
+
+        -- Entradas: CEX corregido a unidad base del articulo
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'E'
+                          THEN R.TraCex_Corregido
+                          ELSE 0 END), 0) AS ENTRADAS_CEX,
+
+        -- Entradas: cantidad en unidad CRP
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'E'
+                          THEN R.TraCud
+                          ELSE 0 END), 0) AS ENTRADAS_CRP,
+
+        -- Salidas: cantidad tradicional de almacen (negativa)
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'S'
+                          THEN R.TraCan * -1
+                          ELSE 0 END), 0) AS SALIDAS_ALM_TRAD,
+
+        -- Salidas: cantidad CEX tradicional (negativa)
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'S'
+                          THEN R.TraCex * -1
+                          ELSE 0 END), 0) AS SALIDAS_CEX_TRAD,
+
+        -- Salidas: CEX corregido a unidad base (negativa)
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'S'
+                          THEN R.TraCex_Corregido * -1
+                          ELSE 0 END), 0) AS SALIDAS_CEX,
+
+        -- Salidas: cantidad en unidad CRP (negativa)
+        COALESCE(SUM(CASE WHEN R.TipoMov = 'S'
+                          THEN R.TraCud * -1
+                          ELSE 0 END), 0) AS SALIDAS_CRP
+
     FROM (
         SELECT
             T1.TraCan,
             T1.TraCex,
             T1.TraCud,
 
-    /* TraCex corregido: unifica la cantidad en la unidad base del artículo */
-        CASE
-            WHEN T1.TraUnd = T2.ArtUal
-            THEN COALESCE(T1.TraCan, 0) * COALESCE(T2.ArtCua, 1)
-            ELSE COALESCE(T1.TraCan, 0) * COALESCE(T3.UalCon, T2.ArtCua, 1)
+            -- TraCex corregido: unifica cantidad en unidad base
+            CASE
+                WHEN T1.TraUnd = T2.ArtUal
+                THEN COALESCE(T1.TraCan, 0)
+                     * COALESCE(T2.ArtCua, 1)
+                ELSE COALESCE(T1.TraCan, 0)
+                     * COALESCE(T3.UalCon, T2.ArtCua, 1)
             END AS TraCex_Corregido,
 
-    /* Indicador de entrada/salida calculado una sola vez */
-        CASE
-            WHEN (T4.TmoOri = 1) OR (T4.TmoOri = 3 AND RTRIM(T4.TmoCdt) = ' ')
-            THEN 'E'
-            WHEN (T4.TmoOri = 2) OR (T4.TmoOri = 3 AND RTRIM(T4.TmoCdt) <> ' ')
-            THEN 'S' ELSE NULL END AS TipoMov
+            -- TipoMov: clasifica el movimiento como E o S
+            CASE
+                WHEN (T4.TmoOri = 1)
+                  OR (T4.TmoOri = 3
+                      AND RTRIM(T4.TmoCdt) = ' ')
+                THEN 'E'
+                WHEN (T4.TmoOri = 2)
+                  OR (T4.TmoOri = 3
+                      AND RTRIM(T4.TmoCdt) <> ' ')
+                THEN 'S'
+                ELSE NULL
+            END AS TipoMov
 
         FROM InvTrad T1
+
+        -- Maestro de articulos: unidad y factor de empaque
         JOIN InvArt T2
           ON T1.ArtCve = T2.ArtCve
+
+        -- Factor de conversion para unidades alternas
         LEFT JOIN InvUal T3
           ON T1.ArtCve = T3.ArtCve
          AND T1.TraUnd = T3.UndCve
+
+        -- Tipo de movimiento: determina si es entrada o salida
         JOIN InvTmo T4
           ON T1.TmoCve = T4.TmoCve
+
+        -- Tabla de fechas: convierte AAAAMMDD a fecha ISO
         JOIN SegFec T9
           ON T1.TraAtr = T9.FecAno
          AND T1.TraMtr = T9.FecMes
          AND T1.TraDtr = T9.FecDia
+
         WHERE T1.ArtCve = P_ARTCVE
           AND T1.DisCve = P_DISCVE
           AND T1.AlmCve = P_ALMCVE
@@ -84,4 +186,3 @@ BEGIN
 END;
 
 GRANT EXECUTE ON FUNCTION SEGLIB.IV_ENTRADAS_SALIDAS TO PUBLIC;
-

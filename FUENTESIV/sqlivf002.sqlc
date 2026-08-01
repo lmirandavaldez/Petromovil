@@ -1,3 +1,64 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIVF002
+-- Objeto    : SEGLIB.IV_ULTIMO_PERIODO_CERRADO
+-- Tipo      : Funcion de tabla SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Devuelve una fila con las fechas inicio y fin del ultimo
+--   periodo contable cerrado en inventarios, y las fechas
+--   inicio y fin del periodo siguiente (aun abierto).
+--
+--   El periodo cerrado se obtiene de la tabla de parametros
+--   InvPar, registro clave '@', campos AnoUpc (ano) y NumUpc
+--   (numero de mes). La fecha base se construye como el primer
+--   dia de ese mes en formato ISO (YYYY-MM-DD).
+--
+--   La CTE PeriodoCerrado calcula la fecha base una sola vez
+--   para evitar recalcularla cuatro veces en el SELECT final.
+--
+--   Logica de fechas:
+--     FECHA_INI_CERRADO : primer dia del periodo cerrado
+--     FECHA_FIN_CERRADO : ultimo dia del periodo cerrado
+--                         (LAST_DAY sobre FechaBase)
+--     FECHA_INI_SIG     : primer dia del periodo siguiente
+--                         (ADD_MONTHS +1 sobre FechaBase)
+--     FECHA_FIN_SIG     : ultimo dia del periodo siguiente
+--                         (LAST_DAY de ADD_MONTHS)
+-- --------------------------------------------------------------
+-- Parametros de entrada: ninguno
+-- --------------------------------------------------------------
+-- Retorna (tabla):
+--   ANO_UPC            INTEGER  Ano del periodo cerrado
+--   MES_UPC            INTEGER  Mes del periodo cerrado
+--   FECHA_INI_CERRADO  DATE     Inicio del periodo cerrado
+--   FECHA_FIN_CERRADO  DATE     Fin del periodo cerrado
+--   FECHA_INI_SIG      DATE     Inicio del periodo siguiente
+--   FECHA_FIN_SIG      DATE     Fin del periodo siguiente
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   INVPAR  Parametros de inventario (AnoUpc, NumUpc, ParCve)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar NOT DETERMINISTIC si InvPar puede cambiar entre
+--      llamadas en la misma sesion; actualmente no se declara
+--      DETERMINISTIC/NOT DETERMINISTIC (DB2 asume el default).
+--   2. Considerar agregar SPECIFIC IV_ULTIMO_PERIODO_CERRADO
+--      para facilitar el mantenimiento de la funcion por nombre
+--      especifico, igual que IV_ENTRADAS_SALIDAS.
+--   3. Si la clave ParCve '@' puede no existir, la funcion
+--      devuelve cero filas sin error. Documentar ese
+--      comportamiento en las aplicaciones consumidoras.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 
 CREATE OR REPLACE FUNCTION SEGLIB.IV_ULTIMO_PERIODO_CERRADO ()
@@ -7,36 +68,45 @@ RETURNS TABLE (
     FECHA_INI_CERRADO  DATE,
     FECHA_FIN_CERRADO  DATE,
     FECHA_INI_SIG      DATE,
-    FECHA_FIN_SIG      DATE)
+    FECHA_FIN_SIG      DATE
+)
 LANGUAGE SQL
 BEGIN
 
     RETURN
+        -- CTE PeriodoCerrado: construye la fecha base del periodo
+        -- cerrado una sola vez, evitando recalcular el TIMESTAMP_FORMAT
+        -- en cada columna del SELECT final.
         WITH PeriodoCerrado AS (
             SELECT
                 AnoUpc,
                 NUMUPC,
-                /* Construir fecha base del periodo cerrado una sola vez */
                 DATE(
                     TIMESTAMP_FORMAT(
-                        VARCHAR(AnoUpc) CONCAT '-' CONCAT
-                        VARCHAR_FORMAT(NUMUPC, '00') CONCAT '-01',
+                        VARCHAR(AnoUpc)            CONCAT '-'
+                        CONCAT VARCHAR_FORMAT(NUMUPC, '00')
+                        CONCAT '-01',
                         'YYYY-MM-DD'
                     )
                 ) AS FechaBase
             FROM InvPar
             WHERE ParCve = '@'
         )
+        -- SELECT final: proyecta las seis columnas de retorno
+        -- usando FechaBase calculada en la CTE.
         SELECT
-            AnoUpc                          AS ANO_UPC,
-            NUMUPC                          AS MES_UPC,
-            FechaBase                       AS FECHA_INI_CERRADO,
-            LAST_DAY(FechaBase)             AS FECHA_FIN_CERRADO,
-            ADD_MONTHS(FechaBase, 1)        AS FECHA_INI_SIG,
-            LAST_DAY(ADD_MONTHS(FechaBase, 1)) AS FECHA_FIN_SIG
+            AnoUpc                               AS ANO_UPC,
+            NUMUPC                               AS MES_UPC,
+            -- Primer dia del periodo cerrado
+            FechaBase                            AS FECHA_INI_CERRADO,
+            -- Ultimo dia del periodo cerrado
+            LAST_DAY(FechaBase)                  AS FECHA_FIN_CERRADO,
+            -- Primer dia del periodo siguiente
+            ADD_MONTHS(FechaBase, 1)             AS FECHA_INI_SIG,
+            -- Ultimo dia del periodo siguiente
+            LAST_DAY(ADD_MONTHS(FechaBase, 1))   AS FECHA_FIN_SIG
         FROM PeriodoCerrado;
 
 END;
 
 GRANT EXECUTE ON FUNCTION SEGLIB.IV_ULTIMO_PERIODO_CERRADO TO PUBLIC;
-

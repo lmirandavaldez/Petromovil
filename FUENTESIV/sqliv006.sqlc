@@ -1,0 +1,156 @@
+-- ==============================================================
+-- Modulo    : Control de Inventarios
+-- Programa  : SQLIV006
+-- Objeto    : VWINV_Transacciones_Inventarios
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- --------------------------------------------------------------
+-- Descripcion:
+--   Vista detallada de transacciones de inventario. Presenta
+--   cada linea de movimiento de InvTrad enriquecida con las
+--   descripciones de distribucion, almacen, tipo de movimiento
+--   y articulo, ademas del encabezado del documento de
+--   referencia (InvTrah) y el nombre del proveedor (CxpPro).
+--
+--   Se usan dos instancias de SegFec:
+--     T9  : fecha de la transaccion (TraAtr/TraMtr/TraDtr)
+--           proyectada como Fecha_Transaccion
+--     T10 : fecha del documento de referencia
+--           (TraAdr/TraMdr/TraDdr de InvTrah)
+--           proyectada como Fecha_Doc_Ref
+--
+--   Todos los joins son LEFT OUTER para conservar las lineas
+--   de transaccion aunque no existan registros en las tablas
+--   maestras o de encabezado (documentos sin encabezado,
+--   articulos eliminados, fechas no registradas, etc.).
+--
+--   El encabezado InvTrah se une por tres campos:
+--     DisCve + TmoCve + TraNum
+--   lo que identifica univocamente el documento al que
+--   pertenece cada linea de transaccion.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   DisCve             Clave de la distribucion     (InvTrad)
+--   DisDes             Descripcion distribucion     (SegDis)
+--   AlmCve             Clave del almacen            (InvTrad)
+--   AlmDes             Descripcion del almacen      (InvAlm)
+--   TmoCve             Clave tipo de movimiento     (InvTrad)
+--   TmoDes             Descripcion tipo movimiento  (InvTmo)
+--   Fecha_Transaccion  Fecha ISO de la transaccion  (SegFec)
+--   TraNum             Numero del documento         (InvTrad)
+--   TraOrc             Origen del documento         (InvTrah)
+--   TraDre             Doc. de referencia externo   (InvTrah)
+--   Fecha_Doc_Ref      Fecha ISO del doc. referencia(SegFec)
+--   TraDes             Descripcion del documento    (InvTrah)
+--   ProCve             Clave del proveedor          (InvTrah)
+--   ProNom             Nombre del proveedor         (CxpPro)
+--   ArtCve             Clave del articulo           (InvTrad)
+--   ArtDes             Descripcion del articulo     (InvArt)
+--   TraCan             Cantidad de la transaccion   (InvTrad)
+--   TraCun             Costo unitario transaccion   (InvTrad)
+--   TraIco             Importe del costo            (InvTrad)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvTrad  T1   Lineas de transacciones (tabla base)
+--   InvTmo   T2   Tipos de movimiento
+--   SegDis   T3   Distribuciones
+--   InvAlm   T4   Almacenes (clave: DisCve + AlmCve)
+--   InvArt   T5   Maestro de articulos
+--   InvTrah  T6   Encabezados de documentos de transaccion
+--                 (clave: DisCve + TmoCve + TraNum)
+--   CxpPro   T7   Proveedores de cuentas por pagar
+--   SegFec   T9   Tabla de fechas (fecha de transaccion)
+--   SegFec   T10  Tabla de fechas (fecha de documento ref.)
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. SegFec se referencia dos veces (T9 y T10). Esto es
+--      correcto y necesario; documentar que ambas instancias
+--      son independientes y no generan producto cartesiano.
+--   2. Verificar indices en InvTrad(DisCve, TmoCve, TraNum,
+--      TraAtr, TraMtr, TraDtr) e InvTrah(DisCve, TmoCve,
+--      TraNum) para evitar full scan en tablas de alto
+--      volumen transaccional.
+--   3. Si el volumen de InvTrad es muy alto, considerar una
+--      Table Function que reciba rango de fechas y/o
+--      distribucion como parametros para limitar el conjunto
+--      de datos procesado.
+--   4. TraCun * TraCan deberia ser igual a TraIco; si no lo
+--      es puede indicar datos inconsistentes. Evaluar agregar
+--      un campo calculado TraIcoCalc para auditoria.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWINV_Transacciones_Inventarios AS
+SELECT
+    -- Ubicacion: distribucion y almacen
+    T1.DisCve,
+    T3.DisDes,
+    T1.AlmCve,
+    T4.AlmDes,
+    -- Tipo de movimiento
+    T1.TmoCve,
+    T2.TmoDes,
+    -- Fecha de la transaccion (via SegFec T9)
+    T9.FecIso                AS Fecha_Transaccion,
+    -- Documento de transaccion
+    T1.TraNum,
+    T6.TraOrc,
+    T6.TraDre,
+    -- Fecha del documento de referencia (via SegFec T10)
+    T10.FecIso               AS Fecha_Doc_Ref,
+    T6.TraDes,
+    T6.ProCve,
+    T7.ProNom,
+    -- Articulo y montos de la linea
+    T1.ArtCve,
+    T5.ArtDes,
+    T1.TraCan,
+    T1.TraCun,
+    T1.TraIco
+
+FROM InvTrad T1
+
+-- Tipo de movimiento
+LEFT OUTER JOIN InvTmo T2
+    ON  T1.TmoCve = T2.TmoCve
+
+-- Descripcion de la distribucion
+LEFT OUTER JOIN SegDis T3
+    ON  T1.DisCve = T3.DisCve
+
+-- Descripcion del almacen (clave compuesta)
+LEFT OUTER JOIN InvAlm T4
+    ON  T1.DisCve = T4.DisCve
+    AND T1.AlmCve = T4.AlmCve
+
+-- Descripcion del articulo
+LEFT OUTER JOIN InvArt T5
+    ON  T1.ArtCve = T5.ArtCve
+
+-- Encabezado del documento de transaccion
+LEFT OUTER JOIN InvTrah T6
+    ON  T1.DisCve  = T6.DisCve
+    AND T1.TmoCve  = T6.TmoCve
+    AND T1.TraNum  = T6.TraNum
+
+-- Proveedor del documento (de cuentas por pagar)
+LEFT OUTER JOIN CxpPro T7
+    ON  T6.ProCve = T7.ProCve
+
+-- Fecha de la transaccion (AAAAMMDD -> ISO)
+LEFT OUTER JOIN SegFec T9
+    ON  T1.TraAtr = T9.FecAno
+    AND T1.TraMtr = T9.FecMes
+    AND T1.TraDtr = T9.FecDia
+
+-- Fecha del documento de referencia (AAAAMMDD -> ISO)
+LEFT OUTER JOIN SegFec T10
+    ON  T6.TraAdr = T10.FecAno
+    AND T6.TraMdr = T10.FecMes
+    AND T6.TraDdr = T10.FecDia;

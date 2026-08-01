@@ -1,0 +1,31 @@
+Create Or Replace View VWINV_Transacciones_Inventarios
+As Select
+T1.DisCve, T3.DisDes, T1.AlmCve, T4.AlmDes, T1.TmoCve, T2.TmoDes,
+T9.FecIso As Fecha_Transaccion,
+T1.TraNum, T6.TraOrc, T6.TraDre, T10.FecIso As Fecha_Doc_Ref,
+T6.TraDes, T6.ProCve, T7.ProNom,
+T1.ArtCve, T5.ArtDes, T1.TraCan, T1.TraCun, T1.TraIco
+  From InvTrad T1
+Left Outer Join InvTmo T2
+    On (T1.TmoCve = T2.TmoCve)
+Left Outer Join SegDis T3
+    On (T1.DisCve = T3.DisCve)
+Left Outer Join InvAlm T4
+    On (T1.DisCve = T4.DisCve)
+   And (T1.AlmCve = T4.AlmCve)
+Left Outer Join InvArt T5
+    On (T1.ArtCve = T5.ArtCve)
+Left Outer Join InvTrah T6
+    On (T1.DisCve = T6.DisCve)
+   And (T1.TmoCve = T6.TmoCve)
+   And (T1.TraNum = T6.TraNum)
+Left Outer Join CxpPro T7
+    On (T6.ProCve = T7.ProCve)
+Left Outer Join SegFec T9
+    On (T1.TraAtr = T9.FecAno)
+   And (T1.TraMtr = T9.FecMes)
+   And (T1.TraDtr = T9.FecDia)
+Left Outer Join SegFec T10
+    On (T6.TraAdr = T10.FecAno)
+   And (T6.TraMdr = T10.FecMes)
+   And (T6.TraDdr = T10.FecDia)
