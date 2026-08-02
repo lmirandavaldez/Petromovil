@@ -1,0 +1,15 @@
+Create Or Replace View VWCAJ_Recibos_No_Aplicados_CXC
+As Select T2.CliCve, T1.DisCve, T1.CdoCve, T1.DocNum, T1.PerAno,
+          T1.PerNum, T9.FecYmd,
+          Sum(T1.IngVtr) As Suma_Ingresos
+     From CajRefd T1
+     Join CajRech T2
+       On (T1.McaCve = T2.McaCve)
+      And (T1.RecNum = T2.RecNum)
+     Join SegFec T9
+       On (T2.IngAno = T9.FecAno)
+      And (T2.IngMes = T9.FecMes)
+      And (T2.IngDia = T9.FecDia)
+    Where (T2.SitCve = '1')
+   Group By T2.CliCve, T1.DisCve, T1.CdoCve, T1.DocNum, T1.PerAno,
+            T1.PerNum, T9.FecYmd

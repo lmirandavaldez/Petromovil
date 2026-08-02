@@ -1,0 +1,19 @@
+Create Or Replace View VWCXP_DOCUMENTOS_REGISTRADOS
+AS Select T1.ProCve, T2.ProNom, T3.MovSig, T1.DpeDoc, T1.NcfNro,
+T9.FecIso As Fecha_Documento,
+T10.FecIso As Fecha_Transaccion, T4.MonSim, T1.DpeTas,
+T1.DpeRef, T1.DpeDr1, T1.DpeDr2, T1.DpeCon, T1.DpeVal, T1.DpeBce,
+T1.PerAno, T1.PerNum, T1.DpeFtr
+  From CxpDpeh T1
+  Join CxpPro T2
+    On (T1.ProCve = T2.ProCve)
+  Join CxpMov T3
+    On (T1.MovCve = T3.MovCve)
+  Join SegMon T4
+    On (T1.MonCve = T4.MonCve)
+  Join SegFec T9
+    On (T1.DpeAno = T9.FecAno)
+   And (T1.DpeMes = T9.FecMes)
+   And (T1.DpeDia = T9.FecDia)
+  Join SegFec T10
+    On (T1.DpeFtr = T10.FecYMd)

@@ -1,0 +1,25 @@
+Create Or Replace View VWITE_Resumen_Corte_Estaciones
+As   Select T1.DisCve As Codigo_Del_Distrito,
+            T1.FacFis As Fecha_Inicio_Corte,
+            T1.FacFfs As Fecha_Final_Corte,
+            T1.FacPam As Ano_Mes_Del_Corte,
+            T2.CliRui As Codigo_Cliente,
+            T3.CatCve As Categoria,
+            T1.FacCar As Codigo_Del_Producto,
+            Sum(T1.TraCan) As Total_Cantidad,
+            Avg(T1.TraPve) As Precio_Promedio,
+            Sum(T1.TraImp) As Importe,
+            Int((Sum(T1.TraImp) +
+            (Select ParMti From ItePar Where ParCve= '@') - 1) /
+            (Select ParMti From ItePar Where ParCve= '@')) As Veces
+       From IteTra T1
+       Join IteEst T2
+         On (T1.DisCve = T2.DisCve)
+       Join InvArt T3
+         On (T1.FacCar = T3.ArtCve)
+      Where (T1.TraCtd = 01)
+        And (T2.CliRui <> 0)
+        And (T2.EstRui = 'S')
+      Group by T1.DisCve, T1.FacFis, T1.FacFfs, T1.FacPam,
+               T2.CliRui, T3.CatCve, T1.FacCar
+     Having Sum(T1.TraCan) > 0

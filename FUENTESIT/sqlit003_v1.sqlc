@@ -1,0 +1,35 @@
+Create Or Replace View VWITE_Resumen_Corte_Diario_Caburantes
+As   Select T1.DisCve As Codigo_Del_Distrito,
+            T1.TraFem As Fecha_Emision,
+            T2.CliRui As Codigo_Cliente,
+            T3.CatCve As Categoria,
+            T1.FacCar As Codigo_Del_Producto,
+            Sum(T1.TraCan) As Total_Cantidad,
+            Avg(T1.TraPve) As Precio_Promedio,
+            Sum(T1.TraImp) As Importe,
+            Int((Sum(T1.TraImp) +
+            (Select ParMti From ItePar Where ParCve= '@') - 1) /
+            (Select ParMti From ItePar Where ParCve= '@')) As Veces
+       From IteTra T1
+       Join IteEst T2
+         On (T1.DisCve = T2.DisCve)
+       Join InvArt T3
+         On (T1.FacCar = T3.ArtCve)
+      Where (T1.TraCtd = 01)
+        And (T2.CliRui <> 0)
+        And (T2.EstRui = 'S')
+        And (T3.ArtPpr = 'S')
+        And Not Exists
+               (Select 1
+                  From IteTrahC T4
+                 Where (T1.DisCve = T4.DisCve)
+                   And (T1.Tran01 = T4.Tran01)
+                   And (T1.Tran02 = T4.Tran02)
+                   And (T1.Tran03 = T4.Tran03)
+                   And (T1.Tran04 = T4.Tran04)
+                   And (T1.TraFem = T4.TraFem)
+                   And (T1.FacCar = T4.FacCar)
+                    And (T1.TraCan = T4.TraCan))
+      Group by T1.DisCve, T1.TraFem, T2.CliRui, T3.CatCve,
+               T1.FacCar
+     Having Sum(T1.TraCan) > 0

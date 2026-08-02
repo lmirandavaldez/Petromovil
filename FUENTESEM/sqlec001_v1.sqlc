@@ -1,0 +1,30 @@
+Create Or Replace View VWEMC_Cronologico_Cheques
+As Select T1.BanCve, T2.BanNom,
+   (Case When T1.SecTtr = 1 Then 'Cheque' Else 'Trasnf' End) As
+   Tipo_Documento,
+       T1.BanNch, T1.PerAno,
+       T1.PerNum,
+  Date(Concat(Substring('0000',0,5-Length(Trim(T1.CheAno))),
+       Trim(T1.CheAno)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T1.CheMes))),
+         Trim(T1.CheMes)) || '-' ||
+Concat(Substring('00',0,3-Length(trim(T1.CheDia))),
+       Trim(T1.CheDia))) As Fecha_Del_Cheque,
+       T1.SecBe1, T2.CtaCve, T2.AuxCve,
+(Case When T2.AuxCve = 0 Then T4.CtaDes Else T5.AuxNom End)
+Descripcion,
+       T3.MonSim, T1.SecTas,
+(Case When T1.SitCve = 2 Then T1.SecMch Else 0 End) As
+Monto_Documento,
+(Case When T1.SitCve = 2 Then 'Vigente' Else 'Cancelado' End) As
+Status_Documento
+  From CogCheh T1
+  Join CogBan T2
+    On (T1.BanCve = T2.BanCve)
+  Join SegMon T3
+    On (T1.MonCve = T3.MonCve)
+  Join CogCta T4
+    On (T2.CtaCve = T4.CtaCve)
+ Left Outer Join CogAuxd T5
+    On (T4.AuxLis = T5.AuxLis)
+   And (T2.AuxCve = T5.AuxCve)

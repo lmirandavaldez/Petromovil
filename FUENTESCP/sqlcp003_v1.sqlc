@@ -1,0 +1,22 @@
+Create Or Replace View VWCXP_DOCUMENTOS_AL_CIERRE
+AS Select T1.Peanci, T1.PeNuci, T1.ProCve, T2.ProNom, T3.MovSig,
+        T1.DpeDoc, T1.DpeRef, T5.NcfNro,
+T9.FecIso As Fecha_Documento, T10.FecIso As Fecha_Transaccion,
+T1.PerAno, T1.PerNum, T1.MonCve, T4.MonSim, T1.DpeTas, T5.DpeDr1,
+T5.DpeDr2, T5.DpeCon, T1.DpeVal, T1.DpeVml, T1.DpeBce, T1.DpeBml
+  From CxpHDpeh T1
+  Join CxpPro T2
+    On (T1.ProCve = T2.ProCve)
+  Join CxpMov T3
+    On (T1.MovCve = T3.MovCve)
+  Join SegMon T4
+    On (T1.MonCve = T4.MonCve)
+  Join CxpDpeh T5
+    On (T1.ProCve = T5.ProCve)
+   And (T1.MovCve = T5.MovCve)
+   And (T1.DpeDoc = T5.DpeDoc)
+   And (T1.DpeRef = T5.DpeRef)
+  Join SegFec T9
+    On (T1.DpeFec = T9.FecYmd)
+  Join SegFec T10
+    On (T1.DpeFtr = T10.FecYMd)

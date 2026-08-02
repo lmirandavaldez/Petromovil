@@ -1,11 +1,12 @@
 -- =============================================================================
--- Vista   : VWNOM_MAESTRO_EMPLEADOS_ACTIVOS_CANCELADOS
--- Archivo : sqlnm010.sqlc
--- Modulo  : Nomina (NM)
--- Objeto  : Vista maestra de empleados activos y cancelados
--- Version : 2 (v1 = original sin cambios en sqlnm010_v1.sqlc)
--- Fecha   : 2025-07-11
--- =============================================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM010
+-- Objeto    : VWNOM_MAESTRO_EMPLEADOS_ACTIVOS_CANCELADOS
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Versión   : 2.0
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Expone todos los datos maestros de empleados independientemente de su
 --   estado (activo / cancelado). Incluye:
@@ -264,3 +265,5 @@ Cross Join Lateral (
         Case When T1.EmpSta <> 'C' Then Current Date Else FS.Fecha_Salida End
     ))
 ) As AT
+
+

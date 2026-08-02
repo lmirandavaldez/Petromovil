@@ -1,0 +1,141 @@
+-- =============================================================
+-- Modulo    : Interface Modulos Externos
+-- Programa  : SQLIM002
+-- Objeto    : VWIME_Cabecera_Detalle_Datos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de cabecera de documentos de importacion con
+--   indicadores de existencia de detalle y deducciones.
+--   Devuelve todos los registros de ImeFach (encabezado de
+--   facturas de importacion) con los identificadores de fila
+--   (RowGui) de sus tablas relacionadas opcionales:
+--     ImeFacd (detalle de la factura)
+--     ImeDed  (deducciones del documento)
+--
+--   Los LEFT OUTER JOINs a ImeFacd y ImeDed solo aportan
+--   RowGui. Si el valor es NULL, el documento no tiene
+--   detalle o deduccion registrada. Esto permite usar la
+--   vista para identificar el estado de completitud de
+--   cada documento de importacion.
+--
+--   No hay filtros WHERE; devuelve todos los documentos.
+--   No hay campos de fecha por concatenar. DtoFec, OrdFec
+--   y PlaFpl se exponen en su tipo original de la tabla.
+--   No aplica logica de resolucion via SegFec.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   CODIGO_DE_DISTRITO           Clave del distrito  (ImeFach/T1)
+--   TIPO_DE_DOCUMENTO            Tipo de documento   (ImeFach/T1)
+--   FICHA_DEL_VEHICULO           Ficha del vehiculo  (ImeFach/T1)
+--   NUMERO_FACTURA_MODULO_EXTERN Nro. factura ext.   (ImeFach/T1)
+--   FECHA_FACTURA_MODULO_EXTERN  Fecha factura ext.  (ImeFach/T1)
+--   HORA_FACTURA_MODULO_EXTERNO  Hora factura ext.   (ImeFach/T1)
+--   NRO_CUADRE_MODULO_EXTERNO    Nro. conocimiento   (ImeFach/T1)
+--   CODIGO_DEL_CLIENTE           Clave del cliente   (ImeFach/T1)
+--   NUMERO_ORDEN_PEDIDO          Nro. orden pedido   (ImeFach/T1)
+--   FECHA_ORDEN_PEDIDO_AMD       Fecha orden (AMD)   (ImeFach/T1)
+--   CODIGO_DISTRITO_PLANILLA     Distrito planilla   (ImeFach/T1)
+--   NUMERO_DEFINITIVO_PLANILLA   Nro. definitivo     (ImeFach/T1)
+--   FECHA_DE_LA_PLANILLA         Fecha de planilla   (ImeFach/T1)
+--   CODIGO_IDENT_REGISTRO_FACH   RowGui encabezado   (ImeFach/T1)
+--   CODIGO_IDENT_REGISTRO_FACD   RowGui detalle      (ImeFacd/T2)
+--                                NULL si sin detalle
+--   CODIGO_IDENT_REGISTRO_DED    RowGui deduccion    (ImeDed/T3)
+--                                NULL si sin deduccion
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   ImeFach  T1   Encabezado de facturas de importacion (base)
+--   ImeFacd  T2   Detalle de facturas de importacion (opcional)
+--   ImeDed   T3   Deducciones del documento (opcional)
+-- -------------------------------------------------------------
+-- Logica de JOIN:
+--   Ambos LEFT OUTER JOINs usan la misma clave compuesta
+--   de cuatro campos: DisCve, DtoTip, VehFic, DtoNfe.
+--   Solo se recupera RowGui de cada tabla relacionada para
+--   indicar presencia (no NULL) o ausencia (NULL) del
+--   registro relacionado.
+-- -------------------------------------------------------------
+-- Uso tipico de RowGui:
+--   CODIGO_IDENT_REGISTRO_FACD IS NOT NULL -> tiene detalle
+--   CODIGO_IDENT_REGISTRO_DED  IS NOT NULL -> tiene deduccion
+--   Permite filtrar documentos incompletos en la consulta
+--   consumidora sin necesidad de subconsultas EXISTS.
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. DtoFec y OrdFec se exponen en tipo raw con alias que
+--      sugieren su naturaleza (FECHA_, _AMD). Si son numericos
+--      YYYYMMDD o caracter, considerar exponer tambien la
+--      version ISO via LEFT OUTER JOIN SegFec para uso en
+--      reportes y filtros de rango de fechas.
+--   2. Si ImeFacd puede tener multiples filas por documento
+--      (detalle multilinea), el LEFT OUTER JOIN producira
+--      una fila por cada linea de detalle, multiplicando
+--      los datos de ImeFach. Confirmar si la clave
+--      (DisCve, DtoTip, VehFic, DtoNfe) es unica en ImeFacd
+--      o si debe limitarse a una linea representativa.
+--   3. Igual para ImeDed: confirmar unicidad de la clave
+--      en esa tabla para evitar multiplicacion de filas.
+--   4. La vista devuelve todos los documentos sin filtro.
+--      Si se usa en reportes operativos, la consulta
+--      consumidora debera filtrar por DisCve, DtoTip o
+--      fechas para evitar lectura completa de ImeFach.
+--   5. Los alias estan en MAYUSCULAS; el resto del sistema
+--      usa mixto (PascalCase). Mantener la convencion del
+--      modulo original pero documentar para consistencia.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWIME_Cabecera_Detalle_Datos AS
+SELECT
+    -- Identificacion del documento
+    T1.DisCve                       AS CODIGO_DE_DISTRITO,
+    T1.DtoTip                       AS TIPO_DE_DOCUMENTO,
+    T1.VehFic                       AS FICHA_DEL_VEHICULO,
+    T1.DtoNfe                       AS NUMERO_FACTURA_MODULO_EXTERNO,
+
+    -- Fechas y hora del documento externo (tipo raw)
+    T1.DtoFec                       AS FECHA_FACTURA_MODULO_EXTERNO,
+    T1.DtoHms                       AS HORA_FACTURA_MODULO_EXTERNO,
+
+    -- Numero de cuadre y cliente
+    T1.ImeNce                       AS NRO_CUADRE_MODULO_EXTERNO,
+    T1.CliCve                       AS CODIGO_DEL_CLIENTE,
+
+    -- Orden de pedido
+    T1.OrdNro                       AS NUMERO_ORDEN_PEDIDO,
+    T1.OrdFec                       AS FECHA_ORDEN_PEDIDO_AMD,
+
+    -- Datos de planilla
+    T1.PlaDis                       AS CODIGO_DISTRITO_PLANILLA,
+    T1.PlaNro                       AS NUMERO_DEFINITIVO_PLANILLA,
+    T1.PlaFpl                       AS FECHA_DE_LA_PLANILLA,
+
+    -- Identificadores de fila por tabla
+    -- NULL indica ausencia del registro relacionado
+    T1.RowGui                       AS CODIGO_IDENT_REGISTRO_FACH,
+    T2.RowGui                       AS CODIGO_IDENT_REGISTRO_FACD,
+    T3.RowGui                       AS CODIGO_IDENT_REGISTRO_DED
+
+FROM ImeFach T1
+
+-- Detalle de la factura (opcional: NULL si no existe)
+LEFT OUTER JOIN ImeFacd T2
+    ON  T1.DisCve = T2.DisCve
+    AND T1.DtoTip = T2.DtoTip
+    AND T1.VehFic = T2.VehFic
+    AND T1.DtoNfe = T2.DtoNfe
+
+-- Deducciones del documento (opcional: NULL si no existe)
+LEFT OUTER JOIN ImeDed T3
+    ON  T1.DisCve = T3.DisCve
+    AND T1.DtoTip = T3.DtoTip
+    AND T1.VehFic = T3.VehFic
+    AND T1.DtoNfe = T3.DtoNfe;

@@ -1,21 +1,27 @@
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
--- ============================================================
--- Vista    : VWNOM_MAESTRO_EMPLEADOS_CANCELADOS
+-- ==============================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM006
+-- Objeto    : VWNOM_MAESTRO_EMPLEADOS_CANCELADOS
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Versión   : 2.0
+-- --------------------------------------------------------------
 -- Propósito: Maestro completo de empleados cancelados/egresados
 --            (EmpSta = 'C') con datos personales, laborales,
 --            de contacto y fechas clave, incluyendo años de edad
 --            y años trabajados calculados correctamente con
 --            SEGLIB.SG_TIEMPO_ANOS.
--- Versión  : 2.0
--- Correcciones v1 → v2:
+-- Correcciones v1  v2:
 --   1. Anos_de_Edad corregido: SEGLIB.SG_TIEMPO_ANOS vía
 --      CROSS JOIN LATERAL (sustituye YEAR(CURRENT_DATE - Date(...))
 --      que producía resultados incorrectos por DURATION DB2).
 --   2. Anos_Trabajo_Empresa corregido: SEGLIB.SG_TIEMPO_ANOS
---      (FechaIngreso → FechaSalida) — sustituye YEAR(Salida-Ingreso)
+--      (FechaIngreso  FechaSalida)  sustituye YEAR(Salida-Ingreso)
 --      mismo problema de aritmética DURATION.
 --   3. Cedula_Empleado centralizada en LATERAL CE con
---      LATERAL(VALUES(...)) — elimina CASE repetido 3 veces
+--      LATERAL(VALUES(...))  elimina CASE repetido 3 veces
 --      y corrige T1.EmpCed sin calificador de tabla.
 --   4. Fecha_Nacimiento centralizada en LATERAL FN (1 cálculo).
 --   5. Fecha_Ingreso centralizada en LATERAL FI (1 cálculo).

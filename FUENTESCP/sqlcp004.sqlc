@@ -1,0 +1,248 @@
+-- =============================================================
+-- Modulo    : Cuentas por Pagar
+-- Programa  : SQLCP004
+-- Objeto    : VWCXP_Documentos_Transacciones
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de transacciones de pago asociadas a documentos de
+--   cuentas por pagar. Consolida el detalle de la transaccion
+--   (CxpDped) con el encabezado del documento (CxpDpeh), los
+--   tipos de movimiento (CxpMov), el proveedor (CxpPro), el
+--   banco (CogBan), el detalle del diario contable (CogHdgd)
+--   y la cuenta contable (CogCta).
+--
+--   Se exponen tres fechas resueltas via LEFT OUTER JOIN a
+--   SegFec:
+--     Fecha_Documento  : fecha del documento CxP
+--                        (DpeAno/DpeMes/DpeDia de CxpDpeh T2)
+--                        JOIN por tres campos separados.
+--     Fecha_Registro   : fecha de registro contable del doc.
+--                        (DpeFtr de CxpDpeh T2, FecYmd)
+--                        JOIN por campo numerico YYYYMMDD.
+--     Fecha_Transaccion: fecha de la transaccion de pago
+--                        (DpeAtr/DpeMtr/DpeDtr de CxpDped T1)
+--                        JOIN por tres campos separados.
+--
+--   Si alguna fecha no existe en SegFec, COALESCE devuelve
+--   el tope del sistema: DATE('2039-12-31').
+--
+--   Filtro: solo transacciones cuyo tipo de movimiento de
+--   pago (T4.MovTip) este entre 1 y 3.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   ProCve                    Clave del proveedor    (CxpDped/T1)
+--   ProNom                    Nombre del proveedor   (CxpPro/T5)
+--   Tipo_Movimiento_Doc       Signo mov. documento   (CxpMov/T3)
+--   DpeDoc                    Numero de documento    (CxpDped/T1)
+--   Fecha_Documento           Fecha ISO del doc.     (SegFec/T10)
+--   Fecha_Registro            Fecha ISO de registro  (SegFec/T11)
+--   Ano_Registro_Documento    Ano periodo doc.       (CxpDpeh/T2)
+--   Periodo_Registro_Document Num. periodo doc.      (CxpDpeh/T2)
+--   Tipo_Diario_Documento     Tipo diario doc.       (CxpDpeh/T2)
+--   Numero_Diario_Documento   Num. diario doc.       (CxpDpeh/T2)
+--   NcfNro                    Num. comprobante NCF   (CxpDpeh/T2)
+--   DpeTas                    Tasa de cambio doc.    (CxpDpeh/T2)
+--   DpeVal                    Valor del documento    (CxpDpeh/T2)
+--   DpeBce                    Balance del documento  (CxpDpeh/T2)
+--   CtaCve                    Clave cuenta contable  (CogHdgd/T7)
+--   CtaDes                    Desc. cuenta contable  (CogCta/T8)
+--   AuxCve                    Clave auxiliar contab. (CogHdgd/T7)
+--   CcoCve                    Clave centro de costo  (CogHdgd/T7)
+--   DgeOri                    Origen del diario      (CogHdgd/T7)
+--   DgeVal                    Valor del diario       (CogHdgd/T7)
+--   Tipo_Movimiento_Transacc  Signo mov. transaccion (CxpMov/T4)
+--   Ano_Registro_Transaccion  Ano periodo transacc.  (CxpDped/T1)
+--   Periodo_Registro_Transac  Num. periodo transacc. (CxpDped/T1)
+--   DpeDor                    Documento de origen    (CxpDped/T1)
+--   Fecha_Transaccion         Fecha ISO transaccion  (SegFec/T12)
+--   BanCve                    Clave del banco        (CxpDped/T1)
+--   BanNom                    Nombre del banco       (CogBan/T6)
+--   Secttr                    Sector de transaccion  (CxpDped/T1)
+--   BanNch                    Numero de cheque       (CxpDped/T1)
+--   Tipo_Diario_Transaccion   Tipo diario transacc.  (CxpDped/T1)
+--   Numero_Diario_Transaccion Num. diario transacc.  (CxpDped/T1)
+--   DpeTca                    Tasa de cambio transac.(CxpDped/T1)
+--   DpeVlc                    Valor en moneda local  (CxpDped/T1)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxpDped  T1   Detalle transacciones de pago CxP (base)
+--   CxpDpeh  T2   Encabezado de documentos CxP
+--   CxpMov   T3   Tipos de movimiento (movimiento documento)
+--   CxpMov   T4   Tipos de movimiento (movimiento transaccion)
+--   CxpPro   T5   Proveedores
+--   CogBan   T6   Bancos
+--   CogHdgd  T7   Detalle del diario contable
+--   CogCta   T8   Plan de cuentas contables
+--   SegFec   T10  Tabla de fechas (Fecha_Documento)
+--   SegFec   T11  Tabla de fechas (Fecha_Registro)
+--   SegFec   T12  Tabla de fechas (Fecha_Transaccion)
+-- -------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   T10 : LEFT OUTER JOIN a SegFec por tres campos separados
+--         (DpeAno, DpeMes, DpeDia de CxpDpeh T2) -> FecIso.
+--   T11 : LEFT OUTER JOIN a SegFec por campo numerico FecYmd
+--         (DpeFtr de CxpDpeh T2 = FecYmd YYYYMMDD) -> FecIso.
+--   T12 : LEFT OUTER JOIN a SegFec por tres campos separados
+--         (DpeAtr, DpeMtr, DpeDtr de CxpDped T1) -> FecIso.
+--   COALESCE devuelve DATE('2039-12-31') si el JOIN es NULL.
+--   SegFec cubre el rango 1940-01-01 a 2039-12-31.
+-- -------------------------------------------------------------
+-- Filtros aplicados:
+--   T4.MovTip BETWEEN 1 AND 3
+--             Solo transacciones de tipos de movimiento 1, 2
+--             y 3 (pagos, anticipos y notas de credito segun
+--             la convencion del sistema).
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. CxpMov se une dos veces (T3 y T4): T3 por el movimiento
+--      del documento (T1.MovCve) y T4 por el movimiento de la
+--      transaccion (T1.DpeMot). El filtro WHERE usa T4.MovTip;
+--      si T1.DpeMot no existe en CxpMov, la transaccion queda
+--      excluida. Evaluar LEFT OUTER JOIN para T4 con COALESCE.
+--   2. CogBan T6 es INNER JOIN: una transaccion sin banco
+--      registrado en CogBan queda excluida. Si BanCve puede
+--      ser 0 o un valor no registrado, evaluar LEFT OUTER JOIN
+--      con COALESCE(T6.BanNom, '').
+--   3. CogHdgd T7 se une por la clave del diario del encabezado
+--      del documento (T2.PerAno/PerNum/TdiCve/DgeDoc), lo que
+--      puede producir multiples filas si el diario tiene varios
+--      asientos. Confirmar que la granularidad esperada de la
+--      vista es a nivel de asiento contable.
+--   4. El JOIN a CxpDpeh T2 no incluye DpeRef como criterio;
+--      confirmar que ProCve + MovCve + DpeDoc es suficiente
+--      para identificar unicamente el encabezado, o si DpeRef
+--      tambien debe incluirse (ver sqlcp003 donde si se usa).
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion, formato 80 cols.
+--                           JOINs a SegFec (T10, T11, T12)
+--                           convertidos a LEFT OUTER JOIN
+--                           con COALESCE DATE('2039-12-31').
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWCXP_Documentos_Transacciones AS
+SELECT
+    -- Identificacion del proveedor
+    T1.ProCve,
+    T5.ProNom,
+
+    -- Tipo de movimiento del documento y numero
+    T3.MovSig                               AS Tipo_Movimiento_Doc,
+    T1.DpeDoc,
+
+    -- Fecha del documento CxP (DpeAno/DpeMes/DpeDia de T2):
+    --   1. SegFec T10 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T10.FecIso, DATE('2039-12-31')) AS Fecha_Documento,
+
+    -- Fecha de registro contable (DpeFtr de T2, FecYmd):
+    --   1. SegFec T11 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T11.FecIso, DATE('2039-12-31')) AS Fecha_Registro,
+
+    -- Periodo y diario del documento
+    T2.PerAno                               AS Ano_Registro_Documento,
+    T2.PerNum                               AS Periodo_Registro_Documento,
+    T2.TdiCve                               AS Tipo_Diario_Documento,
+    T2.DgeDoc                               AS Numero_Diario_Documento,
+
+    -- Datos del documento
+    T2.NcfNro,
+    T2.DpeTas,
+    T2.DpeVal,
+    T2.DpeBce,
+
+    -- Asiento contable del diario
+    T7.CtaCve,
+    T8.CtaDes,
+    T7.AuxCve,
+    T7.CcoCve,
+    T7.DgeOri,
+    T7.DgeVal,
+
+    -- Tipo de movimiento de la transaccion
+    T4.MovSig                               AS Tipo_Movimiento_Transaccion,
+
+    -- Periodo de la transaccion
+    T1.PerAno                               AS Ano_Registro_Transaccion,
+    T1.PerNum                               AS Periodo_Registro_Transaccion,
+    T1.DpeDor,
+
+    -- Fecha de la transaccion de pago (DpeAtr/DpeMtr/DpeDtr):
+    --   1. SegFec T12 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T12.FecIso, DATE('2039-12-31')) AS Fecha_Transaccion,
+
+    -- Datos bancarios de la transaccion
+    T1.BanCve,
+    T6.BanNom,
+    T1.Secttr,
+    T1.BanNch,
+
+    -- Diario de la transaccion
+    T1.TdiCve                               AS Tipo_Diario_Transaccion,
+    T1.DgeDoc                               AS Numero_Diario_Transaccion,
+
+    -- Valores de la transaccion
+    T1.DpeTca,
+    T1.DpeVlc
+
+FROM CxpDped T1
+
+-- Encabezado del documento CxP
+JOIN CxpDpeh T2
+    ON  T1.ProCve = T2.ProCve
+    AND T1.MovCve = T2.MovCve
+    AND T1.DpeDoc = T2.DpeDoc
+
+-- Tipo de movimiento del documento
+JOIN CxpMov T3
+    ON  T1.MovCve = T3.MovCve
+
+-- Tipo de movimiento de la transaccion (filtro MovTip 1-3)
+JOIN CxpMov T4
+    ON  T1.DpeMot = T4.MovCve
+
+-- Proveedor
+JOIN CxpPro T5
+    ON  T1.ProCve = T5.ProCve
+
+-- Banco de la transaccion
+JOIN CogBan T6
+    ON  T1.BanCve = T6.BanCve
+
+-- Detalle del diario contable del documento
+JOIN CogHdgd T7
+    ON  T2.PerAno = T7.PerAno
+    AND T2.PerNum = T7.PerNum
+    AND T2.TdiCve = T7.TdiCve
+    AND T2.DgeDoc = T7.DgeDoc
+
+-- Cuenta contable del asiento
+JOIN CogCta T8
+    ON  T7.CtaCve = T8.CtaCve
+
+-- Fecha del documento (DpeAno / DpeMes / DpeDia de T2)
+LEFT OUTER JOIN SegFec T10
+    ON  T2.DpeAno = T10.FecAno
+    AND T2.DpeMes = T10.FecMes
+    AND T2.DpeDia = T10.FecDia
+
+-- Fecha de registro contable (DpeFtr de T2 = FecYmd YYYYMMDD)
+LEFT OUTER JOIN SegFec T11
+    ON  T2.DpeFtr = T11.FecYmd
+
+-- Fecha de la transaccion (DpeAtr / DpeMtr / DpeDtr de T1)
+LEFT OUTER JOIN SegFec T12
+    ON  T1.DpeAtr = T12.FecAno
+    AND T1.DpeMtr = T12.FecMes
+    AND T1.DpeDtr = T12.FecDia
+
+-- Solo transacciones de tipo de movimiento 1, 2 o 3
+WHERE T4.MovTip BETWEEN 1 AND 3;

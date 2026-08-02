@@ -1,0 +1,133 @@
+-- =============================================================
+-- Modulo    : Interface Modulos Externos
+-- Programa  : SQLIM001
+-- Objeto    : VWIME_Documento_Sin_Cierres
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de documentos de importacion pendientes de cierre.
+--   Devuelve los registros de ImeFach (facturas de importacion)
+--   de vehiculos tipo 2 (T3.VehTip = 2) que NO tienen un
+--   cierre registrado en ImeCcme.
+--
+--   La exclusion se realiza mediante NOT EXISTS contra ImeCcme
+--   usando una clave compuesta de cinco campos:
+--     VehFic, ImeNce, PlaDis, PlaNro, PlaFpl
+--
+--   El GROUP BY sobre los mismos cinco campos del SELECT actua
+--   como DISTINCT, eliminando filas duplicadas que pudieran
+--   existir en ImeFach para la misma combinacion de clave.
+--
+--   No hay campos de fecha por concatenar. PlaFpl se expone
+--   en su tipo original. No aplica logica de SegFec.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   VehFic   Ficha del vehiculo              (ImeFach/T1)
+--   ImeNce   Numero de conocimiento embarque (ImeFach/T1)
+--   PlaDis   Distrito de la placa            (ImeFach/T1)
+--   PlaNro   Numero de placa                 (ImeFach/T1)
+--   PlaFpl   Fecha de la placa               (ImeFach/T1)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   ImeFach  T1   Facturas/documentos de importacion (base)
+--   FacVeh   T3   Vehiculos (filtro por tipo)
+--   ImeCcme  T2   Cierres de importacion
+--                 (usada solo en subconsulta NOT EXISTS)
+-- -------------------------------------------------------------
+-- Logica de exclusion NOT EXISTS (ImeCcme T2):
+--   Se excluye todo documento de ImeFach que tenga un cierre
+--   correspondiente en ImeCcme, identificado por la clave
+--   compuesta de cinco campos:
+--     VehFic, ImeNce, PlaDis, PlaNro, PlaFpl
+--   Nota: en ImeCcme el campo se llama Imence (minuscula 'n')
+--   mientras que en ImeFach se llama ImeNce (mayuscula 'N').
+--   Son el mismo campo; DB2 for i no distingue mayusculas en
+--   nombres de columna, pero documentar para claridad.
+-- -------------------------------------------------------------
+-- Filtros aplicados:
+--   T3.VehTip = 2   Solo vehiculos de tipo 2
+--   NOT EXISTS(T2)  Solo documentos sin cierre en ImeCcme
+-- -------------------------------------------------------------
+-- Logica del GROUP BY:
+--   El GROUP BY sobre los cinco campos del SELECT sin
+--   funciones de agregacion actua como DISTINCT. Elimina
+--   duplicados de ImeFach si existen multiples filas con
+--   la misma combinacion de (VehFic, ImeNce, PlaDis, PlaNro,
+--   PlaFpl). Si ImeFach no tiene duplicados por esa clave,
+--   el GROUP BY es equivalente a SELECT DISTINCT y puede
+--   reemplazarse (ver sugerencia 1).
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. El GROUP BY sin agregaciones es funcionalmente
+--      equivalente a SELECT DISTINCT para los cinco campos.
+--      Considerar reemplazarlo por DISTINCT para mayor
+--      claridad de intencion:
+--        SELECT DISTINCT T1.VehFic, T1.ImeNce, T1.PlaDis,
+--                        T1.PlaNro, T1.PlaFpl
+--      Si ImeFach garantiza unicidad por esa clave, ninguno
+--      de los dos es necesario y puede omitirse.
+--   2. La subconsulta del NOT EXISTS usa SELECT *; en DB2
+--      for i es equivalente a SELECT 1 en terminos de
+--      rendimiento, pero SELECT 1 es la convencion estandar
+--      y mas explicita en que no se necesitan datos, solo
+--      la existencia del registro.
+--   3. PlaFpl se expone en tipo raw. Si es una fecha
+--      almacenada como numerico YYYYMMDD o caracter, confirmar
+--      el tipo y considerar conversion a DATE via JOIN a
+--      SegFec para uniformidad con el sistema.
+--   4. El JOIN a FacVeh T3 usa solo VehFic. Confirmar que
+--      VehFic es clave primaria en FacVeh para evitar
+--      multiplicacion de filas si hay multiples registros
+--      por vehiculo.
+--   5. Confirmar que el filtro VehTip = 2 es correcto para
+--      el proposito de la vista. Si en el futuro se requieren
+--      otros tipos, el filtro deberia parametrizarse o
+--      documentar claramente que tipo 2 representa.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWIME_Documento_Sin_Cierres AS
+SELECT
+    -- Identificacion del documento de importacion
+    T1.VehFic,
+    T1.ImeNce,
+
+    -- Datos de la placa
+    T1.PlaDis,
+    T1.PlaNro,
+    T1.PlaFpl
+
+FROM ImeFach T1
+
+-- Vehiculo (filtro por tipo 2)
+JOIN FacVeh T3
+    ON  T1.VehFic = T3.VehFic
+
+-- Solo documentos sin cierre registrado en ImeCcme
+WHERE NOT EXISTS (
+        -- Excluye si ya existe cierre para esta clave
+        SELECT 1
+          FROM ImeCcme T2
+         WHERE T1.VehFic = T2.VehFic
+           AND T1.ImeNce = T2.Imence
+           AND T1.PlaDis = T2.PlaDis
+           AND T1.PlaNro = T2.PlaNro
+           AND T1.PlaFpl = T2.PlaFpl
+      )
+  AND T3.VehTip = 2
+
+-- GROUP BY actua como DISTINCT sobre los cinco campos
+-- Elimina duplicados de ImeFach si los hubiera
+GROUP BY
+    T1.VehFic,
+    T1.ImeNce,
+    T1.PlaDis,
+    T1.PlaNro,
+    T1.PlaFpl;

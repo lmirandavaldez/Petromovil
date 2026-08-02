@@ -1,0 +1,10 @@
+Create Or Replace View VWITE_Resumen_Transacciones_Librucantes
+As   Select DisCve As Codigo_Del_Distrito,
+            TraFem As Fecha_Transaccion,
+            FacCar As Codigo_Del_Producto,
+            Sum(TraCan) As Total_Cantidad,
+            Avg(TraPve) As Precio_Promedio,
+            Sum(TraImp) As Importe
+       From IteTratl
+      Group by DisCve, TraFem, FacCar
+     Having Sum(TraCan) > 0

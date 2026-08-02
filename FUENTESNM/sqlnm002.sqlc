@@ -1,12 +1,18 @@
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
--- ============================================================
--- Vista    : VWNOM_ACU_EMP_CONCEPTOSMESES
+-- ==============================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM002
+-- Objeto    : VWNOM_ACU_EMP_CONCEPTOSMESES
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Versión   : 2.0
+-- --------------------------------------------------------------
 -- Propósito: Acumulado anual de importes de nómina por empleado
---            y concepto, pivotado en columnas por mes (Ene–Dic).
+--            y concepto, pivotado en columnas por mes (EneDic).
 --            Incluye todos los empleados y estados (sin filtro
 --            de EmpSta) para permitir consultas históricas.
--- Versión  : 2.0
--- Correcciones v1 → v2:
+-- Correcciones v1  v2:
 --   1. IfNull reemplazado por COALESCE (estándar SQL).
 --   2. CAST(... AS DECIMAL(15,2)) explícito en importes para
 --      garantizar tipo consistente independiente de AecImd.
@@ -59,31 +65,31 @@ SELECT
     -- Año del acumulado (dimensión de análisis histórico)
     T2.AecAno,
 
-    -- Importes acumulados por mes — COALESCE garantiza 0 si sin movimiento
+    -- Importes acumulados por mes  COALESCE garantiza 0 si sin movimiento
     -- CAST asegura tipo DECIMAL(15,2) consistente con AecImd
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 01 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 01 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Ene,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 02 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 02 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Feb,
     COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 03 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Mar,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 04 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 04 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Abr,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 05 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 05 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_May,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 06 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 06 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Jun,
     COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 07 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Jul,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 08 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 08 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Ago,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 09 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 09 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Sep,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 10 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 10 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Oct,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 11 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 11 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Nov,
-    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 12 THEN T2.AecImd END) 
+    COALESCE(CAST(SUM(CASE WHEN T2.AecMes = 12 THEN T2.AecImd END)
     AS DECIMAL(15,2)), 0) AS Importe_Dic
 
 FROM NomEmp  T1
@@ -107,3 +113,4 @@ GROUP BY
     T3.CmcTip,  T3.CmcCla,
     T3.CtaCve,  T6.CtaDes,
     T2.AecAno;
+

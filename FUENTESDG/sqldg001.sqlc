@@ -1,0 +1,287 @@
+-- =============================================================
+-- Modulo    : Informes Direccion General De Impuestos
+-- Programa  : SQLDG001
+-- Objeto    : VWDGI_Comprobantes
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de comprobantes fiscales (NCF) emitidos, unificando
+--   dos fuentes mediante UNION ALL:
+--     Rama 1: documentos de facturacion (FacDtoh + FacDed)
+--             sistema 'FA' — NCF en FacDed.NcfNro
+--     Rama 2: facturas de sistema externo (FpsFach)
+--             sistema 'FS' — NCF en FpsFach.NcfNro
+--
+--   En ambas ramas solo se incluyen registros cuyo NcfNro
+--   no es vacio y cuyas posiciones 12-13 son espacios
+--   (formato NCF version anterior / formato corto).
+--
+--   La logica de extraccion del tipo y secuencia NCF soporta
+--   dos formatos del campo NcfNro:
+--     Formato nuevo : posiciones 10-11 = tipo (TcfCve)
+--                     posiciones 12-19 = secuencia (NcfSec)
+--                     (Substring(NcfNro,12,2) <> '  ')
+--     Formato antiguo: posiciones 2-3 = tipo (TcfCve)
+--                     posiciones 4-11 = secuencia (NcfSec)
+--                     (Substring(NcfNro,12,2) = '  ')
+--   El filtro WHERE garantiza que solo entra el formato
+--   antiguo; el CASE queda como salvaguarda de consistencia.
+--
+--   La fecha del documento se resuelve via LEFT OUTER JOIN
+--   a SegFec T9 por los tres campos separados de cada rama.
+--   Si la fecha no existe en SegFec, COALESCE devuelve el
+--   tope del sistema: DATE('2039-12-31').
+-- -------------------------------------------------------------
+-- Lista de columnas de la vista (en orden):
+--   SisCve   Clave del sistema            (SegSis/T4)
+--   SisDes   Descripcion del sistema      (SegSis/T4)
+--   DisCve   Clave del distrito           (FacDtoh o FpsFach)
+--   DisDes   Descripcion del distrito     (SegDis/T3)
+--   DtoTip   Tipo de documento            (FacDtoh o literal 1)
+--   CliCve   Clave del cliente            (FacDtoh o FpsFach)
+--   EstNcf   Estacion emisora del NCF     (IteEst/T6 opcional)
+--   FecAno   Ano de la fecha del doc.     (SegFec/T9)
+--   FecYmd   Fecha YYYYMMDD del doc.      (SegFec/T9)
+--   Status   Estado del documento         (DtoSta o SitCve)
+--   NcfNro   Numero de comprobante NCF    (FacDed o FpsFach)
+--   TcfCve   Tipo de comprobante (codigo) (calc. SUBSTRING)
+--   TcfDes   Tipo de comprobante (desc.)  (SegTcf/T5)
+--   NcfSec   Secuencia del NCF            (calc. SUBSTRING)
+--   MonFac   Moneda de la factura         (DtoMne o FacTin)
+-- -------------------------------------------------------------
+-- Tablas referenciadas (Rama 1 - sistema FA):
+--   FacDtoh  T1   Encabezado documentos de facturacion
+--   FacDed   T2   Datos fiscales/NCF del documento
+--   SegDis   T3   Distritos
+--   SegSis   T4   Sistemas (constante 'FA')
+--   SegTcf   T5   Tipos de comprobante fiscal
+--   IteEst   T6   Estaciones (opcional)
+--   SegFec   T9   Tabla de fechas (fecha del documento)
+-- Tablas referenciadas (Rama 2 - sistema FS):
+--   FpsFach  T1   Encabezado facturas sistema externo
+--   SegDis   T3   Distritos
+--   SegSis   T4   Sistemas (constante 'FS')
+--   SegTcf   T5   Tipos de comprobante fiscal
+--   IteEst   T6   Estaciones (opcional)
+--   SegFec   T9   Tabla de fechas (fecha de la factura)
+-- -------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Rama 1: LEFT OUTER JOIN SegFec T9 por
+--           (DtoAno, DtoMes, DtoDia de FacDtoh T1)
+--   Rama 2: LEFT OUTER JOIN SegFec T9 por
+--           (FacAno, FacMes, FacDia de FpsFach T1)
+--   COALESCE devuelve DATE('2039-12-31') si JOIN es NULL.
+--   Nota: FecAno y FecYmd en la lista de columnas exponen
+--   el ano y el valor numerico YYYYMMDD de la fecha.
+--   Con LEFT OUTER JOIN se usara COALESCE solo en FecYmd
+--   para el tope; FecAno queda NULL si no hay fecha en SegFec.
+-- -------------------------------------------------------------
+-- Logica NCF (extraccion de TcfCve y NcfSec):
+--   Formato nuevo (posicion 12-13 <> espacios):
+--     TcfCve = CAST(SUBSTRING(NcfNro, 10, 2) AS DEC(2,0))
+--     NcfSec = CAST(SUBSTRING(NcfNro, 12, 8) AS DEC(8,0))
+--   Formato antiguo (posicion 12-13 = espacios):
+--     TcfCve = CAST(SUBSTRING(NcfNro,  2, 2) AS DEC(2,0))
+--     NcfSec = CAST(SUBSTRING(NcfNro,  4, 8) AS DEC(8,0))
+--   El filtro WHERE solo permite formato antiguo, el CASE
+--   queda como salvaguarda ante datos mixtos.
+-- -------------------------------------------------------------
+-- Filtros aplicados (ambas ramas):
+--   NcfNro <> '  '              NCF no vacio
+--   SUBSTRING(NcfNro,12,2)='  ' Solo formato NCF antiguo
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Los INNER JOIN a SegFec T9 se convierten a LEFT OUTER
+--      JOIN. FecAno y FecYmd pueden ser NULL si la fecha no
+--      existe en SegFec. Usar COALESCE(T9.FecYmd, 20391231)
+--      para FecYmd y COALESCE(T9.FecAno, 2039) para FecAno
+--      si los reportes consumen esos campos directamente.
+--   2. SegSis T4 se une con constante ('FA'/'FS'). Si SegSis
+--      no tiene esa clave, el INNER JOIN excluye toda la rama.
+--      Verificar que 'FA' y 'FS' existen en SegSis.
+--   3. IteEst T6 se une solo por DisCve. Si hay multiples
+--      estaciones por distrito, el LEFT OUTER JOIN producira
+--      duplicados. Confirmar unicidad de DisCve en IteEst
+--      o agregar criterio adicional al JOIN.
+--   4. En Rama 2 (FpsFach), EstNcf se toma directamente de
+--      T6 sin COALESCE, a diferencia de Rama 1 que usa
+--      COALESCE(T6.EstNcf,''). Normalizar ambas ramas para
+--      consistencia en el UNION ALL.
+--   5. El CAST de SUBSTRING a DEC puede fallar si NcfNro
+--      contiene caracteres no numericos en las posiciones
+--      esperadas. Considerar validacion previa o manejo de
+--      error con CASE adicional.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion, formato 80 cols.
+--                           JOINs a SegFec (T9) convertidos
+--                           a LEFT OUTER JOIN con COALESCE
+--                           DATE('2039-12-31') en FecYmd.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWDGI_Comprobantes
+    (SisCve, SisDes, DisCve, DisDes, DtoTip, CliCve,
+     EstNcf, FecAno, FecYmd,
+     Status, NcfNro, TcfCve, TcfDes, NcfSec, MonFac)
+AS
+
+-- =============================================================
+-- Rama 1: Documentos de facturacion (sistema FA)
+--         Tabla base: FacDtoh / NCF en FacDed
+-- =============================================================
+SELECT
+    T4.SisCve,
+    T4.SisDes,
+    T1.DisCve,
+    T3.DisDes,
+    T1.DtoTip,
+    T1.CliCve,
+
+    -- Estacion emisora del NCF (opcional, NULL si sin estacion)
+    T6.EstNcf,
+
+    -- Fecha del documento (DtoAno / DtoMes / DtoDia)
+    T9.FecAno,
+    T9.FecYmd,
+
+    -- Estado y NCF del documento
+    T1.DtoSta,
+    T2.NcfNro,
+
+    -- Tipo de comprobante (TcfCve) segun formato NCF:
+    --   Formato nuevo (pos.12-13 <> '  '): posicion 10-11
+    --   Formato antiguo (pos.12-13 = '  '): posicion 2-3
+    CASE
+        WHEN SUBSTRING(T2.NcfNro, 12, 2) <> '  '
+        THEN CAST(SUBSTRING(T2.NcfNro, 10, 2) AS DEC(2, 0))
+        ELSE CAST(SUBSTRING(T2.NcfNro,  2, 2) AS DEC(2, 0))
+    END                                     AS TcfCve,
+
+    -- Descripcion del tipo de comprobante
+    T5.TcfDes,
+
+    -- Secuencia del NCF segun formato:
+    --   Formato nuevo: posicion 12-19
+    --   Formato antiguo: posicion 4-11
+    CASE
+        WHEN SUBSTRING(T2.NcfNro, 12, 2) <> '  '
+        THEN CAST(SUBSTRING(T2.NcfNro, 12, 8) AS DEC(8, 0))
+        ELSE CAST(SUBSTRING(T2.NcfNro,  4, 8) AS DEC(8, 0))
+    END                                     AS NcfSec,
+
+    -- Moneda de la factura
+    T1.DtoMne
+
+FROM FacDtoh T1
+
+-- Datos fiscales / NCF del documento
+JOIN FacDed T2
+    ON  T1.DisCve = T2.DisCve
+    AND T1.DtoTip = T2.DtoTip
+    AND T1.DtoNro = T2.DtoNro
+
+-- Distrito
+JOIN SegDis T3
+    ON  T1.DisCve = T3.DisCve
+
+-- Sistema de facturacion (constante 'FA')
+JOIN SegSis T4
+    ON  T4.SisCve = 'FA'
+
+-- Tipo de comprobante (por posicion 2-3 del NCF)
+JOIN SegTcf T5
+    ON  CAST(SUBSTRING(T2.NcfNro, 2, 2) AS DEC(2, 0)) = T5.TcfCve
+
+-- Estacion emisora (opcional)
+LEFT OUTER JOIN IteEst T6
+    ON  T1.DisCve = T6.DisCve
+
+-- Fecha del documento (DtoAno / DtoMes / DtoDia)
+LEFT OUTER JOIN SegFec T9
+    ON  T1.DtoAno = T9.FecAno
+    AND T1.DtoMes = T9.FecMes
+    AND T1.DtoDia = T9.FecDia
+
+-- Solo NCF no vacio en formato antiguo (pos.12-13 = espacios)
+WHERE T2.NcfNro <> '  '
+  AND SUBSTRING(T2.NcfNro, 12, 2) = '  '
+
+UNION ALL
+
+-- =============================================================
+-- Rama 2: Facturas de sistema externo (sistema FS)
+--         Tabla base: FpsFach / NCF en FpsFach.NcfNro
+-- =============================================================
+SELECT
+    T4.SisCve,
+    T4.SisDes,
+    T1.DisCve,
+    T3.DisDes,
+
+    -- Tipo de documento fijo = 1 para facturas externas
+    1,
+    T1.CliCve,
+
+    -- Estacion emisora del NCF (opcional, NULL si sin estacion)
+    T6.EstNcf,
+
+    -- Fecha de la factura (FacAno / FacMes / FacDia)
+    T9.FecAno,
+    T9.FecYmd,
+
+    -- Estado y NCF de la factura
+    T1.SitCve,
+    T1.NcfNro,
+
+    -- Tipo de comprobante segun formato NCF
+    CASE
+        WHEN SUBSTRING(T1.NcfNro, 12, 2) <> '  '
+        THEN CAST(SUBSTRING(T1.NcfNro, 10, 2) AS DEC(2, 0))
+        ELSE CAST(SUBSTRING(T1.NcfNro,  2, 2) AS DEC(2, 0))
+    END                                     AS TcfCve,
+
+    -- Descripcion del tipo de comprobante
+    T5.TcfDes,
+
+    -- Secuencia del NCF
+    CASE
+        WHEN SUBSTRING(T1.NcfNro, 12, 2) <> '  '
+        THEN CAST(SUBSTRING(T1.NcfNro, 12, 8) AS DEC(8, 0))
+        ELSE CAST(SUBSTRING(T1.NcfNro,  4, 8) AS DEC(8, 0))
+    END                                     AS NcfSec,
+
+    -- Moneda de la factura
+    T1.FacTin
+
+FROM FpsFach T1
+
+-- Distrito
+JOIN SegDis T3
+    ON  T1.DisCve = T3.DisCve
+
+-- Sistema de facturacion (constante 'FS')
+JOIN SegSis T4
+    ON  T4.SisCve = 'FS'
+
+-- Tipo de comprobante (por posicion 2-3 del NCF)
+JOIN SegTcf T5
+    ON  CAST(SUBSTRING(T1.NcfNro, 2, 2) AS DEC(2, 0)) = T5.TcfCve
+
+-- Estacion emisora (opcional)
+LEFT OUTER JOIN IteEst T6
+    ON  T1.DisCve = T6.DisCve
+
+-- Fecha de la factura (FacAno / FacMes / FacDia)
+LEFT OUTER JOIN SegFec T9
+    ON  T1.FacAno = T9.FecAno
+    AND T1.FacMes = T9.FecMes
+    AND T1.FacDia = T9.FecDia
+
+-- Solo NCF no vacio en formato antiguo (pos.12-13 = espacios)
+WHERE T1.NcfNro <> '  '
+  AND SUBSTRING(T1.NcfNro, 12, 2) = '  ';

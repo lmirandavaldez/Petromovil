@@ -1,0 +1,153 @@
+-- =============================================================
+-- Modulo    : Caja
+-- Programa  : SQLCA001
+-- Objeto    : VWCAJ_Recibos_Detalle_Ctas
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de detalle de recibos de caja por cuenta contable.
+--   Consolida el encabezado del recibo (CajRech) con su detalle
+--   de cuentas (CajRecd), la maquina de caja (CajMca), el
+--   movimiento (CajMovh), la cuenta contable (CogCta) y,
+--   opcionalmente, el auxiliar contable (CogAuxd).
+--
+--   La fecha del ingreso (IngAno/IngMes/IngDia) se resuelve
+--   mediante LEFT OUTER JOIN a SegFec. Si la fecha no existe
+--   en la tabla de fechas, COALESCE devuelve el tope del
+--   sistema: DATE('2039-12-31').
+--
+--   La descripcion de cuenta se determina segun si el detalle
+--   tiene auxiliar asociado (AuxCve):
+--     AuxCve = 0 : se usa la descripcion de la cuenta (CtaDes)
+--     AuxCve <> 0: se usa el nombre del auxiliar (AuxNom)
+--
+--   Solo se incluyen recibos en estado 'P' (pagado/procesado).
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   McaCve      Clave de maquina de caja         (CajRecd/T1)
+--   McaDes      Descripcion de maquina de caja   (CajMca/T3)
+--   RecNum      Numero de recibo                 (CajRech/T2)
+--   PerAno      Ano del periodo                  (CajRech/T2)
+--   PerNum      Numero del periodo               (CajRech/T2)
+--   FecIso      Fecha ISO del ingreso            (SegFec/T9)
+--   MovCve      Clave del movimiento             (CajRech/T2)
+--   MovDes      Descripcion del movimiento       (CajMovh/T4)
+--   IngVal      Valor del ingreso (encabezado)   (CajRech/T2)
+--   MovSec      Secuencia del movimiento         (CajRecd/T1)
+--   CtaCve      Clave de cuenta contable         (CajRecd/T1)
+--   AuxCve      Clave de auxiliar contable       (CajRecd/T1)
+--   Descripcion Desc. cuenta o auxiliar (calc.)  (CogCta/T5
+--               o CogAuxd/T6 segun AuxCve)
+--   IngVtr      Valor de la transaccion detalle  (CajRecd/T1)
+--   DcaOri      Origen del detalle de caja       (CajRecd/T1)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CajRecd  T1   Detalle de recibos de caja (tabla base)
+--   CajRech  T2   Encabezado de recibos de caja
+--   CajMca   T3   Maquinas de caja
+--   CajMovh  T4   Movimientos de caja (tipos)
+--   CogCta   T5   Plan de cuentas contables
+--   CogAuxd  T6   Detalle de auxiliares contables
+--   SegFec   T9   Tabla de fechas (Fecha del ingreso)
+-- -------------------------------------------------------------
+-- Logica de resolucion de fecha:
+--   La fecha del ingreso se resuelve en dos pasos:
+--     1. LEFT OUTER JOIN a SegFec por (IngAno, IngMes, IngDia).
+--        Devuelve FecIso si la fecha existe en el calendario.
+--     2. COALESCE: si el JOIN devuelve NULL (fecha fuera del
+--        rango de SegFec), se usa DATE('2039-12-31') como tope.
+--   SegFec cubre el rango 1940-01-01 a 2039-12-31.
+-- -------------------------------------------------------------
+-- Filtros aplicados:
+--   T2.SitCve = 'P'   Solo recibos en estado Pagado/Procesado
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Verificar indice en CajRecd(McaCve, RecNum) y
+--      CajRech(McaCve, RecNum) para optimizar el JOIN principal.
+--   2. El JOIN a CajMovh usa T2.MovCve (encabezado); si el
+--      movimiento puede variar por linea de detalle, revisar
+--      si deberia unirse desde T1 en su lugar.
+--   3. CogAuxd T6 se une por (AuxLis, AuxCve); confirmar que
+--      AuxLis siempre proviene de CogCta.AuxLis para evitar
+--      cruces de listas de auxiliares entre cuentas.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion, formato 80 cols,
+--                           JOIN SegFec convertido a LEFT
+--                           OUTER JOIN con COALESCE tope
+--                           DATE('2039-12-31').
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWCAJ_Recibos_Detalle_Ctas AS
+SELECT
+    -- Maquina de caja
+    T1.McaCve,
+    T3.McaDes,
+
+    -- Identificacion del recibo y periodo
+    T2.RecNum,
+    T2.PerAno,
+    T2.PerNum,
+
+    -- Fecha del ingreso:
+    --   1. SegFec T9 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T9.FecIso, DATE('2039-12-31')) AS FecIso,
+
+    -- Movimiento
+    T2.MovCve,
+    T4.MovDes,
+    T2.IngVal,
+
+    -- Detalle de cuenta
+    T1.MovSec,
+    T1.CtaCve,
+    T1.AuxCve,
+
+    -- Descripcion: cuenta contable o nombre de auxiliar
+    CASE
+        WHEN T1.AuxCve = 0 THEN T5.CtaDes
+        ELSE T6.AuxNom
+    END AS Descripcion,
+
+    -- Valores del detalle
+    T1.IngVtr,
+    T1.DcaOri
+
+FROM CajRecd T1
+
+-- Encabezado del recibo
+JOIN CajRech T2
+    ON  T1.McaCve = T2.McaCve
+    AND T1.RecNum = T2.RecNum
+
+-- Maquina de caja
+JOIN CajMca T3
+    ON  T1.McaCve = T3.McaCve
+
+-- Tipo de movimiento (desde encabezado)
+JOIN CajMovh T4
+    ON  T2.MovCve = T4.MovCve
+
+-- Cuenta contable
+JOIN CogCta T5
+    ON  T1.CtaCve = T5.CtaCve
+
+-- Auxiliar contable (opcional)
+LEFT OUTER JOIN CogAuxd T6
+    ON  T5.AuxLis = T6.AuxLis
+    AND T1.AuxCve = T6.AuxCve
+
+-- Fecha del ingreso (IngAno / IngMes / IngDia)
+LEFT OUTER JOIN SegFec T9
+    ON  T2.IngAno = T9.FecAno
+    AND T2.IngMes = T9.FecMes
+    AND T2.IngDia = T9.FecDia
+
+-- Solo recibos pagados/procesados
+WHERE T2.SitCve = 'P';

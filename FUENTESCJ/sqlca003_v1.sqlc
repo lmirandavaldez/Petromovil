@@ -1,0 +1,39 @@
+Create Or Replace View VWCAJ_Ingresos_No_Aplicado
+As Select T2.CliCve, T1.CdoCve, T1.DocNum,
+     Date(Concat(Substring('0000',0,5-Length(Trim(T3.DocAno))),
+         Trim(T3.DocAno)) || '-' ||
+   Concat(Substring('00',0,3-Length(Trim(T3.DocMes))),
+         Trim(T3.DocMes)) || '-' ||
+   Concat(Substring('00',0,3-Length(trim(T3.DocDia))),
+         Trim(T3.DocDia))) As Fecha_Documento,
+         T1.DisCve As Distrito_Documento,
+         T1.PerAno, T1.PerNum, T3.DocVal, T3.DocBce,
+         T3.DocTas, T1.IngVtr, T5.VenCve,
+         T4.DisCve As Distrito_Transaccion,
+         T1.McaCve, T1.RecNum,
+    Date(Concat(Substring('0000',0,5-Length(Trim(T2.IngAno))),
+         Trim(T2.IngAno)) || '-' ||
+  Concat(Substring('00',0,3-Length(Trim(T2.IngMes))),
+        Trim(T2.IngMes)) || '-' ||
+  Concat(Substring('00',0,3-Length(trim(T2.IngDia))),
+        Trim(T2.IngDia))) As Fecha_Transaccion
+    From CajRefd T1
+    Join CajRech T2
+      On (T1.McaCve = T2.McaCve)
+     And (T1.RecNum = T2.RecNum)
+    Join CxcDoch T3
+      On (T2.CliCve = T3.CliCve)
+     And (T1.PerAno = T3.PerAno)
+     And (T1.PerNum = T3.PerNum)
+     And (T1.CdoCve = T3.CdoCve)
+     And (T1.DisCve = T3.DisCve)
+     And (T1.DocNum = T3.DocNum)
+    Join CajMca T4
+      On (T1.McaCve = T4.McaCve)
+Left Outer Join CxcRvc T5
+      On (T2.CliCve = T5.CliCve)
+Left Outer Join CxcCdo T6
+      On (T1.CdoCve = T6.CdoCve)
+   Where (T6.CdoRel In('01', '09', '10', '11'))
+     And (T2.RecOri = 2)
+     And (T2.SitCve = '1')

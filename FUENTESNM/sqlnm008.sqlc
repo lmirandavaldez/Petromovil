@@ -1,8 +1,12 @@
 -- =============================================================================
--- Vista    : VWNOM_HISTORICO_NOMINAS_DETALLE
--- Módulo   : Nóminas (NM)
--- Archivo  : sqlnm008.sqlc
--- Versión  : 2
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM008
+-- Objeto    : VWNOM_HISTORICO_NOMINAS_DETALLE
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Versión   : 2.0
+-- --------------------------------------------------------------
 -- Descripción:
 --   Muestra el detalle histórico de nóminas por empleado, ciclo y período.
 --   Agrega cantidades, valores e importes, separando ingresos de descuentos
@@ -89,7 +93,7 @@ Left Outer Join NomTno T5 On (T1.TnoCve = T5.TnoCve) -- Tipo de nómina
 Left Outer Join NomUbi T6 On (T2.UbiCve = T6.UbiCve) --Ubicación del empleado
 Left Outer Join NomDep T7 On (T2.DepCve = T7.DepCve) --Departamento del empleado
 Left Outer Join NomCar T8 On (T2.CarCve = T8.CarCve) --Cargo/puesto del empleado
-Left Outer Join NomCat T9 On (T2.CatCve = T9.CatCve) --Categoría del empleado
+Left Outer Join NomCat T9 On (T2.CatCve = T9.CatCve) -- Categoría del empleado
 
 Group By
     T1.CnoCve, T4.CnoDes,
@@ -101,3 +105,4 @@ Group By
     T2.CatCve, T9.CatDes,
     T1.CmcCve, T3.CmcDes,  T3.CmcTip,
     T1.CipAno, T1.CipNum
+

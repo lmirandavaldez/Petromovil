@@ -1,0 +1,57 @@
+Create View VWDGI_COMPROBANTES
+(SisCve, SisDes, DisCve, DisDes, DtoTip, CliCve, EstNcf, FecAno, FecYmd,
+ Status, NcfNro, TcfCve, TcfDes, NcfSec, MonFac) As
+Select T4.SisCve, T4.SisDes, T1.DisCve, T3.DisDes, T1.DtoTip, T1.CliCve,
+       COALESCE(T6.EstNcf,'') As Estacion_Emite_Comprobante, 
+       T9.FecAno, T9.FecYmd, T1.DtoSta, T2.NcfNro,
+(Case When Substring(T2.NcfNro,12,2) <> '  '  Then
+  Cast(Substring(T2.NcfNro,10,2) As Dec(2,0)) Else
+Cast(Substring(T2.NcfNro,2,2) As Dec(2,0)) End),
+ T5.TcfDes,
+ (Case When Substring(T2.NcfNro,12,2) <> '  '  Then
+  Cast(Substring(T2.NcfNro,12,8) As Dec(8,0)) Else
+ Cast(Substring(T2.NcfNro,4,8) As Dec(8,0)) End), T1.DtoMne
+   From FacDtoh T1
+   Join FacDed T2
+     On (T1.DisCve = T2.DisCve)
+    And (T1.DtoTip = T2.DtoTip)
+    And (T1.DtoNro = T2.DtoNro)
+   Join SegDis T3
+     On (T1.DisCve = T3.DisCve)
+  Join SegSis T4
+    On (T4.SisCve = 'FA')
+  Join SegTcf T5
+      On (Cast(Substring(T2.NcfNro,2,2) As Dec(2,0)) = T5.TcfCve)
+Left Outer Join IteEst T6
+      On (T1.DisCve = T6.DisCve)
+  Join SegFec T9
+    On (T1.DtoAno = T9.FecAno)
+   And (T1.DtoMes = T9.FecMes)
+   And (T1.DtoDia = T9.FecDia)
+ Where (T2.NcfNro <> '  ')
+   And (Substring(T2.NcfNro,12,2) = '  ')
+Union All
+  Select T4.SisCve, T4.SisDes, T1.DisCve, T3.DisDes, 1, T1.CliCve,
+         T6.EstNcf, T9.FecAno, T9.FecYmd, T1.SitCve, T1.NcfNro,
+(Case When Substring(T1.NcfNro,12,2) <> '  '  Then
+  Cast(Substring(T1.NcfNro,10,2) As Dec(2,0)) Else
+Cast(Substring(T1.NcfNro,2,2) As Dec(2,0)) End),
+ T5.TcfDes,
+ (Case When Substring(T1.NcfNro,12,2) <> '  '  Then
+  Cast(Substring(T1.NcfNro,12,8) As Dec(8,0)) Else
+ Cast(Substring(T1.NcfNro,4,8) As Dec(8,0)) End), T1.FacTin
+    From FpsFach T1
+    Join SegDis T3
+      On (T1.DisCve = T3.DisCve)
+    Join SegSis T4
+      On (T4.SisCve = 'FS')
+  Join SegTcf T5
+      On (Cast(Substring(T1.NcfNro,2,2) As Dec(2,0)) = T5.TcfCve)
+Left Outer Join IteEst T6
+      On (T1.DisCve = T6.DisCve)
+    Join SegFec T9
+      On (T1.FacAno = T9.FecAno)
+     And (T1.FacMes = T9.FecMes)
+     And (T1.FacDia = T9.FecDia)
+   Where (T1.NcfNro <> '  ')
+   And (Substring(T1.NcfNro,12,2) = '  ')

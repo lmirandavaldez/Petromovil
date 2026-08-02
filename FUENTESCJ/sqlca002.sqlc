@@ -1,0 +1,122 @@
+-- =============================================================
+-- Modulo    : Caja
+-- Programa  : SQLCA002
+-- Objeto    : VWCAJ_Recibos_No_Aplicados_CXC
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de recibos de caja no aplicados a cuentas por cobrar.
+--   Agrupa por cliente, distrito, codigo de documento, numero
+--   de documento, periodo y fecha de ingreso, acumulando el
+--   valor de los ingresos en transito (IngVtr).
+--
+--   Solo incluye recibos en estado '1' (no aplicado).
+--
+--   La fecha del ingreso (IngAno/IngMes/IngDia del encabezado
+--   CajRech) se resuelve mediante LEFT OUTER JOIN a SegFec.
+--   Si la fecha no existe en el calendario, COALESCE devuelve
+--   el tope del sistema: 20391231 (equivalente YMD de
+--   DATE('2039-12-31')).
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   CliCve        Clave del cliente              (CajRech/T2)
+--   DisCve        Clave del distrito             (CajRefd/T1)
+--   CdoCve        Clave del codigo de documento  (CajRefd/T1)
+--   DocNum        Numero del documento           (CajRefd/T1)
+--   PerAno        Ano del periodo                (CajRefd/T1)
+--   PerNum        Numero del periodo             (CajRefd/T1)
+--   FecYmd        Fecha en formato YYYYMMDD      (SegFec/T9)
+--   Suma_Ingresos Suma de IngVtr del grupo       (calc.)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CajRefd  T1   Detalle de referencias de recibos (base)
+--   CajRech  T2   Encabezado de recibos de caja
+--   SegFec   T9   Tabla de fechas (Fecha del ingreso)
+-- -------------------------------------------------------------
+-- Logica de resolucion de fecha:
+--   La fecha del ingreso se resuelve en dos pasos:
+--     1. LEFT OUTER JOIN a SegFec por (IngAno, IngMes, IngDia).
+--        Devuelve FecYmd si la fecha existe en el calendario.
+--     2. COALESCE: si el JOIN devuelve NULL (fecha fuera del
+--        rango de SegFec), se usa 20391231 como tope (valor
+--        YMD equivalente a DATE('2039-12-31')).
+--   SegFec cubre el rango 1940-01-01 a 2039-12-31.
+-- -------------------------------------------------------------
+-- Filtros aplicados:
+--   T2.SitCve = '1'   Solo recibos en estado No Aplicado
+-- -------------------------------------------------------------
+-- Agrupacion:
+--   CliCve, DisCve, CdoCve, DocNum, PerAno, PerNum, FecYmd
+--   La agrupacion incluye FecYmd para que Suma_Ingresos quede
+--   segregada por fecha de ingreso dentro del mismo documento.
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Verificar indice en CajRefd(McaCve, RecNum) y
+--      CajRech(McaCve, RecNum) para optimizar el JOIN principal
+--      entre detalle y encabezado.
+--   2. El campo FecYmd es numerico (YYYYMMDD). Si los reportes
+--      requieren tipo DATE, considerar exponer tambien FecIso
+--      de SegFec o aplicar DATE(CHAR(FecYmd)) en la consulta
+--      consumidora.
+--   3. Considerar agregar CliCve al JOIN con CajRefd T1 si
+--      existe el campo, para evitar recibos cruzados entre
+--      clientes con misma maquina y numero de recibo.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion, formato 80 cols,
+--                           JOIN SegFec convertido a LEFT
+--                           OUTER JOIN con COALESCE tope
+--                           20391231.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWCAJ_Recibos_No_Aplicados_CXC AS
+SELECT
+    -- Cliente
+    T2.CliCve,
+
+    -- Identificacion del documento
+    T1.DisCve,
+    T1.CdoCve,
+    T1.DocNum,
+
+    -- Periodo
+    T1.PerAno,
+    T1.PerNum,
+
+    -- Fecha del ingreso en formato YYYYMMDD:
+    --   1. SegFec T9 (primaria via LEFT OUTER JOIN)
+    --   2. 20391231 si la fecha no esta en SegFec
+    COALESCE(T9.FecYmd, 20391231) AS FecYmd,
+
+    -- Suma de ingresos en transito del grupo
+    SUM(T1.IngVtr) AS Suma_Ingresos
+
+FROM CajRefd T1
+
+-- Encabezado del recibo
+JOIN CajRech T2
+    ON  T1.McaCve = T2.McaCve
+    AND T1.RecNum = T2.RecNum
+
+-- Fecha del ingreso (IngAno / IngMes / IngDia)
+LEFT OUTER JOIN SegFec T9
+    ON  T2.IngAno = T9.FecAno
+    AND T2.IngMes = T9.FecMes
+    AND T2.IngDia = T9.FecDia
+
+-- Solo recibos no aplicados
+WHERE T2.SitCve = '1'
+
+GROUP BY
+    T2.CliCve,
+    T1.DisCve,
+    T1.CdoCve,
+    T1.DocNum,
+    T1.PerAno,
+    T1.PerNum,
+    COALESCE(T9.FecYmd, 20391231);

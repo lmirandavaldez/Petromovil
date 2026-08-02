@@ -1,0 +1,141 @@
+-- ================================================================
+-- Modulo    : Seguridad y Comunes
+-- Programa  : SQLSGF007
+-- Objeto    : SG_DESCOMPONER_COMPROBANTE
+-- Tipo      : Funcion de tabla SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1.1
+-- ----------------------------------------------------------------
+-- Descripcion:
+--   Descompone un numero de comprobante fiscal (NCF) en sus
+--   componentes: tipo, secuencia y prefijo/serie de emision.
+--
+--   Formatos soportados:
+--
+--   Tipo A  longitud 19  inicia con 'A'
+--     NCFTIP   = pos 10-11  (tipo de comprobante)
+--     NCFSEC   = pos 12-19  (secuencia, 8 digitos)
+--     NCFNRO_OUT = pos  1-11 (SER+DIV+ZON+CAJ+TIP)
+--
+--   Tipo B  longitud 11  inicia con 'B'
+--     NCFTIP   = pos  2-3   (tipo de comprobante)
+--     NCFSEC   = pos  4-11  (secuencia, 8 digitos)
+--     NCFNRO_OUT = pos  1-3  (SER+TIP)
+--
+--   Tipo E  longitud 13  inicia con 'E'
+--     NCFTIP   = pos  2-3   (tipo de comprobante)
+--     NCFSEC   = pos  4-13  (secuencia, 10 digitos)
+--     NCFNRO_OUT = pos  1-3  (SER+TIP)
+--
+--   Si el NCF no coincide con ninguno de los formatos anteriores
+--   retorna NCFTIP=0, NCFSEC=0, NCFNRO_OUT=''.
+-- ----------------------------------------------------------------
+-- Parametros de entrada:
+--   NCFNRO    VARCHAR(19)  Numero de comprobante fiscal
+--
+-- Columnas retornadas:
+--   NCFTIP      INTEGER     Tipo de comprobante
+--   NCFSEC      BIGINT      Secuencia del comprobante
+--   NCFNRO_OUT  VARCHAR(20) Prefijo/serie del comprobante
+-- ----------------------------------------------------------------
+-- Historial de cambios:
+--   Version  Fecha       Autor       Descripcion
+--   -------  ----------  ----------  ----------------------------
+--   1.0      2024-01-01  L. Miranda  Creacion inicial
+--   1.1      2025-07-01  L. Miranda  Documentacion y revision
+-- ================================================================
+
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_DESCOMPONER_COMPROBANTE
+(
+    NCFNRO VARCHAR(19)
+)
+RETURNS TABLE
+(
+    NCFTIP     INTEGER,
+    NCFSEC     BIGINT,
+    NCFNRO_OUT VARCHAR(20)
+)
+LANGUAGE SQL
+DETERMINISTIC
+RETURNS NULL ON NULL INPUT
+BEGIN
+
+    RETURN
+        SELECT
+            /* ------------------------------------------ */
+            /* TIPO DE COMPROBANTE (NCFTIP)               */
+            /*   A: posiciones 10-11                      */
+            /*   B: posiciones  2-3                       */
+            /*   E: posiciones  2-3                       */
+            /* ------------------------------------------ */
+            CASE
+                WHEN LENGTH(TRIM(NCFNRO)) = 19
+                 AND SUBSTR(NCFNRO,1,1) = 'A'
+                    THEN INT(SUBSTR(NCFNRO,10,2))
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 11
+                 AND SUBSTR(NCFNRO,1,1) = 'B'
+                    THEN INT(SUBSTR(NCFNRO,2,2))
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 13
+                 AND SUBSTR(NCFNRO,1,1) = 'E'
+                    THEN INT(SUBSTR(NCFNRO,2,2))
+
+                ELSE 0
+            END AS NCFTIP,
+
+            /* ------------------------------------------ */
+            /* SECUENCIA DEL COMPROBANTE (NCFSEC)         */
+            /*   A: posiciones 12-19  (8  digitos)        */
+            /*   B: posiciones  4-11  (8  digitos)        */
+            /*   E: posiciones  4-13  (10 digitos)        */
+            /* ------------------------------------------ */
+            CASE
+                WHEN LENGTH(TRIM(NCFNRO)) = 19
+                 AND SUBSTR(NCFNRO,1,1) = 'A'
+                    THEN BIGINT(SUBSTR(NCFNRO,12,8))
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 11
+                 AND SUBSTR(NCFNRO,1,1) = 'B'
+                    THEN BIGINT(SUBSTR(NCFNRO,4,8))
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 13
+                 AND SUBSTR(NCFNRO,1,1) = 'E'
+                    THEN BIGINT(SUBSTR(NCFNRO,4,10))
+
+                ELSE 0
+            END AS NCFSEC,
+
+            /* ------------------------------------------ */
+            /* PREFIJO/SERIE DEL COMPROBANTE (NCFNRO_OUT) */
+            /*   A: posiciones  1-11  SER+DIV+ZON+CAJ+TIP*/
+            /*   B: posiciones  1-3   SER+TIP             */
+            /*   E: posiciones  1-3   SER+TIP             */
+            /* ------------------------------------------ */
+            CASE
+                WHEN LENGTH(TRIM(NCFNRO)) = 19
+                 AND SUBSTR(NCFNRO,1,1) = 'A'
+                    THEN SUBSTR(NCFNRO,1,11)
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 11
+                 AND SUBSTR(NCFNRO,1,1) = 'B'
+                    THEN SUBSTR(NCFNRO,1,3)
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 13
+                 AND SUBSTR(NCFNRO,1,1) = 'E'
+                    THEN SUBSTR(NCFNRO,1,3)
+
+                ELSE ''
+            END AS NCFNRO_OUT
+
+        FROM SYSIBM.SYSDUMMY1;
+
+END;
+
+
+
+GRANT EXECUTE ON SPECIFIC FUNCTION SEGLIB.SG_DESCOMPONER_COMPROBANTE
+    TO PUBLIC;

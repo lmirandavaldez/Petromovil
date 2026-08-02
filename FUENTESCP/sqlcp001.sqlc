@@ -1,0 +1,208 @@
+-- =============================================================
+-- Modulo    : Cuentas por Pagar
+-- Programa  : SQLCP001
+-- Objeto    : VWCXP_Maestro_Proveedores
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista maestra de proveedores de cuentas por pagar.
+--   Consolida los datos del proveedor (CxpPro) con sus
+--   catalogos de clasificacion (CxpCpa, CxpCla), moneda
+--   (SegMon) y criterios de retencion (CxpCri).
+--
+--   Se decodifican cuatro campos codificados mediante CASE:
+--     ProTip : tipo de proveedor (1=Local, 2=Exterior,
+--              3=Local Moneda Extranjera)
+--     ProIde : tipo de identificacion (C=Cedula, P=Pasaporte,
+--              R=RNC)
+--     ProCls : clasificacion persona (P=Personal,
+--              E=Empresarial)
+--     ProSta : estado del proveedor (espacio=Activo,
+--              S=Suspendido, D=No permitir Pagos)
+--
+--   Todos los joins son LEFT OUTER para preservar proveedores
+--   aunque no tengan todos los catalogos completos.
+--   No hay campos de fecha; no aplica logica de SegFec.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   ProCve                     Clave del proveedor   (T1)
+--   ProNom                     Nombre del proveedor  (T1)
+--   ProTip                     Tipo (codigo)         (T1)
+--   Descripcion_Tipo_Proveedor Tipo (descripcion)    (calc.)
+--   ProCla                     Clave clasificacion   (T1)
+--   ClaDes                     Desc. clasificacion   (CxpCla/T6)
+--   ProDir                     Direccion             (T1)
+--   ProLoc                     Localidad             (T1)
+--   ProEdo                     Estado/provincia      (T1)
+--   ProPob                     Poblacion             (T1)
+--   ProCaa                     Codigo de area/apt.   (T1)
+--   ProTe1                     Telefono 1            (T1)
+--   ProTe2                     Telefono 2            (T1)
+--   ProFax                     Fax                   (T1)
+--   ProIde                     Tipo identif.(codigo) (T1)
+--   Descripcion_Tipo_Identific Tipo identif.(desc.)  (calc.)
+--   ProNid                     Numero de identif.    (T1)
+--   ProFea                     Fecha de alta         (T1)
+--   ProInt                     Indicador interno     (T1)
+--   CpaCve                     Clave grupo de pago   (T1)
+--   CpaDes                     Desc. grupo de pago   (CxpCpa/T2)
+--   MonCve                     Clave de moneda       (T1)
+--   MonSim                     Simbolo de moneda     (SegMon/T3)
+--   ProCls                     Clasificacion(codigo) (T1)
+--   Descripcion_Clasificacion  Clasificacion(desc.)  (calc.)
+--   ProSrp                     Indicador SRP/DGII    (T1)
+--   CriCve                     Clave 1ra retencion   (T1)
+--   Descripcion_Primera_Reten  Desc. 1ra retencion   (CxpCri/T4)
+--   CriCv2                     Clave 2da retencion   (T1)
+--   Descripcion_Segunda_Reten  Desc. 2da retencion   (CxpCri/T5)
+--   ProUni                     Indicador de unicidad (T1)
+--   ProSta                     Estado (codigo)       (T1)
+--   Descripcion_Status         Estado (descripcion)  (calc.)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxpPro  T1   Maestro de proveedores (tabla base)
+--   CxpCpa  T2   Grupos de pago (condiciones de pago)
+--   SegMon  T3   Monedas
+--   CxpCri  T4   Criterios de retencion (primera retencion)
+--   CxpCri  T5   Criterios de retencion (segunda retencion)
+--   CxpCla  T6   Clasificaciones de proveedor
+-- -------------------------------------------------------------
+-- Logica de decodificacion:
+--   ProTip  1 = Local
+--           2 = Exterior
+--           3 = Local Moneda Extranjera
+--           otro = espacio en blanco
+--   ProIde  C = Cedula
+--           P = Pasaporte
+--           R = RNC
+--           otro = espacio en blanco
+--   ProCls  P = Personal
+--           E = Empresarial
+--           otro = espacio en blanco
+--   ProSta  ' ' (espacio) = Activo
+--           S = Suspendido
+--           D = No permitir Pagos
+--           otro = espacio en blanco
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Los CASE de decodificacion devuelven espacio (' ') para
+--      valores desconocidos en lugar de NULL o una descripcion
+--      explicita como 'Desconocido'. Considerar usar NULL o
+--      una cadena descriptiva para facilitar filtros y reportes.
+--   2. CxpCri se une dos veces (T4 y T5) por CriCve y CriCv2
+--      respectivamente. Confirmar que ambas retenciones
+--      provienen del mismo catalogo CxpCri.
+--   3. ProFea se expone como campo raw (tipo original de la
+--      tabla). Si es un campo de fecha almacenado como entero
+--      o caracter, considerar convertirlo a DATE en esta vista
+--      para uniformidad con el resto del sistema.
+--   4. Verificar indice en CxpPro(ProCve) como clave primaria
+--      y en los campos de join (CpaCve, MonCve, CriCve,
+--      CriCv2, ProCla) para optimizar los LEFT OUTER JOINs.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWCXP_Maestro_Proveedores AS
+SELECT
+    -- Identificacion del proveedor
+    T1.ProCve,
+    T1.ProNom,
+
+    -- Tipo de proveedor (codigo y descripcion)
+    T1.ProTip,
+    CASE
+        WHEN T1.ProTip = 1 THEN 'Local'
+        WHEN T1.ProTip = 2 THEN 'Exterior'
+        WHEN T1.ProTip = 3 THEN 'Local Moneda Extranjera'
+        ELSE ' '
+    END                                     AS Descripcion_Tipo_Proveedor,
+
+    -- Clasificacion del proveedor
+    T1.ProCla,
+    T6.ClaDes,
+
+    -- Datos de contacto y ubicacion
+    T1.ProDir,
+    T1.ProLoc,
+    T1.ProEdo,
+    T1.ProPob,
+    T1.ProCaa,
+    T1.ProTe1,
+    T1.ProTe2,
+    T1.ProFax,
+
+    -- Tipo de identificacion (codigo y descripcion)
+    T1.ProIde,
+    CASE
+        WHEN T1.ProIde = 'C' THEN 'Cedula'
+        WHEN T1.ProIde = 'P' THEN 'Pasaporte'
+        WHEN T1.ProIde = 'R' THEN 'RNC'
+        ELSE ' '
+    END                                     AS Descripcion_Tipo_Identificacion,
+
+    -- Numero de identificacion y fecha de alta
+    T1.ProNid,
+    T1.ProFea,
+    T1.ProInt,
+
+    -- Grupo/condicion de pago
+    T1.CpaCve,
+    T2.CpaDes,
+
+    -- Moneda
+    T1.MonCve,
+    T3.MonSim,
+
+    -- Clasificacion persona (codigo y descripcion)
+    T1.ProCls,
+    CASE
+        WHEN T1.ProCls = 'P' THEN 'Personal'
+        WHEN T1.ProCls = 'E' THEN 'Empresarial'
+        ELSE ' '
+    END                         As Descripcion_Clasificacion,
+
+    -- Retenciones
+    T1.ProSrp,
+    T1.CriCve,
+    COALESCE(T4.CriDes,'')      AS Descripcion_Primera_Retencion,
+    T1.CriCv2,
+    COALESCE(T5.CriDes,'')      AS Descripcion_Segunda_Retencion,
+    T1.ProUni,
+
+    -- Estado del proveedor (codigo y descripcion)
+    T1.ProSta,
+    CASE
+        WHEN T1.ProSta = ' ' THEN 'Activo'
+        WHEN T1.ProSta = 'S' THEN 'Suspendido'
+        WHEN T1.ProSta = 'D' THEN 'No permitir Pagos'
+        ELSE ' '
+    END                                     AS Descripcion_Status
+
+FROM CxpPro T1
+
+-- Grupo/condicion de pago (opcional)
+LEFT OUTER JOIN CxpCpa T2
+    ON  T1.CpaCve = T2.CpaCve
+
+-- Moneda (opcional)
+LEFT OUTER JOIN SegMon T3
+    ON  T1.MonCve = T3.MonCve
+
+-- Primera retencion (opcional)
+LEFT OUTER JOIN CxpCri T4
+    ON  T1.CriCve = T4.CriCve
+
+-- Segunda retencion (opcional)
+LEFT OUTER JOIN CxpCri T5
+    ON  T1.CriCv2 = T5.CriCve
+
+-- Clasificacion del proveedor (opcional)
+LEFT OUTER JOIN CxpCla T6
+    ON  T1.ProCla = T6.ProCla;

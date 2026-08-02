@@ -5,7 +5,7 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 3
+-- Version   : 4
 -- --------------------------------------------------------------
 -- Descripcion:
 --   Vista maestra de activos fijos. Consolida en una sola
@@ -17,8 +17,8 @@
 --   Las fechas se almacenan en campos separados de ano, mes y
 --   dia (AfiAad/AfiMad/AfiDad, etc.) y se convierten a tipo
 --   DATE mediante construccion de cadena ISO YYYY-MM-DD usando
---   CONCAT, SUBSTRING y TRIM con relleno de ceros a la
---   izquierda. Se devuelven cuatro fechas calculadas:
+--   RIGHT('00'||TRIM(CHAR(campo)),2) para relleno de ceros.
+--   Se devuelven cuatro fechas calculadas:
 --     Fecha_Adquisicion    : ano/mes/dia de adquisicion
 --     Fecha_De_Instalacion : ano/mes/dia de instalacion
 --     Fecha_Estimada_Baja  : ano/mes/dia estimado de baja
@@ -106,11 +106,11 @@
 --     1. Primero: LEFT JOIN a SegFec por (FecAno,FecMes,FecDia)
 --        devuelve FecIso directamente si la fecha existe.
 --     2. Respaldo: si SegFec no tiene la fecha (NULL), se usa
---        la conversion DATE(CONCAT...) construyendo YYYY-MM-DD
---        con relleno de ceros desde los campos separados.
---     3. Tope: si el resultado sigue siendo NULL (ano = '0000'
---        u otro valor invalido), se devuelve DATE('2039-12-31')
---        que es la fecha maxima del rango del sistema.
+--        DATE(ano||'-'||mes||'-'||dia) con RIGHT('00'||...,2)
+--        para relleno de ceros. Protegido con CASE que valida:
+--        NULL, '0000', rango de mes (1-12) y dia (1-31).
+--     3. Tope: si el resultado sigue siendo NULL, se devuelve
+--        DATE('2039-12-31') que es la fecha maxima del sistema.
 --   SegFec cubre el rango 1940-01-01 a 2039-12-31.
 -- --------------------------------------------------------------
 -- Sugerencias de mejora:
@@ -131,6 +131,10 @@
 --                           COALESCE (T11 a T14)
 --   2026-08-01  L. Miranda  Fecha NULL devuelve tope
 --                           DATE('2039-12-31')
+--   2026-08-02  L. Miranda  Respaldo: validacion completa de
+--                           NULL, '0000', rango mes (1-12) y
+--                           dia (1-31). Relleno de ceros con
+--                           RIGHT('00'||TRIM(CHAR()),2).
 -- ==============================================================
 
 CREATE OR REPLACE VIEW VWAFI_Activos_Fijos AS
@@ -192,29 +196,27 @@ SELECT
     T7.CcoDes,
     -- Proveedor
     T1.ProCve,
-    T8.ProNom,
+    COALESCE(T8.ProNom,'') As Nombre_del_Proveedor,
 
     -- Fecha de adquisicion:
     --   1. SegFec T11 (primaria)
-    --   2. DATE(CONCAT...) respaldo por campos separados
-    --   3. DATE('2039-12-31') si el resultado es NULL
+    --   2. DATE(ano-mes-dia) respaldo: validacion NULL/'0000'/rango
+    --   3. DATE('2039-12-31') si el resultado sigue siendo NULL
     COALESCE(
         T11.FecIso,
         CASE
-            WHEN T1.AfiAad <> '0000'
-            THEN DATE(
-                CONCAT(
-                    SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.AfiAad))),
-                    TRIM(T1.AfiAad)
-                ) || '-' ||
-                CONCAT(
-                    SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiMad))),
-                    TRIM(T1.AfiMad)
-                ) || '-' ||
-                CONCAT(
-                    SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiDad))),
-                    TRIM(T1.AfiDad)
-                )
+            WHEN T1.AfiAad IS NULL OR TRIM(T1.AfiAad) = '0000'
+              OR T1.AfiMad IS NULL OR TRIM(T1.AfiMad) = '00'
+              OR T1.AfiDad IS NULL OR TRIM(T1.AfiDad) = '00'
+              OR CAST(TRIM(T1.AfiMad) AS SMALLINT) < 1
+              OR CAST(TRIM(T1.AfiMad) AS SMALLINT) > 12
+              OR CAST(TRIM(T1.AfiDad) AS SMALLINT) < 1
+              OR CAST(TRIM(T1.AfiDad) AS SMALLINT) > 31
+                THEN NULL
+            ELSE DATE(
+                TRIM(T1.AfiAad) || '-' ||
+                RIGHT('00' || TRIM(T1.AfiMad), 2) || '-' ||
+                RIGHT('00' || TRIM(T1.AfiDad), 2)
             )
         END,
         DATE('2039-12-31')
@@ -222,25 +224,23 @@ SELECT
 
     -- Fecha de instalacion:
     --   1. SegFec T12 (primaria)
-    --   2. DATE(CONCAT...) respaldo por campos separados
-    --   3. DATE('2039-12-31') si el resultado es NULL
+    --   2. DATE(ano-mes-dia) respaldo: validacion NULL/'0000'/rango
+    --   3. DATE('2039-12-31') si el resultado sigue siendo NULL
     COALESCE(
         T12.FecIso,
         CASE
-            WHEN T1.AfiAin <> '0000'
-            THEN DATE(
-                CONCAT(
-                    SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.AfiAin))),
-                    TRIM(T1.AfiAin)
-                ) || '-' ||
-                CONCAT(
-                    SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiMin))),
-                    TRIM(T1.AfiMin)
-                ) || '-' ||
-                CONCAT(
-                    SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiDin))),
-                    TRIM(T1.AfiDin)
-                )
+            WHEN T1.AfiAin IS NULL OR TRIM(T1.AfiAin) = '0000'
+              OR T1.AfiMin IS NULL OR TRIM(T1.AfiMin) = '00'
+              OR T1.AfiDin IS NULL OR TRIM(T1.AfiDin) = '00'
+              OR CAST(TRIM(T1.AfiMin) AS SMALLINT) < 1
+              OR CAST(TRIM(T1.AfiMin) AS SMALLINT) > 12
+              OR CAST(TRIM(T1.AfiDin) AS SMALLINT) < 1
+              OR CAST(TRIM(T1.AfiDin) AS SMALLINT) > 31
+                THEN NULL
+            ELSE DATE(
+                TRIM(T1.AfiAin) || '-' ||
+                RIGHT('00' || TRIM(T1.AfiMin), 2) || '-' ||
+                RIGHT('00' || TRIM(T1.AfiDin), 2)
             )
         END,
         DATE('2039-12-31')
@@ -248,25 +248,23 @@ SELECT
 
     -- Fecha estimada de baja:
     --   1. SegFec T13 (primaria)
-    --   2. DATE(CONCAT...) respaldo por campos separados
-    --   3. DATE('2039-12-31') si el resultado es NULL
+    --   2. DATE(ano-mes-dia) respaldo: validacion NULL/'0000'/rango
+    --   3. DATE('2039-12-31') si el resultado sigue siendo NULL
     COALESCE(
         T13.FecIso,
         CASE
-            WHEN T1.AfiAde <> '0000'
-            THEN DATE(
-                CONCAT(
-                    SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.AfiAde))),
-                    TRIM(T1.AfiAde)
-                ) || '-' ||
-                CONCAT(
-                    SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiMde))),
-                    TRIM(T1.AfiMde)
-                ) || '-' ||
-                CONCAT(
-                    SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiDde))),
-                    TRIM(T1.AfiDde)
-                )
+            WHEN T1.AfiAde IS NULL OR TRIM(T1.AfiAde) = '0000'
+              OR T1.AfiMde IS NULL OR TRIM(T1.AfiMde) = '00'
+              OR T1.AfiDde IS NULL OR TRIM(T1.AfiDde) = '00'
+              OR CAST(TRIM(T1.AfiMde) AS SMALLINT) < 1
+              OR CAST(TRIM(T1.AfiMde) AS SMALLINT) > 12
+              OR CAST(TRIM(T1.AfiDde) AS SMALLINT) < 1
+              OR CAST(TRIM(T1.AfiDde) AS SMALLINT) > 31
+                THEN NULL
+            ELSE DATE(
+                TRIM(T1.AfiAde) || '-' ||
+                RIGHT('00' || TRIM(T1.AfiMde), 2) || '-' ||
+                RIGHT('00' || TRIM(T1.AfiDde), 2)
             )
         END,
         DATE('2039-12-31')
@@ -274,25 +272,23 @@ SELECT
 
     -- Fecha real de baja:
     --   1. SegFec T14 (primaria)
-    --   2. DATE(CONCAT...) respaldo por campos separados
-    --   3. DATE('2039-12-31') si el resultado es NULL
+    --   2. DATE(ano-mes-dia) respaldo: validacion NULL/'0000'/rango
+    --   3. DATE('2039-12-31') si el resultado sigue siendo NULL
     COALESCE(
         T14.FecIso,
         CASE
-            WHEN T1.AfiAba <> '0000'
-            THEN DATE(
-                CONCAT(
-                    SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.AfiAba))),
-                    TRIM(T1.AfiAba)
-                ) || '-' ||
-                CONCAT(
-                    SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiMba))),
-                    TRIM(T1.AfiMba)
-                ) || '-' ||
-                CONCAT(
-                    SUBSTRING('00', 0, 3 - LENGTH(TRIM(T1.AfiDba))),
-                    TRIM(T1.AfiDba)
-                )
+            WHEN T1.AfiAba IS NULL OR TRIM(T1.AfiAba) = '0000'
+              OR T1.AfiMba IS NULL OR TRIM(T1.AfiMba) = '00'
+              OR T1.AfiDba IS NULL OR TRIM(T1.AfiDba) = '00'
+              OR CAST(TRIM(T1.AfiMba) AS SMALLINT) < 1
+              OR CAST(TRIM(T1.AfiMba) AS SMALLINT) > 12
+              OR CAST(TRIM(T1.AfiDba) AS SMALLINT) < 1
+              OR CAST(TRIM(T1.AfiDba) AS SMALLINT) > 31
+                THEN NULL
+            ELSE DATE(
+                TRIM(T1.AfiAba) || '-' ||
+                RIGHT('00' || TRIM(T1.AfiMba), 2) || '-' ||
+                RIGHT('00' || TRIM(T1.AfiDba), 2)
             )
         END,
         DATE('2039-12-31')

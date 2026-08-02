@@ -1,0 +1,95 @@
+-- =============================================================
+-- Modulo    : Interfaces Modulos Externos
+-- Programa  : SQLIT002
+-- Objeto    : VWITE_Resumen_Transacciones_Librucantes
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de resumen de transacciones de librucantes para
+--   interfaz con modulos externos. Agrupa las transacciones
+--   de la tabla IteTratl por distrito, fecha de transaccion
+--   y codigo de producto, acumulando cantidad total, precio
+--   promedio e importe.
+--
+--   A diferencia de sqlit001 (VWITE_Resumen_Corte_Estaciones),
+--   esta vista opera sobre IteTratl (transacciones de
+--   librucantes) en lugar de IteTra, no requiere JOINs a
+--   estaciones ni articulos, y no aplica filtros de estado.
+--
+--   TraFem se expone en su tipo original de la tabla. No hay
+--   campos de fecha por concatenar; no aplica logica de
+--   resolucion via SegFec.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Codigo_Del_Distrito  Clave del distrito       (IteTratl)
+--   Fecha_Transaccion    Fecha de la transaccion  (IteTratl)
+--   Codigo_Del_Producto  Codigo del producto      (IteTratl)
+--   Total_Cantidad       Suma de TraCan del grupo (calc.)
+--   Precio_Promedio      Promedio de TraPve       (calc.)
+--   Importe              Suma de TraImp del grupo (calc.)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   IteTratl   Transacciones de librucantes (tabla base unica)
+-- -------------------------------------------------------------
+-- Agrupacion:
+--   DisCve, TraFem, FacCar
+--   Agrupa por distrito, fecha y producto para acumular
+--   los totales de cada combinacion.
+-- -------------------------------------------------------------
+-- Filtro de agrupacion (HAVING):
+--   SUM(TraCan) > 0   Solo grupos con cantidad total positiva
+--   No hay filtro WHERE; incluye todas las transacciones
+--   disponibles en IteTratl.
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. TraFem se expone en su tipo raw. Confirmar si es tipo
+--      DATE, numerico YYYYMMDD o caracter. Si es numerico,
+--      considerar exponer tambien la version ISO via JOIN a
+--      SegFec (LEFT OUTER JOIN por FecYmd o por campos
+--      separados) para uso uniforme en reportes.
+--   2. No hay filtro WHERE de estado ni periodo. Si IteTratl
+--      acumula historico de multiples periodos, los reportes
+--      consumidores deben filtrar por DisCve y/o TraFem para
+--      evitar lectura completa de la tabla.
+--   3. Precio_Promedio usa AVG(TraPve): precio promedio
+--      simple. Si el precio varia por cantidad en la misma
+--      transaccion, considerar precio ponderado:
+--        SUM(TraImp) / NULLIF(SUM(TraCan), 0)
+--      para evitar division por cero si TraCan = 0.
+--   4. El nombre 'Librucantes' en el objeto y la tabla
+--      IteTratl sugiere 'lubricantes'. Verificar si es un
+--      error tipografico en la nomenclatura del sistema o
+--      una convencion interna deliberada.
+--   5. Confirmar que IteTratl tiene indice en (DisCve,
+--      TraFem, FacCar) para optimizar el GROUP BY.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWITE_Resumen_Transacciones_Librucantes AS
+SELECT
+    -- Identificacion del grupo
+    DisCve                                  AS Codigo_Del_Distrito,
+    TraFem                                  AS Fecha_Transaccion,
+    FacCar                                  AS Codigo_Del_Producto,
+
+    -- Acumulados del grupo
+    SUM(TraCan)                             AS Total_Cantidad,
+    AVG(TraPve)                             AS Precio_Promedio,
+    SUM(TraImp)                             AS Importe
+
+FROM IteTratl
+
+GROUP BY
+    DisCve,
+    TraFem,
+    FacCar
+
+-- Solo grupos con cantidad total positiva
+HAVING SUM(TraCan) > 0;

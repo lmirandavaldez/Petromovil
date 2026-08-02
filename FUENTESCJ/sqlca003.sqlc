@@ -1,0 +1,187 @@
+-- =============================================================
+-- Modulo    : Caja
+-- Programa  : SQLCA003
+-- Objeto    : VWCAJ_Ingresos_No_Aplicado
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de ingresos de caja no aplicados a documentos de
+--   cuentas por cobrar. Relaciona el detalle de referencias
+--   de recibo (CajRefd) con el encabezado del recibo (CajRech),
+--   el encabezado del documento CxC (CxcDoch), la maquina de
+--   caja (CajMca) y opcionalmente el vendedor (CxcRvc) y el
+--   codigo de documento (CxcCdo).
+--
+--   Se exponen dos fechas calculadas:
+--     Fecha_Documento   : fecha del documento CxC
+--                         (DocAno/DocMes/DocDia de CxcDoch T3)
+--     Fecha_Transaccion : fecha del ingreso en caja
+--                         (IngAno/IngMes/IngDia de CajRech T2)
+--
+--   Cada fecha se resuelve via LEFT OUTER JOIN a SegFec.
+--   Si la fecha no existe en el calendario, COALESCE devuelve
+--   el tope del sistema: DATE('2039-12-31').
+--
+--   Filtros activos:
+--     CdoRel IN ('01','09','10','11'): solo tipos de documento
+--       relacionados con ingresos aplicables.
+--     RecOri = 2  : origen del recibo = aplicacion CxC.
+--     SitCve = '1': recibo en estado No Aplicado.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   CliCve             Clave del cliente          (CajRech/T2)
+--   CdoCve             Clave del cod. documento   (CajRefd/T1)
+--   DocNum             Numero del documento       (CajRefd/T1)
+--   Fecha_Documento    Fecha ISO del documento    (SegFec/T10)
+--   Distrito_Documento Clave de distrito          (CajRefd/T1)
+--   PerAno             Ano del periodo            (CajRefd/T1)
+--   PerNum             Numero del periodo         (CajRefd/T1)
+--   DocVal             Valor del documento        (CxcDoch/T3)
+--   DocBce             Balance del documento      (CxcDoch/T3)
+--   DocTas             Tasa del documento         (CxcDoch/T3)
+--   IngVtr             Valor ingreso en transito  (CajRefd/T1)
+--   VenCve             Clave del vendedor         (CxcRvc/T5)
+--   Distrito_Transacc  Distrito de la maquina     (CajMca/T4)
+--   McaCve             Clave de maquina de caja   (CajRefd/T1)
+--   RecNum             Numero de recibo           (CajRefd/T1)
+--   Fecha_Transaccion  Fecha ISO del ingreso      (SegFec/T11)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CajRefd  T1   Detalle de referencias de recibos (base)
+--   CajRech  T2   Encabezado de recibos de caja
+--   CxcDoch  T3   Encabezado de documentos CxC
+--   CajMca   T4   Maquinas de caja
+--   CxcRvc   T5   Vendedores de CxC (opcional)
+--   CxcCdo   T6   Codigos de documento CxC (filtro)
+--   SegFec   T10  Tabla de fechas (Fecha_Documento)
+--   SegFec   T11  Tabla de fechas (Fecha_Transaccion)
+-- -------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Dos LEFT OUTER JOIN independientes a SegFec:
+--     T10: por (DocAno, DocMes, DocDia) de CxcDoch T3
+--          -> Fecha_Documento
+--     T11: por (IngAno, IngMes, IngDia) de CajRech T2
+--          -> Fecha_Transaccion
+--   COALESCE devuelve DATE('2039-12-31') si el JOIN es NULL.
+--   SegFec cubre el rango 1940-01-01 a 2039-12-31.
+-- -------------------------------------------------------------
+-- Filtros aplicados:
+--   T6.CdoRel IN ('01','09','10','11')
+--             Solo documentos de tipos relacionados
+--   T2.RecOri = 2
+--             Solo recibos de origen aplicacion CxC
+--   T2.SitCve = '1'
+--             Solo recibos en estado No Aplicado
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. CxcRvc T5 se une solo por CliCve; si un cliente puede
+--      tener multiples vendedores activos, el LEFT JOIN podria
+--      producir duplicados. Verificar unicidad de CliCve en
+--      CxcRvc o agregar criterio adicional al JOIN.
+--   2. CxcCdo T6 se usa solo en el WHERE (CdoRel); considerar
+--      si el LEFT OUTER JOIN es correcto o si deberia ser INNER
+--      JOIN dado que el filtro de CdoRel excluye nulls de T6.
+--   3. Verificar indices en CajRefd(McaCve, RecNum) y
+--      CajRech(McaCve, RecNum) para el JOIN principal.
+--   4. El JOIN a CxcDoch T3 incluye DisCve; confirmar que
+--      DisCve es parte de la clave primaria del documento para
+--      evitar duplicados si un documento existe en varios
+--      distritos.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion, formato 80 cols.
+--                           Fechas Documento y Transaccion
+--                           migradas de DATE(CONCAT...) a
+--                           LEFT OUTER JOIN SegFec (T10,T11)
+--                           con COALESCE DATE('2039-12-31').
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWCAJ_Ingresos_No_Aplicado AS
+SELECT
+    -- Identificacion del cliente y documento
+    T2.CliCve,
+    T1.CdoCve,
+    T1.DocNum,
+
+    -- Fecha del documento CxC:
+    --   1. SegFec T10 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T10.FecIso, DATE('2039-12-31')) AS Fecha_Documento,
+
+    -- Distrito y periodo del detalle
+    T1.DisCve                               AS Distrito_Documento,
+    T1.PerAno,
+    T1.PerNum,
+
+    -- Valores del documento CxC
+    T3.DocVal,
+    T3.DocBce,
+    T3.DocTas,
+
+    -- Valor del ingreso en transito
+    T1.IngVtr,
+
+    -- Vendedor (opcional)
+    T5.VenCve,
+
+    -- Distrito de la maquina de caja
+    T4.DisCve                               AS Distrito_Transaccion,
+
+    -- Identificacion del recibo
+    T1.McaCve,
+    T1.RecNum,
+
+    -- Fecha del ingreso en caja:
+    --   1. SegFec T11 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T11.FecIso, DATE('2039-12-31')) AS Fecha_Transaccion
+
+FROM CajRefd T1
+
+-- Encabezado del recibo
+JOIN CajRech T2
+    ON  T1.McaCve = T2.McaCve
+    AND T1.RecNum = T2.RecNum
+
+-- Documento de cuentas por cobrar
+JOIN CxcDoch T3
+    ON  T2.CliCve  = T3.CliCve
+    AND T1.PerAno  = T3.PerAno
+    AND T1.PerNum  = T3.PerNum
+    AND T1.CdoCve  = T3.CdoCve
+    AND T1.DisCve  = T3.DisCve
+    AND T1.DocNum  = T3.DocNum
+
+-- Maquina de caja
+JOIN CajMca T4
+    ON  T1.McaCve = T4.McaCve
+
+-- Vendedor del cliente (opcional)
+LEFT OUTER JOIN CxcRvc T5
+    ON  T2.CliCve = T5.CliCve
+
+-- Codigo de documento (filtro por tipo de relacion)
+LEFT OUTER JOIN CxcCdo T6
+    ON  T1.CdoCve = T6.CdoCve
+
+-- Fecha del documento CxC (DocAno / DocMes / DocDia)
+LEFT OUTER JOIN SegFec T10
+    ON  T3.DocAno = T10.FecAno
+    AND T3.DocMes = T10.FecMes
+    AND T3.DocDia = T10.FecDia
+
+-- Fecha del ingreso en caja (IngAno / IngMes / IngDia)
+LEFT OUTER JOIN SegFec T11
+    ON  T2.IngAno = T11.FecAno
+    AND T2.IngMes = T11.FecMes
+    AND T2.IngDia = T11.FecDia
+
+-- Solo documentos relacionados, de origen CxC y no aplicados
+WHERE T6.CdoRel IN ('01', '09', '10', '11')
+  AND T2.RecOri  = 2
+  AND T2.SitCve  = '1';

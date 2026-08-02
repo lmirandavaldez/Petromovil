@@ -1,0 +1,77 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_DESCOMPONER_COMPROBANTE
+(
+    NCFNRO VARCHAR(19)
+)
+RETURNS TABLE
+(
+    NCFTIP INTEGER,
+    NCFSEC BIGINT,
+    NCFNRO_OUT VARCHAR(20)
+)
+LANGUAGE SQL
+DETERMINISTIC
+RETURNS NULL ON NULL INPUT
+BEGIN
+
+    RETURN
+        SELECT
+            /* ------------------------------ */
+            /* TIPO DE COMPROBANTE (NCFTIP)   */
+            /* ------------------------------ */
+            CASE
+                WHEN LENGTH(TRIM(NCFNRO)) = 19 AND SUBSTR(NCFNRO,1,1)='A'
+                    THEN INT(SUBSTR(NCFNRO,10,2))
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 11 AND SUBSTR(NCFNRO,1,1)='B'
+                    THEN INT(SUBSTR(NCFNRO,2,2))
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 13 AND SUBSTR(NCFNRO,1,1)='E'
+                    THEN INT(SUBSTR(NCFNRO,2,2))
+
+                ELSE 0
+            END AS NCFTIP,
+
+            /* ------------------------------ */
+            /* SECUENCIA (NCFSEC)             */
+            /* ------------------------------ */
+            CASE
+                WHEN LENGTH(TRIM(NCFNRO)) = 19 AND SUBSTR(NCFNRO,1,1)='A'
+                    THEN BIGINT(SUBSTR(NCFNRO,12,8))
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 11 AND SUBSTR(NCFNRO,1,1)='B'
+                    THEN BIGINT(SUBSTR(NCFNRO,4,8))
+
+                WHEN LENGTH(TRIM(NCFNRO)) = 13 AND SUBSTR(NCFNRO,1,1)='E'
+                    THEN BIGINT(SUBSTR(NCFNRO,4,10))
+
+                ELSE 0
+            END AS NCFSEC,
+
+            /* ------------------------------ */
+            /* NUEVO CAMPO (NCFNRO_OUT)       */
+            /* ------------------------------ */
+            CASE
+                /* Tipo A  SER+DIV+ZON+CAJ+TIP (11 posiciones) */
+                WHEN LENGTH(TRIM(NCFNRO)) = 19 AND SUBSTR(NCFNRO,1,1)='A'
+                    THEN SUBSTR(NCFNRO,1,11)
+
+                /* Tipo B  SER+TIP (3 posiciones) */
+                WHEN LENGTH(TRIM(NCFNRO)) = 11 AND SUBSTR(NCFNRO,1,1)='B'
+                    THEN SUBSTR(NCFNRO,1,3)
+
+                /* Tipo E  SER+TIP (3 posiciones) */
+                WHEN LENGTH(TRIM(NCFNRO)) = 13 AND SUBSTR(NCFNRO,1,1)='E'
+                    THEN SUBSTR(NCFNRO,1,3)
+
+                ELSE ''
+            END AS NCFNRO_OUT
+
+        FROM SYSIBM.SYSDUMMY1;
+
+END;
+
+
+
+GRANT EXECUTE ON SPECIFIC FUNCTION SEGLIB.SG_DESCOMPONER_COMPROBANTE TO PUBLIC;

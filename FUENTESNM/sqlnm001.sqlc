@@ -1,12 +1,18 @@
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
--- ============================================================
--- Vista    : VWNOM_MAESTRO_EMPLEADOS
+-- ==============================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM001
+-- Objeto    : VWNOM_MAESTRO_EMPLEADOS
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Versión  : 3.0
+-- --------------------------------------------------------------
 -- Propósito: Maestro completo de empleados activos con datos
 --            personales, laborales, de contacto y fechas clave,
 --            incluyendo años de edad y antigüedad calculados con
 --            SEGLIB.SG_TIEMPO_ANOS.
--- Versión  : 2.0
--- Correcciones v1 → v2:
+-- Correcciones v1  v2:
 --   1. Anos_de_Edad y Anos_En_la_Empresa corregidos: se usa
 --      SEGLIB.SG_TIEMPO_ANOS vía CROSS JOIN LATERAL en lugar de
 --      YEAR(Current Date - Date(...)), que producía resultados
@@ -15,12 +21,19 @@
 --      Vacaciones protegidas con CASE de validación de campos
 --      (NULL/0/rango) para evitar error al construir la DATE.
 --   3. Cedula_Empleado centralizada en LATERAL CE con
---      LATERAL(VALUES(...)) — elimina el CASE repetido 3 veces.
+--      LATERAL(VALUES(...))  elimina el CASE repetido 3 veces.
 --   4. Fecha_Nacimiento centralizada en LATERAL FN (1 cálculo).
 --   5. Fecha_Ingreso centralizada en LATERAL FI (1 cálculo).
 --   6. T1.EmpCed calificado con alias de tabla en todos los usos.
 --   7. Capitalización SQL normalizada a mayúsculas.
 --   8. Cabecera de documentación añadida.
+-- Correcciones v2  v3:
+--   9. LATERAL FN (nacimiento) y FI (ingreso) protegidos con
+--      validación completa NULL/0/rango mes-dia, igual que las
+--      fechas opcionales. Centinela DATE('1900-01-01').
+--  10. Relleno de ceros estandarizado a RIGHT('00'||TRIM(CHAR()),2)
+--      en todos los LATERAL (FN, FI)  consistencia con fechas
+--      opcionales.
 -- Tablas base:
 --   NomEmp (T1)  Maestro de empleados
 --   NomDep (T2)  Departamentos
@@ -166,16 +179,21 @@ CROSS JOIN LATERAL (
          )) AS V(CED_VAL)
 ) AS CE
 
--- LATERAL FN: fecha de nacimiento construida una sola vez
+-- LATERAL FN: fecha de nacimiento  validacion completa NULL/0/rango
 CROSS JOIN LATERAL (
-    SELECT DATE(
-        CONCAT(SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.EmpAna))),
-               TRIM(T1.EmpAna)) || '-' ||
-        CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.EmpMna))),
-               TRIM(T1.EmpMna)) || '-' ||
-        CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.EmpDna))),
-               TRIM(T1.EmpDna))
-    ) AS Fecha_Nacimiento
+    SELECT CASE
+        WHEN T1.EmpAna IS NULL OR T1.EmpAna = 0
+          OR T1.EmpMna IS NULL OR T1.EmpMna = 0
+          OR T1.EmpDna IS NULL OR T1.EmpDna = 0
+          OR T1.EmpAna < 1900  OR T1.EmpAna > 9999
+          OR T1.EmpMna < 1     OR T1.EmpMna > 12
+          OR T1.EmpDna < 1     OR T1.EmpDna > 31
+              THEN DATE('1900-01-01')
+        ELSE DATE(
+            TRIM(CHAR(T1.EmpAna)) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpMna)), 2) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpDna)), 2))
+    END AS Fecha_Nacimiento
     FROM SYSIBM.SYSDUMMY1
 ) AS FN
 
@@ -185,16 +203,21 @@ CROSS JOIN LATERAL (
     FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(FN.Fecha_Nacimiento, CURRENT_DATE))
 ) AS EA
 
--- LATERAL FI: fecha de ingreso construida una sola vez
+-- LATERAL FI: fecha de ingreso  validacion completa NULL/0/rango
 CROSS JOIN LATERAL (
-    SELECT DATE(
-        CONCAT(SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.EmpAin))),
-               TRIM(T1.EmpAin)) || '-' ||
-        CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.EmpMin))),
-               TRIM(T1.EmpMin)) || '-' ||
-        CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.EmpDin))),
-               TRIM(T1.EmpDin))
-    ) AS Fecha_Ingreso
+    SELECT CASE
+        WHEN T1.EmpAin IS NULL OR T1.EmpAin = 0
+          OR T1.EmpMin IS NULL OR T1.EmpMin = 0
+          OR T1.EmpDin IS NULL OR T1.EmpDin = 0
+          OR T1.EmpAin < 1900  OR T1.EmpAin > 9999
+          OR T1.EmpMin < 1     OR T1.EmpMin > 12
+          OR T1.EmpDin < 1     OR T1.EmpDin > 31
+              THEN DATE('1900-01-01')
+        ELSE DATE(
+            TRIM(CHAR(T1.EmpAin)) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpMin)), 2) || '-' ||
+            RIGHT('00' || TRIM(CHAR(T1.EmpDin)), 2))
+    END AS Fecha_Ingreso
     FROM SYSIBM.SYSDUMMY1
 ) AS FI
 
@@ -205,3 +228,4 @@ CROSS JOIN LATERAL (
 ) AS A
 
 WHERE T1.EmpSta = 'A';
+

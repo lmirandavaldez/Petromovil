@@ -1,0 +1,16 @@
+Create Or Replace View VWCAJ_Comisiones
+As    Select SupCve,
+             VenCve,
+             Sum(IngVtr) As Monto_Ingresos,
+             Sum(TotCom) As Total_Comision,
+             Sum(TotGls) As Total_Galones
+    From CajcVenn
+     Group by SupCve, VenCve
+   Union
+      Select SupCve,
+             VenCve,
+             Sum(IngVtr) As Monto_Ingresos,
+             Sum(TotCom) As Total_Comision,
+             Sum(TotGls) As Total_Galones
+    From CajcVex
+     Group by SupCve, VenCve

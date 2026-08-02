@@ -1,0 +1,53 @@
+Create Or Replace View VWCXP_Documentos_Transacciones
+As Select T1.ProCve, T5.ProNom,
+          T3.MovSig As Tipo_Movimiento_Doc, T1.DpeDoc,
+          T10.FecIso As Fecha_Documento,
+          T11.FecIso As Fecha_Registro,
+          T2.PerAno As Ano_Registro_Documento,
+          T2.PerNum As Periodo_Registro_Documento,
+          T2.TdiCve As Tipo_Diario_Documento,
+          T2.DgeDoc As Numero_Diario_Documento,
+          T2.NcfNro, T2.DpeTas, T2.DpeVal,
+          T2.DpeBce,
+          T7.CtaCve, T8.CtaDes, T7.AuxCve, T7.CcoCve, T7.DgeOri,
+          T7.DgeVal,
+          T4.MovSig As Tipo_Movimiento_Transaccion,
+          T1.PerAno As Ano_Registro_Transaccion,
+          T1.PerNum As Periodo_Registro_Transaccion,
+          T1.DpeDor,
+          T12.FecIso As Fecha_Transaccion,
+          T1.BanCve, T6.BanNom, T1.Secttr, T1.BanNch,
+          T1.TdiCve As Tipo_Diario_Transaccion,
+          T1.DgeDoc As Numero_Diario_Transaccion,
+          T1.DpeTca, T1.DpeVlc
+  From CxpDped T1
+  Join CxpDpeh T2
+    On (T1.ProCve = T2.ProCve)
+   And (T1.MovCve = T2.MovCve)
+   And (T1.DpeDoc = T2.DpeDoc)
+  Join CxpMov T3
+    On (T1.MovCve = T3.MovCve)
+  Join CxpMov T4
+    On (T1.DpeMot = T4.MovCve)
+  Join CxpPro T5
+    On (T1.ProCve = T5.ProCve)
+  Join CogBan T6
+    On (T1.BanCve = T6.BanCve)
+  Join CogHdgd T7
+    On (T2.PerAno = T7.PerAno)
+   And (T2.PerNum = T7.PerNum)
+   And (T2.TdiCve = T7.TdiCve)
+   And (T2.DgeDoc = T7.DgeDoc)
+  Join CogCta T8
+    On (T7.CtaCve = T8.CtaCve)
+  Join SegFec T10
+    On (T2.DpeAno = T10.FecAno)
+   And (T2.DpeMes = T10.FecMes)
+   And (T2.DpeDia = T10.FecDia)
+  Join SegFec T11
+    On (T2.DpeFtr = T11.FecYmd)
+  Join SegFec T12
+    On (T1.DpeAtr = T12.FecAno)
+   And (T1.DpeMtr = T12.FecMes)
+   And (T1.DpeDtr = T12.FecDia)
+Where (T4.MovTip Between 1 And 3)

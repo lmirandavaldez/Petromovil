@@ -1,0 +1,112 @@
+-- =============================================================
+-- Modulo    : Caja
+-- Programa  : SQLCA004
+-- Objeto    : VWCAJ_Comisiones
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista consolidada de comisiones de vendedores de caja.
+--   Une mediante UNION dos fuentes de comisiones:
+--     CajcVenn : comisiones de vendedores activos (normales)
+--     CajcVex  : comisiones de vendedores externos
+--
+--   Para cada combinacion de supervisor y vendedor se agrupa
+--   y suma el monto de ingresos, el total de comision y el
+--   total de galones. El UNION (sin ALL) elimina duplicados
+--   entre ambas fuentes, aunque en la practica no deberian
+--   existir ya que provienen de tablas diferentes.
+--
+--   No contiene filtros de estado: incluye todos los registros
+--   disponibles en ambas tablas de comisiones.
+--
+--   No hay campos de fecha en esta vista; no aplica logica
+--   de resolucion de fechas via SegFec.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   SupCve         Clave del supervisor           (CajcVenn/
+--                                                  CajcVex)
+--   VenCve         Clave del vendedor             (CajcVenn/
+--                                                  CajcVex)
+--   Monto_Ingresos Suma del valor de ingresos     (calc.)
+--   Total_Comision Suma del total de comision     (calc.)
+--   Total_Galones  Suma del total de galones      (calc.)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CajcVenn   Comisiones de vendedores normales  (rama 1)
+--   CajcVex    Comisiones de vendedores externos  (rama 2)
+-- -------------------------------------------------------------
+-- Logica de union:
+--   UNION (sin ALL): agrupa y suma por (SupCve, VenCve) en
+--   cada rama por separado, luego elimina filas duplicadas
+--   entre las dos ramas. Si se requiere sumar los totales
+--   de ambas fuentes para el mismo vendedor, se debe usar
+--   UNION ALL envuelto en una consulta exterior con GROUP BY,
+--   o cambiar la logica segun el requerimiento (ver sugerencia
+--   1 abajo).
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. UNION vs UNION ALL: el UNION actual elimina duplicados
+--      entre ramas pero NO suma los valores de un mismo
+--      vendedor que aparezca en ambas tablas; cada rama
+--      aporta su propio total. Si se necesita el gran total
+--      consolidado por vendedor entre ambas fuentes, usar:
+--
+--        SELECT SupCve, VenCve,
+--               SUM(Monto_Ingresos) AS Monto_Ingresos,
+--               SUM(Total_Comision) AS Total_Comision,
+--               SUM(Total_Galones)  AS Total_Galones
+--        FROM (
+--            SELECT SupCve, VenCve,
+--                   SUM(IngVtr) AS Monto_Ingresos,
+--                   SUM(TotCom) AS Total_Comision,
+--                   SUM(TotGls) AS Total_Galones
+--            FROM CajcVenn GROUP BY SupCve, VenCve
+--            UNION ALL
+--            SELECT SupCve, VenCve,
+--                   SUM(IngVtr) AS Monto_Ingresos,
+--                   SUM(TotCom) AS Total_Comision,
+--                   SUM(TotGls) AS Total_Galones
+--            FROM CajcVex  GROUP BY SupCve, VenCve
+--        ) AS Base
+--        GROUP BY SupCve, VenCve
+--
+--   2. Confirmar que CajcVenn y CajcVex tienen los mismos
+--      tipos de datos en (SupCve, VenCve, IngVtr, TotCom,
+--      TotGls) para que el UNION sea valido sin conversion
+--      implicita.
+--   3. Considerar agregar filtro de periodo o estado si la
+--      vista se usa en reportes de cierre, para evitar
+--      incluir comisiones de periodos anteriores no cerrados.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWCAJ_Comisiones AS
+
+-- Rama 1: comisiones de vendedores normales
+SELECT
+    SupCve,
+    VenCve,
+    SUM(IngVtr) AS Monto_Ingresos,
+    SUM(TotCom) AS Total_Comision,
+    SUM(TotGls) AS Total_Galones
+FROM CajcVenn
+GROUP BY SupCve, VenCve
+
+UNION
+
+-- Rama 2: comisiones de vendedores externos
+SELECT
+    SupCve,
+    VenCve,
+    SUM(IngVtr) AS Monto_Ingresos,
+    SUM(TotCom) AS Total_Comision,
+    SUM(TotGls) AS Total_Galones
+FROM CajcVex
+GROUP BY SupCve, VenCve;

@@ -1,0 +1,35 @@
+Create Or Replace View VWCXP_Maestro_Proveedores
+As Select T1.ProCve, T1.ProNom, T1.ProTip,
+(Case When T1.ProTip = 1 Then 'Local'
+      When T1.ProTip = 2 Then 'Exterior'
+      When T1.ProTip = 3 Then 'Local Moneda Extranjera'
+Else ' ' End) Descripcion_Tipo_Proveedor, T1.ProCla, T6.ClaDes,
+T1.ProDir, T1.ProLoc, T1.ProEdo,
+T1.ProPob, T1.ProCaa, T1.ProTe1, T1.ProTe2, T1.ProFax, T1.ProIde,
+(Case When T1.ProIde = 'C' Then 'Cedula'
+      When T1.ProIde = 'P' Then 'Pasaporte'
+      When T1.ProIde = 'R' Then 'RNC'
+Else ' ' End) Descripcion_Tipo_Identificacion, T1.ProNid,
+T1.ProFea, T1.ProInt, T1.CpaCve, T2.CpaDes, T1.MonCve, T3.MonSim,
+T1.ProCls,
+(Case When T1.ProCls = 'P' Then 'Personal'
+      When T1.ProCls = 'E' Then 'Empresarial'
+Else ' ' End) Descripcion_Clasificacion,
+T1.ProSrp, T1.CriCve, T4.CriDes As Descripcion_Primera_Retencion,
+T1.CriCv2, T5.CriDes As Descripcion_Segunda_Retencion, T1.ProUni,
+T1.ProSta,
+(Case When T1.ProSta = ' ' Then 'Activo'
+      When T1.ProSta = 'S' Then 'Suspendido'
+      When T1.ProSta = 'D' Then 'No permitir Pagos'
+Else ' ' End) Descripcion_Status
+  From CxpPro T1
+Left Outer Join CxpCpa T2
+  On (T1.CpaCve = T2.CpaCve)
+Left Outer Join SegMon T3
+  On (T1.MonCve = T3.MonCve)
+Left Outer Join CxpCri T4
+  On (T1.CriCve = T4.CriCve)
+Left Outer Join CxpCri T5
+  On (T1.CriCv2 = T5.CriCve)
+Left Outer Join CxpCla T6
+  On (T1.ProCla = T6.ProCla)

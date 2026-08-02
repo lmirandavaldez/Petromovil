@@ -1,0 +1,28 @@
+Create Or Replace View VWIME_Datos_Cabecera_Detalle
+As Select T1.DisCve As CODIGO_DE_DISTRITO,
+          T1.DtoTip As TIPO_DE_DOCUMENTO,
+          T1.VehFic As FICHA_DEL_VEHICULO,
+          T1.DtoNfe As NUMERO_FACTURA_MODULO_EXTERNO,
+          T1.RowGui As CODIGO_IDENT_REGISTRO_DED,
+          T2.DtoFec As FECHA_FACTURA_MODULO_EXTERNO,
+          T2.DtoHms As HORA_FACTURA_MODULO_EXTERNO,
+          T2.ImeNce As NRO_CUADRE_MODULO_EXTERNO,
+          T2.CliCve As CODIGO_DEL_CLIENTE,
+          T2.OrdNro As NUMERO_ORDEN_PEDIDO,
+          T2.OrdFec As FECHA_ORDEN_PEDIDO_AMD,
+          T2.PlaDis As CODIGO_DISTRITO_PLANILLA,
+          T2.PlaNro As NUMERO_DEFINITIVO_PLANILLA,
+          T2.PlaFpl As FECHA_DE_LA_PLANILLA,
+          T2.RowGui As CODIGO_IDENT_REGISTRO_FACH,
+          T3.RowGui As CODIGO_IDENT_REGISTRO_FACD
+           From ImeDed  T1
+Left Outer Join ImeFach T2
+             On (T1.DisCve = T2.DisCve)
+            And (T1.DtoTip = T2.DtoTip)
+            And (T1.VehFic = T2.VehFic)
+            And (T1.DtoNfe = T2.DtoNfe)
+Left Outer Join ImeFacd T3
+             On (T1.DisCve = T3.DisCve)
+            And (T1.DtoTip = T3.DtoTip)
+            And (T1.VehFic = T3.VehFic)
+            And (T1.DtoNfe = T3.DtoNfe)

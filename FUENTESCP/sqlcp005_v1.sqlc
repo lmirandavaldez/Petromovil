@@ -1,0 +1,50 @@
+Create Or Replace View VWCXP_Pagos_realizado_Documentos
+As Select
+T1.BanCve As Codigo_del_Banco,
+T4.BanNom As Nombre_del_Banco,
+(Case When T1.SecTtr = 1 Then 'Cheque'
+      When T1.SecTtr = 2 Then 'Transferencia'
+Else ' ' End) As Tipo_Transaccion,
+T1.BanNch As Numero_del_Cheque,
+T20.FecIso As Fecha_del_Cheque,
+T1.ProCve As Codigo_Del_Proveedor,
+T5.ProNom As Nombre_del_Proveedor,
+T6.MonSim As Simbolo_De_La_Moneda,
+T1.FseTas As Tasa_De_La_Transaccion,
+T1.FseVal As Monto_Del_Cheque,
+(T7.MovSig||'-'||T3.DpeDoc) As Documento,
+T21.FecIso As Fecha_De_La_Factura,
+T8.NcfNro As Numero_Del_Comprobantes_Fiscal,
+T3.DpeVtr As Monto_de_la_Transaccion
+  From CxpTrah T1
+  Join CxpMov T2
+    On (T1.DpeMot = T2.MovCve)
+  Join CxpDped T3
+    On (T1.ProCve = T3.ProCve)
+   And (T1.BanCve = T3.BanCve)
+   And (T1.SecTtr = T3.SecTtr)
+   And (T1.BanNch = T3.BanNch)
+   And (T1.FseAno = T3.DpeAtr)
+   And (T1.FseMes = T3.DpeMtr)
+   And (T1.FseDia = T3.DpeDtr)
+  Join CogBan T4
+    On (T1.BanCve = T4.BanCve)
+  Join CxpPro T5
+    On (T1.ProCve = T5.ProCve)
+  Join SegMon T6
+    On (T1.MonCve = T6.MonCve)
+  Join CxpMov T7
+    On (T3.MovCve = T7.MovCve)
+  Join CxpDpeh T8
+    On (T3.ProCve = T8.ProCve)
+   And (T3.MovCve = T8.MovCve)
+   And (T3.DpeDoc = T8.DpeDoc)
+  Join SegFec T20
+    On (T1.FseAno = T20.FecAno)
+   And (T1.FseMes = T20.FecMes)
+   And (T1.FseDia = T20.FecDia)
+  Join SegFec T21
+    On (T8.DpeAno = T21.FecAno)
+   And (T8.DpeMes = T21.FecMes)
+   And (T8.DpeDia = T21.FecDia)
+ Where (T2.MovTip In(1,2,3))

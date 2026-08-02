@@ -1,0 +1,145 @@
+-- =============================================================
+-- Modulo    : Interface Modulos Externos
+-- Programa  : SQLIM003
+-- Objeto    : VWIME_Detalle_Cabecera_Datos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de detalle de facturas de importacion con datos de
+--   cabecera y deducciones asociadas. Es la vista inversa de
+--   SQLIM002 (VWIME_Cabecera_Detalle_Datos): la tabla base
+--   es ImeFacd (detalle) en lugar de ImeFach (encabezado).
+--
+--   Devuelve todos los registros de ImeFacd con los datos
+--   del encabezado correspondiente (ImeFach T2, opcional)
+--   y el identificador de fila de deducciones (ImeDed T3,
+--   opcional).
+--
+--   Los LEFT OUTER JOINs permiten devolver lineas de detalle
+--   aun si no tienen encabezado o deduccion registrada,
+--   lo que puede indicar registros huerfanos en ImeFacd.
+--
+--   No hay filtros WHERE; devuelve todos los detalles.
+--   No hay campos de fecha por concatenar. DtoFec, OrdFec
+--   y PlaFpl provienen de ImeFach T2 en tipo original.
+--   No aplica logica de resolucion via SegFec.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   CODIGO_DE_DISTRITO           Clave del distrito  (ImeFacd/T1)
+--   TIPO_DE_DOCUMENTO            Tipo de documento   (ImeFacd/T1)
+--   FICHA_DEL_VEHICULO           Ficha del vehiculo  (ImeFacd/T1)
+--   NUMERO_FACTURA_MODULO_EXTERN Nro. factura ext.   (ImeFacd/T1)
+--   CODIGO_IDENT_REGISTRO_FACD   RowGui detalle      (ImeFacd/T1)
+--   FECHA_FACTURA_MODULO_EXTERN  Fecha factura ext.  (ImeFach/T2)
+--                                NULL si sin cabecera
+--   HORA_FACTURA_MODULO_EXTERNO  Hora factura ext.   (ImeFach/T2)
+--                                NULL si sin cabecera
+--   NRO_CUADRE_MODULO_EXTERNO    Nro. conocimiento   (ImeFach/T2)
+--                                NULL si sin cabecera
+--   CODIGO_DEL_CLIENTE           Clave del cliente   (ImeFach/T2)
+--                                NULL si sin cabecera
+--   NUMERO_ORDEN_PEDIDO          Nro. orden pedido   (ImeFach/T2)
+--                                NULL si sin cabecera
+--   FECHA_ORDEN_PEDIDO_AMD       Fecha orden (AMD)   (ImeFach/T2)
+--                                NULL si sin cabecera
+--   CODIGO_DISTRITO_PLANILLA     Distrito planilla   (ImeFach/T2)
+--                                NULL si sin cabecera
+--   NUMERO_DEFINITIVO_PLANILLA   Nro. definitivo     (ImeFach/T2)
+--                                NULL si sin cabecera
+--   FECHA_DE_LA_PLANILLA         Fecha de planilla   (ImeFach/T2)
+--                                NULL si sin cabecera
+--   CODIGO_IDENT_REGISTRO_FACH   RowGui encabezado   (ImeFach/T2)
+--                                NULL si sin cabecera
+--   CODIGO_IDENT_REGISTRO_DED    RowGui deduccion    (ImeDed/T3)
+--                                NULL si sin deduccion
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   ImeFacd  T1   Detalle de facturas de importacion (base)
+--   ImeFach  T2   Encabezado de facturas (opcional)
+--   ImeDed   T3   Deducciones del documento (opcional)
+-- -------------------------------------------------------------
+-- Diferencia clave con SQLIM002:
+--   SQLIM002 (base ImeFach): devuelve encabezados con
+--     indicadores de si tienen detalle y deduccion.
+--     Util para detectar encabezados sin detalle.
+--   SQLIM003 (base ImeFacd): devuelve detalles con datos
+--     del encabezado y deduccion.
+--     Util para detectar detalles sin encabezado (huerfanos).
+-- -------------------------------------------------------------
+-- Logica de JOIN:
+--   Ambos LEFT OUTER JOINs usan la clave compuesta de
+--   cuatro campos: DisCve, DtoTip, VehFic, DtoNfe.
+--   ImeFach T2: aporta datos de cabecera y su RowGui.
+--   ImeDed  T3: aporta solo RowGui como indicador.
+-- -------------------------------------------------------------
+-- Uso tipico de RowGui:
+--   CODIGO_IDENT_REGISTRO_FACH IS NULL -> detalle sin cabecera
+--   CODIGO_IDENT_REGISTRO_DED IS NOT NULL -> tiene deduccion
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. El LEFT OUTER JOIN a ImeFach T2 es inusual: en un
+--      esquema normalizado el detalle siempre debe tener
+--      cabecera. Un INNER JOIN seria mas correcto y garantiza
+--      integridad. El LEFT OUTER JOIN solo es util para
+--      detectar registros huerfanos en ImeFacd. Si ese es
+--      el objetivo, documentarlo explicitamente o agregar
+--      un filtro WHERE T2.RowGui IS NULL para la deteccion.
+--   2. Si ImeDed puede tener multiples filas por documento,
+--      el LEFT OUTER JOIN multiplicara filas de ImeFacd.
+--      Confirmar unicidad de clave en ImeDed o reemplazar
+--      por subconsulta escalar para solo obtener RowGui.
+--   3. DtoFec, OrdFec y PlaFpl de ImeFach T2 seran NULL
+--      para detalles sin cabecera. Los reportes consumidores
+--      deben manejar estos NULLs con COALESCE si es necesario.
+--   4. Considerar si esta vista y SQLIM002 podrian unificarse
+--      en una sola con parametro de tabla base, o si la
+--      separacion responde a un patron de uso especifico.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWIME_Detalle_Cabecera_Datos AS
+SELECT
+    -- Identificacion del detalle (tabla base ImeFacd)
+    T1.DisCve                       AS CODIGO_DE_DISTRITO,
+    T1.DtoTip                       AS TIPO_DE_DOCUMENTO,
+    T1.VehFic                       AS FICHA_DEL_VEHICULO,
+    T1.DtoNfe                       AS NUMERO_FACTURA_MODULO_EXTERNO,
+    T1.RowGui                       AS CODIGO_IDENT_REGISTRO_FACD,
+
+    -- Datos del encabezado (ImeFach T2, NULL si sin cabecera)
+    T2.DtoFec                       AS FECHA_FACTURA_MODULO_EXTERNO,
+    T2.DtoHms                       AS HORA_FACTURA_MODULO_EXTERNO,
+    T2.ImeNce                       AS NRO_CUADRE_MODULO_EXTERNO,
+    T2.CliCve                       AS CODIGO_DEL_CLIENTE,
+    T2.OrdNro                       AS NUMERO_ORDEN_PEDIDO,
+    T2.OrdFec                       AS FECHA_ORDEN_PEDIDO_AMD,
+    T2.PlaDis                       AS CODIGO_DISTRITO_PLANILLA,
+    T2.PlaNro                       AS NUMERO_DEFINITIVO_PLANILLA,
+    T2.PlaFpl                       AS FECHA_DE_LA_PLANILLA,
+    T2.RowGui                       AS CODIGO_IDENT_REGISTRO_FACH,
+
+    -- Indicador de deduccion (ImeDed T3, NULL si sin deduccion)
+    T3.RowGui                       AS CODIGO_IDENT_REGISTRO_DED
+
+FROM ImeFacd T1
+
+-- Encabezado de la factura (opcional: NULL si no existe)
+LEFT OUTER JOIN ImeFach T2
+    ON  T1.DisCve = T2.DisCve
+    AND T1.DtoTip = T2.DtoTip
+    AND T1.VehFic = T2.VehFic
+    AND T1.DtoNfe = T2.DtoNfe
+
+-- Deducciones del documento (opcional: NULL si no existe)
+LEFT OUTER JOIN ImeDed T3
+    ON  T1.DisCve = T3.DisCve
+    AND T1.DtoTip = T3.DtoTip
+    AND T1.VehFic = T3.VehFic
+    AND T1.DtoNfe = T3.DtoNfe;

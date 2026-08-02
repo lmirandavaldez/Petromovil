@@ -1,0 +1,215 @@
+-- =============================================================
+-- Modulo    : Cuentas por Pagar
+-- Programa  : SQLCP005
+-- Objeto    : VWCXP_Pagos_Realizado_Documentos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de pagos realizados a proveedores con el detalle de
+--   los documentos aplicados en cada transaccion. Consolida
+--   el encabezado de la transaccion de pago (CxpTrah) con el
+--   detalle de aplicacion (CxpDped), el encabezado del
+--   documento CxP (CxpDpeh), el banco (CogBan), el proveedor
+--   (CxpPro), la moneda (SegMon) y los tipos de movimiento
+--   (CxpMov T2 para filtro, CxpMov T7 para signo del doc.).
+--
+--   Se decodifica el tipo de transaccion (SecTtr) mediante
+--   CASE: 1=Cheque, 2=Transferencia.
+--
+--   El campo Documento se construye concatenando el signo
+--   del movimiento del documento con su numero:
+--     Documento = T7.MovSig || '-' || T3.DpeDoc
+--
+--   Se exponen dos fechas resueltas via LEFT OUTER JOIN a
+--   SegFec, ambas por tres campos separados:
+--     Fecha_del_Cheque   : fecha de la transaccion de pago
+--                          (FseAno/FseMes/FseDia de CxpTrah T1)
+--     Fecha_De_La_Factura: fecha del documento CxP
+--                          (DpeAno/DpeMes/DpeDia de CxpDpeh T8)
+--
+--   Si alguna fecha no existe en SegFec, COALESCE devuelve
+--   el tope del sistema: DATE('2039-12-31').
+--
+--   Filtro: solo pagos cuyo tipo de movimiento (T2.MovTip)
+--   este en (1, 2, 3).
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Codigo_del_Banco              Clave del banco     (CxpTrah/T1)
+--   Nombre_del_Banco              Nombre del banco    (CogBan/T4)
+--   Tipo_Transaccion              Tipo (descripcion)  (calc.)
+--   Numero_del_Cheque             Num. cheque/transf. (CxpTrah/T1)
+--   Fecha_del_Cheque              Fecha ISO del pago  (SegFec/T20)
+--   Codigo_Del_Proveedor          Clave del proveedor (CxpTrah/T1)
+--   Nombre_del_Proveedor          Nombre proveedor    (CxpPro/T5)
+--   Simbolo_De_La_Moneda          Simbolo de moneda   (SegMon/T6)
+--   Tasa_De_La_Transaccion        Tasa de cambio      (CxpTrah/T1)
+--   Monto_Del_Cheque              Valor del pago      (CxpTrah/T1)
+--   Documento                     MovSig-DpeDoc       (calc.)
+--   Fecha_De_La_Factura           Fecha ISO del doc.  (SegFec/T21)
+--   Numero_Del_Comprobantes_Fisca Num. NCF            (CxpDpeh/T8)
+--   Monto_de_la_Transaccion       Valor aplicado      (CxpDped/T3)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxpTrah  T1   Encabezado transacciones de pago CxP (base)
+--   CxpMov   T2   Tipos de movimiento (filtro MovTip)
+--   CxpDped  T3   Detalle transacciones de pago CxP
+--   CogBan   T4   Bancos
+--   CxpPro   T5   Proveedores
+--   SegMon   T6   Monedas
+--   CxpMov   T7   Tipos de movimiento (signo del documento)
+--   CxpDpeh  T8   Encabezado de documentos CxP
+--   SegFec   T20  Tabla de fechas (Fecha_del_Cheque)
+--   SegFec   T21  Tabla de fechas (Fecha_De_La_Factura)
+-- -------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   T20 : LEFT OUTER JOIN a SegFec por tres campos separados
+--         (FseAno, FseMes, FseDia de CxpTrah T1) -> FecIso.
+--   T21 : LEFT OUTER JOIN a SegFec por tres campos separados
+--         (DpeAno, DpeMes, DpeDia de CxpDpeh T8) -> FecIso.
+--   COALESCE devuelve DATE('2039-12-31') si el JOIN es NULL.
+--   SegFec cubre el rango 1940-01-01 a 2039-12-31.
+-- -------------------------------------------------------------
+-- Logica de JOIN CxpDped T3:
+--   El detalle de pago se relaciona con el encabezado de la
+--   transaccion por seis campos:
+--     ProCve, BanCve, SecTtr, BanNch,
+--     FseAno=DpeAtr, FseMes=DpeMtr, FseDia=DpeDtr
+--   Esto garantiza que solo se incluyen los documentos
+--   aplicados en esa transaccion especifica de pago.
+-- -------------------------------------------------------------
+-- Logica de decodificacion:
+--   SecTtr  1 = Cheque
+--           2 = Transferencia
+--           otro = espacio en blanco
+-- -------------------------------------------------------------
+-- Filtros aplicados:
+--   T2.MovTip IN (1, 2, 3)
+--             Solo pagos de tipos de movimiento 1, 2 y 3.
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. CxpMov se une dos veces (T2 y T7): T2 filtra por
+--      MovTip usando T1.DpeMot; T7 aporta MovSig usando
+--      T3.MovCve. Si T1.DpeMot = T3.MovCve siempre, T2 y T7
+--      podrian unificarse en un solo alias. Confirmar si los
+--      movimientos de encabezado y detalle son siempre iguales.
+--   2. El CASE de SecTtr devuelve ' ' para valores distintos
+--      de 1 y 2. Considerar NULL o 'Desconocido' para
+--      facilitar filtros en reportes.
+--   3. El campo Documento concatena MovSig (texto) con DpeDoc
+--      (probablemente numerico). Verificar que la conversion
+--      implicita no genere espacios; usar TRIM(CHAR(T3.DpeDoc))
+--      si DpeDoc es numerico: T7.MovSig||'-'||
+--      TRIM(CHAR(T3.DpeDoc)).
+--   4. El JOIN a CxpDpeh T8 no incluye DpeRef como criterio
+--      (igual que sqlcp004). Confirmar que ProCve + MovCve +
+--      DpeDoc identifica unicamente el encabezado del doc.
+--   5. El nombre del objeto tiene 'realizado' en minuscula;
+--      normalizar a VWCXP_Pagos_Realizados_Documentos (plural
+--      y mayuscula inicial) para consistencia con otras vistas.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion, formato 80 cols.
+--                           JOINs a SegFec (T20, T21)
+--                           convertidos a LEFT OUTER JOIN
+--                           con COALESCE DATE('2039-12-31').
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWCXP_Pagos_Realizado_Documentos AS
+SELECT
+    -- Banco de la transaccion
+    T1.BanCve                               AS Codigo_del_Banco,
+    T4.BanNom                               AS Nombre_del_Banco,
+
+    -- Tipo de transaccion (codigo decodificado)
+    CASE
+        WHEN T1.SecTtr = 1 THEN 'Cheque'
+        WHEN T1.SecTtr = 2 THEN 'Transferencia'
+        ELSE ' '
+    END                                     AS Tipo_Transaccion,
+
+    -- Identificacion del pago
+    T1.BanNch                               AS Numero_del_Cheque,
+
+    -- Fecha del cheque/transferencia (FseAno/FseMes/FseDia):
+    --   1. SegFec T20 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T20.FecIso, DATE('2039-12-31')) AS Fecha_del_Cheque,
+
+    -- Proveedor
+    T1.ProCve                               AS Codigo_Del_Proveedor,
+    T5.ProNom                               AS Nombre_del_Proveedor,
+
+    -- Moneda y valores del pago
+    T6.MonSim                               AS Simbolo_De_La_Moneda,
+    T1.FseTas                               AS Tasa_De_La_Transaccion,
+    T1.FseVal                               AS Monto_Del_Cheque,
+
+    -- Documento aplicado: signo del movimiento + numero doc.
+    (T7.MovSig || '-' || T3.DpeDoc)         AS Documento,
+
+    -- Fecha de la factura (DpeAno/DpeMes/DpeDia de T8):
+    --   1. SegFec T21 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T21.FecIso, DATE('2039-12-31')) AS Fecha_De_La_Factura,
+
+    -- Comprobante fiscal y monto aplicado
+    T8.NcfNro                               AS Numero_Del_Comprobantes_Fiscal,
+    T3.DpeVtr                               AS Monto_de_la_Transaccion
+
+FROM CxpTrah T1
+
+-- Tipo de movimiento del pago (filtro MovTip)
+JOIN CxpMov T2
+    ON  T1.DpeMot = T2.MovCve
+
+-- Detalle de documentos aplicados en la transaccion
+JOIN CxpDped T3
+    ON  T1.ProCve = T3.ProCve
+    AND T1.BanCve = T3.BanCve
+    AND T1.SecTtr = T3.SecTtr
+    AND T1.BanNch = T3.BanNch
+    AND T1.FseAno = T3.DpeAtr
+    AND T1.FseMes = T3.DpeMtr
+    AND T1.FseDia = T3.DpeDtr
+
+-- Banco
+JOIN CogBan T4
+    ON  T1.BanCve = T4.BanCve
+
+-- Proveedor
+JOIN CxpPro T5
+    ON  T1.ProCve = T5.ProCve
+
+-- Moneda
+JOIN SegMon T6
+    ON  T1.MonCve = T6.MonCve
+
+-- Tipo de movimiento del documento (signo para Documento)
+JOIN CxpMov T7
+    ON  T3.MovCve = T7.MovCve
+
+-- Encabezado del documento CxP (NCF y fecha de factura)
+JOIN CxpDpeh T8
+    ON  T3.ProCve = T8.ProCve
+    AND T3.MovCve = T8.MovCve
+    AND T3.DpeDoc = T8.DpeDoc
+
+-- Fecha del cheque/transferencia (FseAno / FseMes / FseDia)
+LEFT OUTER JOIN SegFec T20
+    ON  T1.FseAno = T20.FecAno
+    AND T1.FseMes = T20.FecMes
+    AND T1.FseDia = T20.FecDia
+
+-- Fecha de la factura (DpeAno / DpeMes / DpeDia de T8)
+LEFT OUTER JOIN SegFec T21
+    ON  T8.DpeAno = T21.FecAno
+    AND T8.DpeMes = T21.FecMes
+    AND T8.DpeDia = T21.FecDia
+
+-- Solo pagos de tipos de movimiento 1, 2 y 3
+WHERE T2.MovTip IN (1, 2, 3);

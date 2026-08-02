@@ -1,0 +1,24 @@
+Create Or Replace View VWCAJ_Recibos_Detalle_Ctas
+As Select T1.McaCve, T3.McaDes, T2.RecNum, T2.PerAno, T2.PerNum,
+       T9.FecIso, T2.MovCve,
+       T4.MovDes, T2.IngVal, T1.MovSec, T1.CtaCve, T1.AuxCve,
+(Case When T1.AuxCve = 0 Then T5.CtaDes Else T6.AuxNom End)
+Descripcion, T1.IngVtr, T1.DcaOri
+   From CajRecd T1
+   Join CajRech T2
+     On (T1.McaCve = T2.McaCve)
+    And (T1.RecNum = T2.RecNum)
+   Join CajMca T3
+     On (T1.McaCve = T3.McaCve)
+   Join CajMovh T4
+     On (T2.MovCve = T4.MovCve)
+   Join CogCta T5
+     On (T1.CtaCve = T5.CtaCve)
+Left Outer Join CogAuxd T6
+     On (T5.AuxLis = T6.AuxLis)
+    And (T1.AuxCve = T6.AuxCve)
+   Join SegFec T9
+     On (T2.IngAno = T9.FecAno)
+    And (T2.IngMes = T9.FecMes)
+    And (T2.IngDia = T9.FecDia)
+  Where (T2.SitCve = 'P')

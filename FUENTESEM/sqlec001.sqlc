@@ -1,0 +1,171 @@
+-- =============================================================
+-- Modulo    : Egresos
+-- Programa  : SQLEC001
+-- Objeto    : VWEMC_Cronologico_Cheques
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista cronologica de cheques y transferencias emitidos.
+--   Consolida el encabezado del cheque (CogCheh) con el banco
+--   emisor (CogBan), la moneda (SegMon), la cuenta contable
+--   del banco (CogCta) y opcionalmente su auxiliar (CogAuxd).
+--
+--   Se decodifican tres campos mediante CASE:
+--     SecTtr : tipo de documento (1=Cheque, otro=Transf.)
+--     AuxCve : descripcion de cuenta o auxiliar segun valor
+--     SitCve : monto y estado del documento (2=Vigente,
+--              otro=Cancelado; monto = 0 si cancelado)
+--
+--   La fecha del cheque (CheAno/CheMes/CheDia de CogCheh T1)
+--   se resuelve via LEFT OUTER JOIN a SegFec T9. Si la fecha
+--   no existe en el calendario, COALESCE devuelve el tope
+--   del sistema: DATE('2039-12-31').
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   BanCve           Clave del banco              (CogCheh/T1)
+--   BanNom           Nombre del banco             (CogBan/T2)
+--   Tipo_Documento   Tipo cheque/transf. (calc.)  (CogCheh/T1)
+--   BanNch           Numero de cheque             (CogCheh/T1)
+--   PerAno           Ano del periodo              (CogCheh/T1)
+--   PerNum           Numero del periodo           (CogCheh/T1)
+--   Fecha_Del_Cheque Fecha ISO del cheque         (SegFec/T9)
+--   SecBe1           Beneficiario del cheque      (CogCheh/T1)
+--   CtaCve           Clave cuenta contable banco  (CogBan/T2)
+--   AuxCve           Clave auxiliar contable      (CogBan/T2)
+--   Descripcion      Desc. cuenta o auxiliar      (calc.)
+--   MonSim           Simbolo de moneda            (SegMon/T3)
+--   SecTas           Tasa de cambio               (CogCheh/T1)
+--   Monto_Documento  Monto si vigente, 0 si canc. (calc.)
+--   Status_Documento Estado vigente/cancelado     (calc.)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CogCheh  T1   Encabezado de cheques (tabla base)
+--   CogBan   T2   Bancos (aporta cuenta y auxiliar contable)
+--   SegMon   T3   Monedas
+--   CogCta   T4   Plan de cuentas contables
+--   CogAuxd  T5   Detalle de auxiliares contables (opcional)
+--   SegFec   T9   Tabla de fechas (Fecha_Del_Cheque)
+-- -------------------------------------------------------------
+-- Logica de resolucion de fecha:
+--   La fecha del cheque se resuelve en dos pasos:
+--     1. LEFT OUTER JOIN a SegFec T9 por (CheAno, CheMes,
+--        CheDia) de CogCheh T1. Devuelve FecIso si existe.
+--     2. COALESCE: si el JOIN devuelve NULL, se usa el tope
+--        DATE('2039-12-31').
+--   SegFec cubre el rango 1940-01-01 a 2039-12-31.
+-- -------------------------------------------------------------
+-- Logica de decodificacion:
+--   SecTtr  1     = Cheque
+--           otro  = Transf. (nota: 'Trasnf' en original;
+--                   ver sugerencia 1)
+--   AuxCve  = 0   -> Descripcion = CtaDes (cuenta contable)
+--           <> 0  -> Descripcion = AuxNom (auxiliar)
+--   SitCve  = 2   -> Monto_Documento = SecMch, Status = Vigente
+--           otro  -> Monto_Documento = 0,     Status = Cancelado
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. El literal 'Trasnf' en el CASE de SecTtr tiene un
+--      error de tipografia (letra 'n' y 's' invertidas).
+--      Corregir a 'Transf' o 'Transferencia' para consistencia
+--      con otras vistas del sistema (sqlcp005 usa 'Transferencia').
+--   2. CogBan T2 aporta CtaCve y AuxCve de la cuenta contable
+--      del banco. Si el banco no tiene auxiliar (AuxCve = 0),
+--      CogAuxd T5 devolvera NULL por ser LEFT OUTER JOIN; el
+--      CASE lo maneja correctamente con CtaDes.
+--   3. El CASE de Monto_Documento devuelve 0 (numerico) para
+--      cheques cancelados. Asegurarse de que el tipo de dato
+--      de SecMch y el literal 0 sean compatibles para evitar
+--      conversion implicita en DB2 for i.
+--   4. No hay filtro de estado ni periodo en la vista; incluye
+--      todos los cheques (vigentes y cancelados). Si los
+--      reportes operativos solo necesitan vigentes, agregar
+--      WHERE T1.SitCve = 2 en la consulta consumidora.
+--   5. Verificar indice en CogCheh(BanCve) y CogBan(BanCve)
+--      para optimizar el JOIN principal.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion, formato 80 cols.
+--                           Fecha_Del_Cheque migrada de
+--                           DATE(CONCAT...) a LEFT OUTER
+--                           JOIN SegFec T9 con COALESCE
+--                           DATE('2039-12-31').
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWEMC_Cronologico_Cheques AS
+SELECT
+    -- Banco emisor
+    T1.BanCve,
+    T2.BanNom,
+
+    -- Tipo de documento (codigo decodificado)
+    CASE
+        WHEN T1.SecTtr = 1 THEN 'Cheque'
+        ELSE 'Trasnf'
+    END                                     AS Tipo_Documento,
+
+    -- Identificacion del cheque y periodo
+    T1.BanNch,
+    T1.PerAno,
+    T1.PerNum,
+
+    -- Fecha del cheque (CheAno / CheMes / CheDia):
+    --   1. SegFec T9 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T9.FecIso, DATE('2039-12-31'))  AS Fecha_Del_Cheque,
+
+    -- Beneficiario y cuenta contable del banco
+    T1.SecBe1,
+    T2.CtaCve,
+    T2.AuxCve,
+
+    -- Descripcion: cuenta contable o nombre de auxiliar
+    CASE
+        WHEN T2.AuxCve = 0 THEN T4.CtaDes
+        ELSE T5.AuxNom
+    END                                     AS Descripcion,
+
+    -- Moneda y tasa
+    T3.MonSim,
+    T1.SecTas,
+
+    -- Monto: valor si vigente, 0 si cancelado
+    CASE
+        WHEN T1.SitCve = 2 THEN T1.SecMch
+        ELSE 0 
+    END                                     AS Monto_Documento,
+
+    -- Estado del documento
+    CASE
+        WHEN T1.SitCve = 2 THEN 'Vigente'
+        ELSE 'Cancelado'
+    END                                     AS Status_Documento
+
+FROM CogCheh T1
+
+-- Banco (aporta nombre, cuenta y auxiliar contable)
+JOIN CogBan T2
+    ON  T1.BanCve = T2.BanCve
+
+-- Moneda
+JOIN SegMon T3
+    ON  T1.MonCve = T3.MonCve
+
+-- Cuenta contable del banco
+JOIN CogCta T4
+    ON  T2.CtaCve = T4.CtaCve
+
+-- Auxiliar contable del banco (opcional)
+LEFT OUTER JOIN CogAuxd T5
+    ON  T4.AuxLis = T5.AuxLis
+    AND T2.AuxCve = T5.AuxCve
+
+-- Fecha del cheque (CheAno / CheMes / CheDia)
+LEFT OUTER JOIN SegFec T9
+    ON  T1.CheAno = T9.FecAno
+    AND T1.CheMes = T9.FecMes
+    AND T1.CheDia = T9.FecDia;

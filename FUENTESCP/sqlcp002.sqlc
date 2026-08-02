@@ -1,0 +1,156 @@
+-- =============================================================
+-- Modulo    : Cuentas por Pagar
+-- Programa  : SQLCP002
+-- Objeto    : VWCXP_Documentos_Registrados
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de documentos registrados en cuentas por pagar.
+--   Consolida el encabezado del documento (CxpDpeh) con el
+--   proveedor (CxpPro), el tipo de movimiento (CxpMov) y
+--   la moneda (SegMon).
+--
+--   Se exponen dos fechas resueltas via LEFT OUTER JOIN a
+--   SegFec:
+--     Fecha_Documento   : fecha del documento contable
+--                         (DpeAno/DpeMes/DpeDia de CxpDpeh)
+--                         JOIN por los tres campos separados.
+--     Fecha_Transaccion : fecha de registro de la transaccion
+--                         (DpeFtr de CxpDpeh, formato FecYMd
+--                         YYYYMMDD) JOIN por campo numerico.
+--
+--   Si alguna fecha no existe en SegFec, COALESCE devuelve
+--   el tope del sistema: DATE('2039-12-31').
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   ProCve             Clave del proveedor        (CxpDpeh/T1)
+--   ProNom             Nombre del proveedor       (CxpPro/T2)
+--   MovSig             Signo del movimiento       (CxpMov/T3)
+--   DpeDoc             Numero de documento        (CxpDpeh/T1)
+--   NcfNro             Numero de comprobante NCF  (CxpDpeh/T1)
+--   Fecha_Documento    Fecha ISO del documento    (SegFec/T9)
+--   Fecha_Transaccion  Fecha ISO de transaccion   (SegFec/T10)
+--   MonSim             Simbolo de moneda          (SegMon/T4)
+--   DpeTas             Tasa de cambio             (CxpDpeh/T1)
+--   DpeRef             Referencia del documento   (CxpDpeh/T1)
+--   DpeDr1             Descripcion linea 1        (CxpDpeh/T1)
+--   DpeDr2             Descripcion linea 2        (CxpDpeh/T1)
+--   DpeCon             Concepto del documento     (CxpDpeh/T1)
+--   DpeVal             Valor del documento        (CxpDpeh/T1)
+--   DpeBce             Balance del documento      (CxpDpeh/T1)
+--   PerAno             Ano del periodo            (CxpDpeh/T1)
+--   PerNum             Numero del periodo         (CxpDpeh/T1)
+--   DpeFtr             Fecha transacc. (FecYMd)   (CxpDpeh/T1)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxpDpeh  T1   Encabezado de documentos CxP (tabla base)
+--   CxpPro   T2   Proveedores
+--   CxpMov   T3   Tipos de movimiento CxP
+--   SegMon   T4   Monedas
+--   SegFec   T9   Tabla de fechas (Fecha_Documento)
+--   SegFec   T10  Tabla de fechas (Fecha_Transaccion)
+-- -------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   T9  : LEFT OUTER JOIN a SegFec por tres campos separados
+--         (DpeAno, DpeMes, DpeDia) -> devuelve FecIso.
+--   T10 : LEFT OUTER JOIN a SegFec por campo numerico FecYMd
+--         (DpeFtr = FecYMd) -> devuelve FecIso.
+--   COALESCE devuelve DATE('2039-12-31') si el JOIN es NULL.
+--   SegFec cubre el rango 1940-01-01 a 2039-12-31.
+--   Nota: DpeFtr se expone tambien como campo raw para
+--   preservar el valor original YYYYMMDD del registro.
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Los JOINs a CxpPro, CxpMov y SegMon son INNER JOIN;
+--      si puede existir un documento sin proveedor, movimiento
+--      o moneda registrados en sus respectivos catalogos, el
+--      documento quedara excluido de la vista. Evaluar si
+--      deben ser LEFT OUTER JOIN segun el requerimiento.
+--   2. DpeFtr se une a SegFec por FecYMd (numerico YYYYMMDD).
+--      Confirmar que DpeFtr siempre tiene formato YYYYMMDD
+--      valido; un valor 0 o incompleto no encontraria registro
+--      en SegFec y devolveria el tope DATE('2039-12-31').
+--   3. Verificar indice en CxpDpeh(ProCve, MovCve, MonCve)
+--      para optimizar los JOINs con los catalogos.
+--   4. NcfNro (comprobante fiscal NCF) se expone sin
+--      formateo; si el sistema requiere validacion de formato
+--      NCF, considerar agregar un campo calculado con el
+--      formato estandar.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion, formato 80 cols.
+--                           JOINs a SegFec (T9, T10)
+--                           convertidos a LEFT OUTER JOIN
+--                           con COALESCE DATE('2039-12-31').
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWCXP_Documentos_Registrados AS
+SELECT
+    -- Identificacion del proveedor
+    T1.ProCve,
+    T2.ProNom,
+
+    -- Tipo de movimiento
+    T3.MovSig,
+
+    -- Identificacion del documento
+    T1.DpeDoc,
+    T1.NcfNro,
+
+    -- Fecha del documento (DpeAno / DpeMes / DpeDia):
+    --   1. SegFec T9 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T9.FecIso,  DATE('2039-12-31')) AS Fecha_Documento,
+
+    -- Fecha de la transaccion (DpeFtr en formato FecYMd):
+    --   1. SegFec T10 (primaria via LEFT OUTER JOIN)
+    --   2. DATE('2039-12-31') si la fecha no esta en SegFec
+    COALESCE(T10.FecIso, DATE('2039-12-31')) AS Fecha_Transaccion,
+
+    -- Moneda
+    T4.MonSim,
+    T1.DpeTas,
+
+    -- Datos del documento
+    T1.DpeRef,
+    T1.DpeDr1,
+    T1.DpeDr2,
+    T1.DpeCon,
+    T1.DpeVal,
+    T1.DpeBce,
+
+    -- Periodo
+    T1.PerAno,
+    T1.PerNum,
+
+    -- Fecha de transaccion raw (YYYYMMDD)
+    T1.DpeFtr
+
+FROM CxpDpeh T1
+
+-- Proveedor
+JOIN CxpPro T2
+    ON  T1.ProCve = T2.ProCve
+
+-- Tipo de movimiento
+JOIN CxpMov T3
+    ON  T1.MovCve = T3.MovCve
+
+-- Moneda
+JOIN SegMon T4
+    ON  T1.MonCve = T4.MonCve
+
+-- Fecha del documento (DpeAno / DpeMes / DpeDia)
+LEFT OUTER JOIN SegFec T9
+    ON  T1.DpeAno = T9.FecAno
+    AND T1.DpeMes = T9.FecMes
+    AND T1.DpeDia = T9.FecDia
+
+-- Fecha de la transaccion (DpeFtr = FecYMd YYYYMMDD)
+LEFT OUTER JOIN SegFec T10
+    ON  T1.DpeFtr = T10.FecYMd;

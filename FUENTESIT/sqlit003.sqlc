@@ -1,0 +1,182 @@
+-- =============================================================
+-- Modulo    : Interfaces Modulos Externos
+-- Programa  : SQLIT003
+-- Objeto    : VWITE_Resumen_Corte_Diario_Caburantes
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- -------------------------------------------------------------
+-- Descripcion:
+--   Vista de resumen de corte diario de caburantes (combustibles
+--   principales) para interfaz con modulos externos. Es una
+--   variante especializada de sqlit001 que aplica dos filtros
+--   adicionales:
+--     - Solo articulos marcados como principales (ArtPpr='S')
+--     - Excluye transacciones ya procesadas al historico
+--       mediante NOT EXISTS contra IteTrahC
+--
+--   Agrupa las transacciones de interfaz (IteTra) por
+--   distrito, fecha de emision, cliente, categoria y producto,
+--   acumulando cantidad total, precio promedio e importe.
+--
+--   Calcula el campo Veces: numero de veces que el importe
+--   supera el monto minimo de transaccion (ParMti) definido
+--   en ItePar con clave '@'. Formula de techo entero:
+--     Veces = INT((Importe + ParMti - 1) / ParMti)
+--
+--   TraFem se expone en su tipo original. No hay campos de
+--   fecha por concatenar; no aplica logica de SegFec.
+-- -------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Codigo_Del_Distrito  Clave del distrito         (IteTra/T1)
+--   Fecha_Emision        Fecha de la transaccion    (IteTra/T1)
+--   Codigo_Cliente       RUI del cliente            (IteEst/T2)
+--   Categoria            Categoria del articulo     (InvArt/T3)
+--   Codigo_Del_Producto  Codigo del producto        (IteTra/T1)
+--   Total_Cantidad       Suma de TraCan del grupo   (calc.)
+--   Precio_Promedio      Promedio de TraPve         (calc.)
+--   Importe              Suma de TraImp del grupo   (calc.)
+--   Veces                Techo(Importe / ParMti)    (calc.)
+-- -------------------------------------------------------------
+-- Tablas referenciadas:
+--   IteTra   T1   Transacciones de interfaz (tabla base)
+--   IteEst   T2   Estaciones de servicio
+--   InvArt   T3   Articulos de inventario
+--   IteTrahC T4   Historico de transacciones procesadas
+--                 (usada solo en subconsulta NOT EXISTS)
+--   ItePar        Parametros de interfaz (clave '@', ParMti)
+-- -------------------------------------------------------------
+-- Logica de exclusion NOT EXISTS (IteTrahC T4):
+--   Se excluye toda transaccion de IteTra que ya tenga un
+--   registro correspondiente en el historico IteTrahC,
+--   identificado por la clave compuesta de siete campos:
+--     DisCve, Tran01, Tran02, Tran03, Tran04, TraFem, FacCar,
+--     TraCan
+--   Esto garantiza que la vista solo devuelve transacciones
+--   pendientes de procesar, no duplicando las ya enviadas.
+-- -------------------------------------------------------------
+-- Logica de calculo de Veces:
+--   ParMti se obtiene de ItePar WHERE ParCve = '@'.
+--   La subconsulta se ejecuta dos veces en la formula.
+--   Formula de techo entero:
+--     INT((SUM(TraImp) + ParMti - 1) / ParMti)
+--   Ejemplo: Importe=250, ParMti=100 -> INT(349/100) = 3
+-- -------------------------------------------------------------
+-- Filtros aplicados:
+--   T1.TraCtd = 1       Solo transacciones tipo 1 (corte)
+--   T2.CliRui <> 0      Excluye estaciones sin cliente RUI
+--   T2.EstRui = 'S'     Solo estaciones activas en RUI
+--   T3.ArtPpr = 'S'     Solo articulos principales
+--   NOT EXISTS(T4)      Excluye transac. ya en historico
+-- -------------------------------------------------------------
+-- Agrupacion:
+--   DisCve, TraFem, CliRui, CatCve, FacCar
+-- -------------------------------------------------------------
+-- Filtro de agrupacion (HAVING):
+--   SUM(TraCan) > 0     Solo grupos con cantidad positiva
+-- -------------------------------------------------------------
+-- Diferencias con sqlit001 (VWITE_Resumen_Corte_Estaciones):
+--   sqlit001 agrupa por FacFis, FacFfs, FacPam (periodo corte)
+--   sqlit003 agrupa por TraFem (fecha de emision diaria)
+--   sqlit003 agrega filtro ArtPpr = 'S' (solo principales)
+--   sqlit003 agrega NOT EXISTS contra historico IteTrahC
+-- -------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. La subconsulta (SELECT ParMti FROM ItePar WHERE
+--      ParCve='@') se ejecuta dos veces en la expresion Veces.
+--      Usar CROSS JOIN LATERAL para resolverla una sola vez:
+--
+--        CROSS JOIN LATERAL (
+--            SELECT ParMti FROM ItePar WHERE ParCve = '@'
+--        ) AS PAR
+--
+--      y en el SELECT:
+--        INT((SUM(T1.TraImp) + PAR.ParMti - 1)
+--            / PAR.ParMti) AS Veces
+--
+--   2. La clave del NOT EXISTS incluye TraCan como criterio.
+--      Si dos transacciones distintas tienen identicos los
+--      siete campos (incluyendo cantidad), la segunda quedara
+--      incorrectamente excluida. Confirmar si la clave de
+--      IteTra tiene algun campo adicional (ej. numero de
+--      secuencia) que deba incluirse en el NOT EXISTS.
+--   3. Precio_Promedio usa AVG(TraPve). Para precio ponderado
+--      usar: SUM(TraImp) / NULLIF(SUM(TraCan), 0).
+--   4. TraFem se expone en tipo raw. Si es numerico YYYYMMDD,
+--      considerar exponer FecIso via LEFT OUTER JOIN SegFec
+--      para uniformidad con otras vistas del sistema.
+--   5. El JOIN a IteEst T2 usa solo DisCve; confirmar que
+--      DisCve es clave primaria en IteEst para evitar
+--      duplicados si hay multiples registros por distrito.
+-- -------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  ---------------------------------
+--   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
+-- =============================================================
+
+CREATE OR REPLACE VIEW VWITE_Resumen_Corte_Diario_Caburantes AS
+SELECT
+    -- Identificacion del grupo
+    T1.DisCve                               AS Codigo_Del_Distrito,
+    T1.TraFem                               AS Fecha_Emision,
+
+    -- Cliente de la estacion
+    T2.CliRui                               AS Codigo_Cliente,
+
+    -- Categoria y producto
+    T3.CatCve                               AS Categoria,
+    T1.FacCar                               AS Codigo_Del_Producto,
+
+    -- Acumulados del grupo
+    SUM(T1.TraCan)                          AS Total_Cantidad,
+    AVG(T1.TraPve)                          AS Precio_Promedio,
+    SUM(T1.TraImp)                          AS Importe,
+
+    -- Numero de veces que el importe supera el minimo (ParMti)
+    -- Formula techo: INT((Importe + ParMti - 1) / ParMti)
+    INT((SUM(T1.TraImp) +
+        (SELECT ParMti FROM ItePar WHERE ParCve = '@') - 1) /
+        (SELECT ParMti FROM ItePar WHERE ParCve = '@'))
+                                            AS Veces
+
+FROM IteTra T1
+
+-- Estacion de servicio (aporta cliente RUI)
+JOIN IteEst T2
+    ON  T1.DisCve = T2.DisCve
+
+-- Articulo de inventario (aporta categoria y filtro ArtPpr)
+JOIN InvArt T3
+    ON  T1.FacCar = T3.ArtCve
+
+-- Solo transacciones tipo corte, con cliente RUI activo
+-- y articulos principales, no procesadas al historico
+WHERE T1.TraCtd = 1
+  AND T2.CliRui <> 0
+  AND T2.EstRui  = 'S'
+  AND T3.ArtPpr  = 'S'
+  AND NOT EXISTS (
+        -- Excluye transacciones ya enviadas al historico
+        SELECT 1
+          FROM IteTrahC T4
+         WHERE T1.DisCve = T4.DisCve
+           AND T1.Tran01 = T4.Tran01
+           AND T1.Tran02 = T4.Tran02
+           AND T1.Tran03 = T4.Tran03
+           AND T1.Tran04 = T4.Tran04
+           AND T1.TraFem = T4.TraFem
+           AND T1.FacCar = T4.FacCar
+           AND T1.TraCan = T4.TraCan
+  )
+
+GROUP BY
+    T1.DisCve,
+    T1.TraFem,
+    T2.CliRui,
+    T3.CatCve,
+    T1.FacCar
+
+-- Solo grupos con cantidad total positiva
+HAVING SUM(T1.TraCan) > 0;
