@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Vendedores_Comision
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC004
+-- Objeto    : VWCXC_Vendedores_Comision
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Expone la relación entre vendedores y sus rangos/parámetros de
 --            comisión por categoría de inventario. Consolida la información
 --            de las tablas CxcVen (vendedores), CxcRcv (rangos de comisión

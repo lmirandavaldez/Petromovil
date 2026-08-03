@@ -1,0 +1,72 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.FA_ULTIMO_PERIODO_CERRADO ()
+RETURNS TABLE (
+    ANO_UPC            INTEGER,
+    MES_UPC            INTEGER,
+    FECHA_INI_CERRADO  DATE,
+    FECHA_FIN_CERRADO  DATE,
+    FECHA_INI_SIG      DATE,
+    FECHA_FIN_SIG      DATE)
+LANGUAGE SQL
+BEGIN
+
+    RETURN
+        SELECT
+            AnoUpc,
+            NUMUPC,
+
+            /* Fecha inicial del periodo cerrado */
+            DATE(
+                TIMESTAMP_FORMAT(
+                    VARCHAR(AnoUpc) CONCAT '-' CONCAT
+                    VARCHAR_FORMAT(NUMUPC, '00') CONCAT '-01',
+                    'YYYY-MM-DD'
+                )
+            ) AS FechaIniCerrado,
+
+            /* Fecha final del periodo cerrado */
+            LAST_DAY(
+                DATE(
+                    TIMESTAMP_FORMAT(
+                        VARCHAR(AnoUpc) CONCAT '-' CONCAT
+                        VARCHAR_FORMAT(NUMUPC, '00') CONCAT '-01',
+                        'YYYY-MM-DD'
+                    )
+                )
+            ) AS FechaFinCerrado,
+
+            /* Fecha inicial del siguiente periodo */
+            DATE(
+                ADD_MONTHS(
+                    DATE(
+                        TIMESTAMP_FORMAT(
+                            VARCHAR(AnoUpc) CONCAT '-' CONCAT
+                            VARCHAR_FORMAT(NUMUPC, '00') CONCAT '-01',
+                            'YYYY-MM-DD'
+                        )
+                    ),
+                    1
+                )
+            ) AS FechaIniSiguiente,
+
+            /* Fecha final del siguiente periodo */
+            LAST_DAY(
+                ADD_MONTHS(
+                    DATE(
+                        TIMESTAMP_FORMAT(
+                            VARCHAR(AnoUpc) CONCAT '-' CONCAT
+                            VARCHAR_FORMAT(NUMUPC, '00') CONCAT '-01',
+                            'YYYY-MM-DD'
+                        )
+                    ),
+                    1
+                )
+            ) AS FechaFinSiguiente
+
+        FROM FacPar
+        WHERE ParCve = '@';
+
+END;
+
+    GRANT EXECUTE ON FUNCTION SEGLIB.FA_ULTIMO_PERIODO_CERRADO TO PUBLIC;

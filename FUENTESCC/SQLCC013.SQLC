@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Notas_Credito_Administrativas
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC013
+-- Objeto    : VWCXC_Notas_Credito_Administrativas
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Presenta las notas de crédito de tipo administrativo registradas
 --            en el sistema, excluyendo los tipos 3, 5 y 6 (operativos/internos).
 --            Consolida el encabezado de la nota (CxcNchh), su detalle con el

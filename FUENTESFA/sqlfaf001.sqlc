@@ -1,0 +1,122 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+-- ==============================================================
+-- Modulo    : Facturacion
+-- Programa  : sqlfaf001
+-- Objeto    : SEGLIB.FA_ULTIMO_PERIODO_CERRADO
+-- Tipo      : Funcion SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2.0
+-- Proyecto  : Facturacion / Periodos
+-- --------------------------------------------------------------
+-- Proposito:
+--   Retorna una fila con el periodo contable cerrado mas
+--   reciente (ANO_UPC / MES_UPC), junto con las fechas
+--   de inicio y fin de dicho periodo y del periodo siguiente.
+--   La fuente es FacPar filtrada por ParCve = '@'.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   ANO_UPC           INTEGER  Ano del periodo cerrado
+--   MES_UPC           INTEGER  Numero de mes del periodo cerrado
+--   FECHA_INI_CERRADO DATE     Primer dia del periodo cerrado
+--   FECHA_FIN_CERRADO DATE     Ultimo dia del periodo cerrado
+--   FECHA_INI_SIG     DATE     Primer dia del periodo siguiente
+--   FECHA_FIN_SIG     DATE     Ultimo dia del periodo siguiente
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   FacPar   -- parametros de facturacion (ParCve = '@')
+--   SegFec   -- calendario (FecAno, FecMes, FecDia, FecIso)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   El periodo base se forma con AnoUpc + NUMUPC (dia 1).
+--   Se hace LEFT JOIN a SegFec buscando el dia 1 del mes.
+--   Si esa fecha no existe en SegFec se usa DATE('2039-12-31')
+--   como valor por defecto (en lugar de abortar con error).
+--   El periodo siguiente se calcula con ADD_MONTHS( base, 1).
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Declarar la funcion como READS SQL DATA para que el
+--      optimizador elija el mejor plan de acceso.
+--   2. Agregar SPECIFIC NAME para facilitar el mantenimiento
+--      (DROP SPECIFIC FUNCTION en lugar de DROP FUNCTION).
+--   3. Considerar NOT DETERMINISTIC porque el resultado
+--      depende del estado actual de FacPar.
+--   4. Documentar en FacPar que ParCve = '@' es el registro
+--      del ultimo periodo cerrado (clave de configuracion).
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+--                           Se sustituye concatenacion de string
+--                           por LEFT JOIN a SegFec; valor por
+--                           defecto DATE('2039-12-31') cuando
+--                           la fecha no existe en calendario.
+-- ==============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.FA_ULTIMO_PERIODO_CERRADO ()
+RETURNS TABLE (
+    ANO_UPC            INTEGER,
+    MES_UPC            INTEGER,
+    FECHA_INI_CERRADO  DATE,
+    FECHA_FIN_CERRADO  DATE,
+    FECHA_INI_SIG      DATE,
+    FECHA_FIN_SIG      DATE)
+LANGUAGE SQL
+READS SQL DATA
+NOT DETERMINISTIC
+BEGIN
+
+    RETURN
+        -- FacPar: parametros de facturacion (registro del
+        --         ultimo periodo cerrado, ParCve = '@')
+        -- SegFec T9: calendario para el dia 1 del periodo
+        --            cerrado (AnoUpc, NUMUPC, dia 1)
+        -- LEFT JOIN: si el dia 1 no esta en SegFec se usa
+        --            DATE('2039-12-31') como valor centinela
+        SELECT
+            FP.AnoUpc,
+            FP.NUMUPC,
+
+            -- Fecha inicial del periodo cerrado
+            -- (dia 1 del mes del periodo, de SegFec)
+            COALESCE(T9.FecIso, DATE('2039-12-31'))
+                AS FECHA_INI_CERRADO,
+
+            -- Fecha final del periodo cerrado
+            -- (ultimo dia del mes, calculado desde la base)
+            LAST_DAY(
+                COALESCE(T9.FecIso, DATE('2039-12-31'))
+            ) AS FECHA_FIN_CERRADO,
+
+            -- Fecha inicial del periodo siguiente
+            -- (+1 mes desde el dia 1 del periodo cerrado)
+            ADD_MONTHS(
+                COALESCE(T9.FecIso, DATE('2039-12-31')),
+                1
+            ) AS FECHA_INI_SIG,
+
+            -- Fecha final del periodo siguiente
+            -- (ultimo dia del mes siguiente)
+            LAST_DAY(
+                ADD_MONTHS(
+                    COALESCE(T9.FecIso, DATE('2039-12-31')),
+                    1
+                )
+            ) AS FECHA_FIN_SIG
+
+        FROM FacPar AS FP
+
+        -- LEFT JOIN al calendario por el dia 1 del mes
+        LEFT JOIN SegFec AS T9
+            ON  T9.FecAno = FP.AnoUpc
+            AND T9.FecMes = FP.NUMUPC
+            AND T9.FecDia = 1
+
+        WHERE FP.ParCve = '@';
+
+END;
+
+    GRANT EXECUTE ON FUNCTION SEGLIB.FA_ULTIMO_PERIODO_CERRADO
+        TO PUBLIC;

@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Cantidad_Cheques
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC015
+-- Objeto    : VWCXC_Cantidad_Cheques
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Resume, por cliente, la fecha del último cheque emitido y la
 --            cantidad total de cheques registrados en CxcUlt, filtrando
 --            únicamente los tipos de documento cuyo CdoRel = '02' (cheques).

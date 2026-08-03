@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Relacion_Comision_Vendedores_Externos
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC012
+-- Objeto    : VWCXC_Relacion_Comision_Vendedores_Externos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Presenta la relación de comisiones asignadas a vendedores
 --            externos por cliente. Para cada registro de CxcRcve muestra
 --            el nombre del vendedor externo, el nombre del cliente y el

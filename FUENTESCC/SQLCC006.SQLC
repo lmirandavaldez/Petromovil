@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Maestro_Clientes_Carga
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC006
+-- Objeto    : VWCXC_Maestro_Clientes_Carga
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Consolida los datos maestros del cliente con su información
 --            geográfica (provincia, municipio, demarcación) y el vendedor
 --            asignado. Diseñada para ser usada en procesos de carga/migración

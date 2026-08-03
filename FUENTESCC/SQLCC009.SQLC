@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Direcciones_Despacho
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC009
+-- Objeto    : VWCXC_Direcciones_Despacho
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Presenta todas las direcciones de despacho registradas para cada
 --            cliente activo (CliSta = 'A'), enriquecidas con la descripción
 --            geográfica completa (provincia, municipio, demarcación) y los

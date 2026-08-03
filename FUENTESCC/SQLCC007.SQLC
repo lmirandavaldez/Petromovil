@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Historico_Descuentos
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC007
+-- Objeto    : VWCXC_Historico_Descuentos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Presenta el historial de descuentos por cliente y artículo
 --            registrados en CxcCdc, enriquecido con la descripción del cliente,
 --            el vendedor asignado, la descripción del artículo y el usuario

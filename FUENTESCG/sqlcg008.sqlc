@@ -1,7 +1,14 @@
--- ============================================================
--- Vista     : VWCOG_Diario_General
+-- ==============================================================
 -- Modulo    : Contabilidad General
--- Objeto    : Detalle del diario general: una fila por linea
+-- Programa  : SQLCG008
+-- Objeto    : VWCOG_Diario_General
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito    : Detalle del diario general: una fila por linea
 --             de asiento contable.
 --             Construye el numero de documento formateado
 --             como TdiCve-NNNNNNN (7 digitos con ceros a la
@@ -9,6 +16,7 @@
 --             Separa el valor en Debito o Credito segun el
 --             campo DgeOri (1=Debito, 2=Credito).
 --             No aplica agrupacion; devuelve el detalle puro.
+-- --------------------------------------------------------------
 -- Tablas    : CogHdgd   lineas del diario general (tabla base)
 --             CogTdi    tipos de documento contable
 --             CogPer    periodos contables
@@ -17,10 +25,7 @@
 --             CogCco    catalogo de centros de costo
 --             CxpCfa    clasificacion de formas de pago (CxP)
 --             SegFec    calendario / tabla de fechas
--- Esquema   : (default)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2  (mejorada)
+-- --------------------------------------------------------------
 -- Cambios   :
 --   v2 - Se agrega cabecera de documentacion completa.
 --        Se agrega alias explicito As en FROM y JOINs.

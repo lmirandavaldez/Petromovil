@@ -13,33 +13,26 @@
 --   dos fuentes: facturas de distribucion (FacDtoh/FacDed) y
 --   facturas de punto de servicio (FpsFach). La descomposicion
 --   del NCF (tipo, secuencia, serie) se realiza con expresiones
---   CASE/SUBSTR directamente en la vista mediante un WITH unico
---   al inicio, evitando la llamada a SG_DESCOMPONER_COMPROBANTE
---   que se ejecutaba una vez por fila (3M+ invocaciones). Los
---   CTEs precalculan TcfCve para que el Join a SegTcf use una
---   columna simple. Resuelve la fecha mediante Inner Join a
---   SegFec.
--- --------------------------------------------------------------
--- Nota de sintaxis Db2 for i:
---   El WITH (CTE) se declara una sola vez antes del SELECT
---   principal. No se permite un segundo WITH despues de
---   UNION ALL. Ambos CTEs (B1_Ncf y B2_Ncf) se definen en
---   el mismo bloque WITH separados por coma.
+--   CASE/SUBSTR directamente en la vista mediante CTEs, evitando
+--   la llamada a SG_DESCOMPONER_COMPROBANTE que se ejecutaba
+--   una vez por fila (3M+ invocaciones). El CTE precalcula
+--   TcfCve para que el Join a SegTcf use una columna simple.
+--   Resuelve la fecha mediante Inner Join a SegFec.
 -- --------------------------------------------------------------
 -- Logica de descomposicion del NCF (inline):
 --   Tipo A  longitud 19, inicia 'A'
---     TcfCve     = pos 10-11  (INT)
---     NcfSec     = pos 12-19  (BIGINT, 8 digitos)
---     Serie      = pos  1-11  (SER+DIV+ZON+CAJ+TIP)
+--     NCFTIP     = pos 10-11  (INT)
+--     NCFSEC     = pos 12-19  (BIGINT, 8 digitos)
+--     NCFNRO_OUT = pos  1-11  (SER+DIV+ZON+CAJ+TIP)
 --   Tipo B  longitud 11, inicia 'B'
---     TcfCve     = pos  2-3   (INT)
---     NcfSec     = pos  4-11  (BIGINT, 8 digitos)
---     Serie      = pos  1-3   (SER+TIP)
+--     NCFTIP     = pos  2-3   (INT)
+--     NCFSEC     = pos  4-11  (BIGINT, 8 digitos)
+--     NCFNRO_OUT = pos  1-3   (SER+TIP)
 --   Tipo E  longitud 13, inicia 'E'
---     TcfCve     = pos  2-3   (INT)
---     NcfSec     = pos  4-13  (BIGINT, 10 digitos)
---     Serie      = pos  1-3   (SER+TIP)
---   Otro formato: TcfCve=0, NcfSec=0, Serie=''
+--     NCFTIP     = pos  2-3   (INT)
+--     NCFSEC     = pos  4-13  (BIGINT, 10 digitos)
+--     NCFNRO_OUT = pos  1-3   (SER+TIP)
+--   Otro formato: NCFTIP=0, NCFSEC=0, NCFNRO_OUT=''
 -- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   SisCve              Codigo del sistema (FA / FS)
@@ -60,23 +53,24 @@
 --   MonFac              Monto del documento
 -- --------------------------------------------------------------
 -- Tablas referenciadas:
---   FacDtoh   Encabezado de facturas de distribucion   (B1_Ncf)
---   FacDed    Detalle NCF de facturas de distribucion  (B1_Ncf)
---   FpsFach   Encabezado de facturas POS               (B2_Ncf)
+--   FacDtoh   Encabezado de facturas de distribucion   (T1-B1)
+--   FacDed    Detalle NCF de facturas de distribucion  (T2-B1)
+--   FpsFach   Encabezado de facturas POS               (T1-B2)
 --   SegDis    Catalogo de distribuidoras               (T3)
---   SegSis    Catalogo de sistemas                     (T4)
+--   SegSis    Catalogo de sistemas (1 fila via CTE)    (T4)
 --   SegTcf    Tipos de comprobante fiscal              (T5)
 --   IteEst    Estaciones de despacho                   (T6)
 --   SegFec    Calendario de fechas                     (T9)
 --   NOTA: Se elimino CROSS JOIN TABLE(SG_DESCOMPONER_COMPROBANTE)
+--   NOTA: CTEs precalculan TcfCve para Join limpio a SegTcf
 -- --------------------------------------------------------------
 -- Logica de resolucion de fechas:
 --   Ambos bloques resuelven la fecha del documento mediante
 --   Inner Join a SegFec por (Ano, Mes, Dia). Las facturas
 --   siempre tienen fecha valida, por lo que no se requiere
 --   valor centinela ni COALESCE.
---     B1_Ncf: DtoAno / DtoMes / DtoDia
---     B2_Ncf: FacAno / FacMes / FacDia
+--     Bloque 1: T1.DtoAno / T1.DtoMes / T1.DtoDia
+--     Bloque 2: T1.FacAno / T1.FacMes / T1.FacDia
 -- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. Crear indice en FacDed(DisCve, DtoTip, DtoNro) para
@@ -99,9 +93,7 @@
 --                           facturas siempre tienen fecha
 --   2026-08-01  L. Miranda  Inline de SG_DESCOMPONER_COMPROBANTE
 --                           mediante CTEs; elimina 3M+ llamadas
---                           a funcion
---   2026-08-01  L. Miranda  Correccion sintaxis Db2 for i: WITH
---                           unico con ambos CTEs antes del SELECT
+--                           a funcion y Join a SegSis
 -- ==============================================================
 
 CREATE OR REPLACE VIEW VWDGI_COMPROBANTES
@@ -125,14 +117,11 @@ CREATE OR REPLACE VIEW VWDGI_COMPROBANTES
 )
 AS
 
--- Un solo WITH con ambos CTEs: requerido por Db2 for i
-With
-
 -- ==============================================================
--- CTE B1_Ncf: facturas de distribucion (FacDtoh + FacDed)
--- Precalcula TcfCve, NcfSec y Serie_Comprobante una sola vez
+-- Bloque 1: Facturas de distribucion (FacDtoh + FacDed)
+-- CTE B1: precalcula los tres campos NCF para Join limpio
 -- ==============================================================
-B1_Ncf (
+With B1_Ncf (
     DisCve, DtoTip, DtoNro, CliCve, DtoSta, DtoMne,
     DtoAno, DtoMes, DtoDia,
     NcfNro, TcfCve, NcfSec, Serie_Comprobante
@@ -148,6 +137,8 @@ B1_Ncf (
         T1.DtoMes,
         T1.DtoDia,
         T2.NcfNro,
+
+        -- TcfCve calculado una sola vez
         Case
             When LENGTH(TRIM(T2.NcfNro)) = 19
              And SUBSTR(T2.NcfNro,1,1) = 'A'
@@ -160,6 +151,8 @@ B1_Ncf (
                 Then INT(SUBSTR(T2.NcfNro,2,2))
             Else 0
         End,
+
+        -- NcfSec calculado una sola vez
         Case
             When LENGTH(TRIM(T2.NcfNro)) = 19
              And SUBSTR(T2.NcfNro,1,1) = 'A'
@@ -172,6 +165,8 @@ B1_Ncf (
                 Then BIGINT(SUBSTR(T2.NcfNro,4,10))
             Else 0
         End,
+
+        -- Serie_Comprobante calculado una sola vez
         Case
             When LENGTH(TRIM(T2.NcfNro)) = 19
              And SUBSTR(T2.NcfNro,1,1) = 'A'
@@ -184,76 +179,14 @@ B1_Ncf (
                 Then SUBSTR(T2.NcfNro,1,3)
             Else ''
         End
+
     From       FacDtoh  T1
     Inner Join FacDed   T2
             On T1.DisCve = T2.DisCve
            And T1.DtoTip = T2.DtoTip
            And T1.DtoNro = T2.DtoNro
     Where T2.NcfNro <> '  '
-),
-
--- ==============================================================
--- CTE B2_Ncf: facturas de punto de servicio (FpsFach)
--- Precalcula TcfCve, NcfSec y Serie_Comprobante una sola vez
--- ==============================================================
-B2_Ncf (
-    DisCve, FacTip, CliCve, SitCve, FacTin,
-    FacAno, FacMes, FacDia,
-    NcfNro, TcfCve, NcfSec, Serie_Comprobante
-) As (
-    Select
-        T1.DisCve,
-        T1.FacTip,
-        T1.CliCve,
-        T1.SitCve,
-        T1.FacTin,
-        T1.FacAno,
-        T1.FacMes,
-        T1.FacDia,
-        T1.NcfNro,
-        Case
-            When LENGTH(TRIM(T1.NcfNro)) = 19
-             And SUBSTR(T1.NcfNro,1,1) = 'A'
-                Then INT(SUBSTR(T1.NcfNro,10,2))
-            When LENGTH(TRIM(T1.NcfNro)) = 11
-             And SUBSTR(T1.NcfNro,1,1) = 'B'
-                Then INT(SUBSTR(T1.NcfNro,2,2))
-            When LENGTH(TRIM(T1.NcfNro)) = 13
-             And SUBSTR(T1.NcfNro,1,1) = 'E'
-                Then INT(SUBSTR(T1.NcfNro,2,2))
-            Else 0
-        End,
-        Case
-            When LENGTH(TRIM(T1.NcfNro)) = 19
-             And SUBSTR(T1.NcfNro,1,1) = 'A'
-                Then BIGINT(SUBSTR(T1.NcfNro,12,8))
-            When LENGTH(TRIM(T1.NcfNro)) = 11
-             And SUBSTR(T1.NcfNro,1,1) = 'B'
-                Then BIGINT(SUBSTR(T1.NcfNro,4,8))
-            When LENGTH(TRIM(T1.NcfNro)) = 13
-             And SUBSTR(T1.NcfNro,1,1) = 'E'
-                Then BIGINT(SUBSTR(T1.NcfNro,4,10))
-            Else 0
-        End,
-        Case
-            When LENGTH(TRIM(T1.NcfNro)) = 19
-             And SUBSTR(T1.NcfNro,1,1) = 'A'
-                Then SUBSTR(T1.NcfNro,1,11)
-            When LENGTH(TRIM(T1.NcfNro)) = 11
-             And SUBSTR(T1.NcfNro,1,1) = 'B'
-                Then SUBSTR(T1.NcfNro,1,3)
-            When LENGTH(TRIM(T1.NcfNro)) = 13
-             And SUBSTR(T1.NcfNro,1,1) = 'E'
-                Then SUBSTR(T1.NcfNro,1,3)
-            Else ''
-        End
-    From FpsFach T1
-    Where T1.NcfNro <> '  '
 )
-
--- ==============================================================
--- Bloque 1: facturas de distribucion
--- ==============================================================
 Select
     'FA'                                        As SisCve,
     T4.SisDes                                   As SisDes,
@@ -273,19 +206,89 @@ Select
     B.DtoMne
 
 From            B1_Ncf   B
-Inner Join SegDis        T3  On T3.DisCve = B.DisCve
-Inner Join SegSis        T4  On T4.SisCve = 'FA'
-Inner Join SegTcf        T5  On T5.TcfCve = B.TcfCve
-Left  Join IteEst        T6  On T6.DisCve = B.DisCve
-Inner Join SegFec        T9  On T9.FecAno  = B.DtoAno
-                             And T9.FecMes  = B.DtoMes
-                             And T9.FecDia  = B.DtoDia
+Inner Join SegDis        T3
+        On T3.DisCve = B.DisCve
+Inner Join SegSis        T4
+        On T4.SisCve = 'FA'
+-- Join limpio: TcfCve ya es un INT calculado en el CTE
+Inner Join SegTcf        T5
+        On T5.TcfCve = B.TcfCve
+Left  Join IteEst        T6
+        On T6.DisCve = B.DisCve
+-- Inner Join a SegFec: la factura siempre tiene fecha valida
+Inner Join SegFec        T9
+        On T9.FecAno = B.DtoAno
+       And T9.FecMes = B.DtoMes
+       And T9.FecDia = B.DtoDia
+
 
 UNION ALL
 
 -- ==============================================================
--- Bloque 2: facturas de punto de servicio
+-- Bloque 2: Facturas de punto de servicio (FpsFach)
+-- CTE B2: precalcula los tres campos NCF para Join limpio
 -- ==============================================================
+With B2_Ncf (
+    DisCve, FacTip, CliCve, SitCve, FacTin,
+    FacAno, FacMes, FacDia,
+    NcfNro, TcfCve, NcfSec, Serie_Comprobante
+) As (
+    Select
+        T1.DisCve,
+        T1.FacTip,
+        T1.CliCve,
+        T1.SitCve,
+        T1.FacTin,
+        T1.FacAno,
+        T1.FacMes,
+        T1.FacDia,
+        T1.NcfNro,
+
+        -- TcfCve calculado una sola vez
+        Case
+            When LENGTH(TRIM(T1.NcfNro)) = 19
+             And SUBSTR(T1.NcfNro,1,1) = 'A'
+                Then INT(SUBSTR(T1.NcfNro,10,2))
+            When LENGTH(TRIM(T1.NcfNro)) = 11
+             And SUBSTR(T1.NcfNro,1,1) = 'B'
+                Then INT(SUBSTR(T1.NcfNro,2,2))
+            When LENGTH(TRIM(T1.NcfNro)) = 13
+             And SUBSTR(T1.NcfNro,1,1) = 'E'
+                Then INT(SUBSTR(T1.NcfNro,2,2))
+            Else 0
+        End,
+
+        -- NcfSec calculado una sola vez
+        Case
+            When LENGTH(TRIM(T1.NcfNro)) = 19
+             And SUBSTR(T1.NcfNro,1,1) = 'A'
+                Then BIGINT(SUBSTR(T1.NcfNro,12,8))
+            When LENGTH(TRIM(T1.NcfNro)) = 11
+             And SUBSTR(T1.NcfNro,1,1) = 'B'
+                Then BIGINT(SUBSTR(T1.NcfNro,4,8))
+            When LENGTH(TRIM(T1.NcfNro)) = 13
+             And SUBSTR(T1.NcfNro,1,1) = 'E'
+                Then BIGINT(SUBSTR(T1.NcfNro,4,10))
+            Else 0
+        End,
+
+        -- Serie_Comprobante calculado una sola vez
+        Case
+            When LENGTH(TRIM(T1.NcfNro)) = 19
+             And SUBSTR(T1.NcfNro,1,1) = 'A'
+                Then SUBSTR(T1.NcfNro,1,11)
+            When LENGTH(TRIM(T1.NcfNro)) = 11
+             And SUBSTR(T1.NcfNro,1,1) = 'B'
+                Then SUBSTR(T1.NcfNro,1,3)
+            When LENGTH(TRIM(T1.NcfNro)) = 13
+             And SUBSTR(T1.NcfNro,1,1) = 'E'
+                Then SUBSTR(T1.NcfNro,1,3)
+            Else ''
+        End
+
+    From FpsFach T1
+    Where T1.NcfNro <> '  '
+)
 Select
     'FS'                                        As SisCve,
     T4.SisDes                                   As SisDes,
@@ -296,7 +299,7 @@ Select
     COALESCE(T6.EstNcf, '')                     As EstNcf,
     T9.FecAno                                   As FecAno,
     T9.FecYmd                                   As FecYmd,
-    CASE WHEN TRIM(B.SitCve) = '' THEN 'A' ELSE B.SitCve END,
+    B.SitCve,
     B.NcfNro,
     B.TcfCve,
     T5.TcfDes,
@@ -305,10 +308,17 @@ Select
     B.FacTin
 
 From            B2_Ncf   B
-Inner Join SegDis        T3  On T3.DisCve = B.DisCve
-Inner Join SegSis        T4  On T4.SisCve = 'FS'
-Inner Join SegTcf        T5  On T5.TcfCve = B.TcfCve
-Left  Join IteEst        T6  On T6.DisCve = B.DisCve
-Inner Join SegFec        T9  On T9.FecAno  = B.FacAno
-                             And T9.FecMes  = B.FacMes
-                             And T9.FecDia  = B.FacDia
+Inner Join SegDis        T3
+        On T3.DisCve = B.DisCve
+Inner Join SegSis        T4
+        On T4.SisCve = 'FS'
+-- Join limpio: TcfCve ya es un INT calculado en el CTE
+Inner Join SegTcf        T5
+        On T5.TcfCve = B.TcfCve
+Left  Join IteEst        T6
+        On T6.DisCve = B.DisCve
+-- Inner Join a SegFec: la factura siempre tiene fecha valida
+Inner Join SegFec        T9
+        On T9.FecAno = B.FacAno
+       And T9.FecMes = B.FacMes
+       And T9.FecDia = B.FacDia

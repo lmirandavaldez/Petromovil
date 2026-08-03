@@ -1,0 +1,125 @@
+CREATE OR REPLACE VIEW VWDGI_COMPROBANTES
+(
+    SisCve, SisDes, DisCve, DisDes, DtoTip, CliCve, EstNcf,
+    FecAno, FecYmd, Status, NcfNro, TcfCve, TcfDes,
+    Serie_Comprobante,   -- << NUEVO CAMPO
+    NcfSec, MonFac
+)
+AS
+
+/* ============================================================
+   BLOQUE 1  FACDTOH + FACDED
+   ============================================================ */
+SELECT
+    T4.SisCve,
+    T4.SisDes,
+    T1.DisCve,
+    T3.DisDes,
+    T1.DtoTip,
+    T1.CliCve,
+    COALESCE(T6.EstNcf,'') AS Estacion_Emite_Comprobante,
+    T9.FecAno,
+    T9.FecYmd,
+    T1.DtoSta,
+    T2.NcfNro,
+
+    /* Tipo de comprobante desde la función */
+    F.NCFTIP AS TcfCve,
+
+    /* Descripción del tipo */
+    T5.TcfDes,
+
+    /* NUEVO CAMPO: SERIE + TIP (B/E) o SER+DIV+ZON+CAJ+TIP (A) */
+    F.NCFNRO_OUT AS Serie_Comprobante,
+
+    /* Secuencia desde la función */
+    F.NCFSEC,
+
+    T1.DtoMne
+
+FROM FacDtoh T1
+JOIN FacDed T2
+  ON T1.DisCve = T2.DisCve
+ AND T1.DtoTip = T2.DtoTip
+ AND T1.DtoNro = T2.DtoNro
+
+/* Función que descompone el NCF */
+CROSS JOIN TABLE(SEGLIB.SG_DESCOMPONER_COMPROBANTE(T2.NcfNro)) F
+
+JOIN SegDis T3
+  ON T1.DisCve = T3.DisCve
+
+JOIN SegSis T4
+  ON T4.SisCve = 'FA'
+
+JOIN SegTcf T5
+  ON F.NCFTIP = T5.TcfCve
+
+LEFT JOIN IteEst T6
+  ON T1.DisCve = T6.DisCve
+
+JOIN SegFec T9
+  ON T1.DtoAno = T9.FecAno
+ AND T1.DtoMes = T9.FecMes
+ AND T1.DtoDia = T9.FecDia
+
+WHERE T2.NcfNro <> '  '
+
+
+UNION ALL
+
+/* ============================================================
+   BLOQUE 2  FPSFACH
+   ============================================================ */
+SELECT
+    T4.SisCve,
+    T4.SisDes,
+    T1.DisCve,
+    T3.DisDes,
+    T1.FacTip,
+    T1.CliCve,
+    COALESCE(T6.EstNcf,'') AS Estacion_Emite_Comprobante,
+    T9.FecAno,
+    T9.FecYmd,
+    T1.SitCve,
+    T1.NcfNro,
+
+    /* Tipo desde la función */
+    F.NCFTIP AS TcfCve,
+
+    /* Descripción del tipo */
+    T5.TcfDes,
+
+    /* NUEVO CAMPO */
+    F.NCFNRO_OUT AS Serie_Comprobante,
+
+    /* Secuencia desde la función */
+    F.NCFSEC,
+
+    T1.FacTin
+
+FROM FpsFach T1
+
+/* Función aplicada al NCF */
+CROSS JOIN TABLE(SEGLIB.SG_DESCOMPONER_COMPROBANTE(T1.NcfNro)) F
+
+JOIN SegDis T3
+  ON T1.DisCve = T3.DisCve
+
+JOIN SegSis T4
+  ON T4.SisCve = 'FS'
+
+JOIN SegTcf T5
+  ON F.NCFTIP = T5.TcfCve
+
+LEFT JOIN IteEst T6
+  ON T1.DisCve = T6.DisCve
+
+JOIN SegFec T9
+  ON T1.FacAno = T9.FecAno
+ AND T1.FacMes = T9.FecMes
+ AND T1.FacDia = T9.FecDia
+
+WHERE T1.NcfNro <> '  ';
+
+

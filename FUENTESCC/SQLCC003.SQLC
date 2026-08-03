@@ -1,7 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Territorios_Zonas
--- Módulo  : Cuentas por Cobrar (CxC)
--- Objeto  : View
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC003
+-- Objeto    : VWCXC_Territorios_Zonas
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Expone la relación entre territorios de venta y las zonas
 --            comerciales que los componen. Un territorio puede contener
 --            múltiples zonas; solo se muestran territorios con al menos

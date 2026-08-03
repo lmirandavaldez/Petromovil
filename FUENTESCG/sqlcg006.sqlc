@@ -1,7 +1,14 @@
--- ============================================================
--- Vista     : VWCOG_MAYOR_GENERAL_Bcc_MESES
+-- ==============================================================
 -- Modulo    : Contabilidad General
--- Objeto    : Pivot mensual combinado del mayor general y del
+-- Programa  : SQLCG006
+-- Objeto    : VWCOG_MAYOR_GENERAL_Bcc_MESES
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito : Pivot mensual combinado del mayor general y del
 --             balance por centro de costo, por cuenta contable,
 --             auxiliar y ano.
 --             Por cada combinacion expone en la misma fila
@@ -17,16 +24,14 @@
 --             CcoCve / Descripcion_Cco pueden ser NULL cuando
 --             la cuenta no tiene movimientos en CogBcc.
 --             Solo incluye periodos cerrados (PerSit = 'C').
+-- --------------------------------------------------------------
 -- Tablas    : CogCta    catalogo de cuentas (tabla base)
 --             CogMge    movimientos del mayor general
 --             CogAuxd   catalogo de auxiliares
 --             CogBcc    balance por cuenta y centro de costo
 --             CogCco    catalogo de centros de costo
 --             CogPer    periodos contables
--- Esquema   : (default)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2  (mejorada)
+-- --------------------------------------------------------------
 -- Cambios   :
 --   v2 - Se agrega cabecera de documentacion completa.
 --        Se agrega alias explicito As en FROM y JOINs.

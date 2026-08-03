@@ -1,17 +1,22 @@
--- ============================================================
--- Vista     : VWCOG_Saldos_Cuentas_CentroCosto
+-- ==============================================================
 -- Modulo    : Contabilidad General
--- Objeto    : Saldos del balance por cuenta contable y centro
+-- Programa  : SQLCG007
+-- Objeto    : VWCOG_Saldos_Cuentas_CentroCosto
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito : Saldos del balance por cuenta contable y centro
 --             de costo, por ano y numero de periodo.
 --             Por cada combinacion devuelve el balance
 --             inicial, debitos, creditos y balance final.
 --             Excluye registros con cuenta en blanco
 --             (CtaCve = '    ').
+-- --------------------------------------------------------------
 -- Tablas    : CogBcc    balance por cuenta y centro de costo
--- Esquema   : (default)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2  (mejorada)
+-- --------------------------------------------------------------
 -- Cambios   :
 --   v2 - Se agrega cabecera de documentacion completa.
 --        Se agrega alias explicito As en FROM.

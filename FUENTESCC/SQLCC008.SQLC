@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Ultimos_Documentos
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC008
+-- Objeto    : VWCXC_Ultimos_Documentos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Resume, por cliente y tipo de documento, la fecha del último
 --            documento emitido y la cantidad total de documentos registrados
 --            en CxcUlt. Filtra únicamente los tipos de documento vigentes

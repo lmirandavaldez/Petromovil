@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Notas_Debito_Administrativas
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC014
+-- Objeto    : VWCXC_Notas_Debito_Administrativas
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Presenta las notas de débito de tipo administrativo (DndTip = 1)
 --            registradas en el sistema. Consolida el encabezado de la nota
 --            (CxcNdhh), su detalle con el documento afectado (CxcNdhd) y el

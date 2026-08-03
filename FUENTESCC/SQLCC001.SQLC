@@ -1,7 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Maestro_Clientes
--- Módulo  : Cuentas por Cobrar (CxC)
--- Objeto  : View
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC001
+-- Objeto    : VWCXC_Maestro_Clientes
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Consolida la información maestra de clientes incluyendo datos
 --            generales, dirección fiscal, zona comercial, territorio, vendedor,
 --            supervisor, campaña, provincia, municipio y demarcación.

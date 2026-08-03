@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Documentos_Pendiente_a_la_fecha
--- Módulo  : Cuentas por Cobrar (CxC) / Caja
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC010
+-- Objeto    : VWCXC_Documentos_Pendiente_a_la_fecha
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Muestra los documentos de cobro (CxcDoch) que tienen balance
 --            pendiente a la fecha, es decir, cuyo balance original (DocBce)
 --            menos los ingresos ya aplicados de recibos procesados es distinto

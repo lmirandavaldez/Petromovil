@@ -1,7 +1,14 @@
--- ============================================================
--- Vista     : VWCOG_Diario_General_3
+-- ==============================================================
 -- Modulo    : Contabilidad General
--- Objeto    : Detalle del diario general completo: una fila
+-- Programa  : SQLCG010
+-- Objeto    : VWCOG_Diario_General_3
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito    : Detalle del diario general completo: una fila
 --             por linea de asiento contable.
 --             Extiende VWCOG_Diario_General_2 con:
 --               - TdiCve y DgeDoc explícitos (sin formatear).
@@ -16,6 +23,7 @@
 --             Separa el valor en Debito o Credito segun
 --             DgeOri (1=Debito, 2=Credito).
 --             No aplica agrupacion; devuelve el detalle puro.
+-- --------------------------------------------------------------
 -- Tablas    : CogHdgd   lineas del diario general (tabla base)
 --             CogTdi    tipos de documento contable
 --             CogPer    periodos contables
@@ -27,10 +35,7 @@
 --             SegUsr    usuarios del sistema
 --             SegFec T10 fecha del documento (DgeAno/Mes/Dia)
 --             SegFec T11 fecha de aplicacion (AplAno/Mes/Dia)
--- Esquema   : (default)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2  (mejorada)
+-- --------------------------------------------------------------
 -- Cambios   :
 --   v2 - Se agrega cabecera de documentacion completa.
 --        Se agrega alias explicito As en FROM y JOINs.

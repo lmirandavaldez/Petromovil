@@ -1,7 +1,14 @@
--- ============================================================
--- Vista     : VWCOG_MAYOR_GENERALBCC
+-- ==============================================================
 -- Modulo    : Contabilidad General
--- Objeto    : Mayor general por centro de costo, cuenta
+-- Programa  : SQLCG003
+-- Objeto    : VWCOG_MAYOR_GENERALBCC
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito    : Mayor general por centro de costo, cuenta
 --             contable, auxiliar, ano y numero de periodo.
 --             Por cada combinacion devuelve el balance
 --             inicial, debitos, creditos y balance final
@@ -11,15 +18,8 @@
 --             Descripcion muestra el nombre de la cuenta o
 --             del auxiliar segun corresponda.
 --             Solo incluye periodos cerrados (PerSit = 'C').
--- Tablas    : CogBcc    balance por cuenta y centro de costo
---             CogPer    periodos contables
---             CogCta    catalogo de cuentas
---             CogAuxd   catalogo de auxiliares
---             CogCco    catalogo de centros de costo
--- Esquema   : (default)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2  (mejorada)
+-- --------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Cambios   :
 --   v2 - Se agrega cabecera de documentacion completa.
 --        Se agrega alias explicito As en FROM y JOINs.

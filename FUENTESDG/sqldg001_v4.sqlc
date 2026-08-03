@@ -1,0 +1,200 @@
+-- ==============================================================
+-- Modulo    : Digitacion
+-- Programa  : sqldg001
+-- Objeto    : VWDGI_COMPROBANTES
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Consolida los comprobantes fiscales (NCF) emitidos desde
+--   dos fuentes: facturas de distribucion (FacDtoh/FacDed) y
+--   facturas de punto de servicio (FpsFach). Descompone el NCF
+--   usando la funcion SG_DESCOMPONER_COMPROBANTE para obtener
+--   tipo, serie normalizada y secuencia. Resuelve la fecha del
+--   documento mediante Inner Join a SegFec.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   SisCve              Codigo del sistema (FA / FS)
+--   SisDes              Descripcion del sistema
+--   DisCve              Codigo de la distribuidora
+--   DisDes              Descripcion de la distribuidora
+--   DtoTip              Tipo de documento
+--   CliCve              Codigo del cliente
+--   EstNcf              Estacion que emite el comprobante
+--   FecAno              Ano de la fecha del documento
+--   FecYmd              Fecha en formato YYYYMMDD
+--   Status              Estado del documento
+--   NcfNro              Numero de NCF original
+--   TcfCve              Codigo del tipo de comprobante (NCF)
+--   TcfDes              Descripcion del tipo de comprobante
+--   Serie_Comprobante   Serie normalizada del NCF
+--   NcfSec              Secuencia del NCF
+--   MonFac              Monto del documento
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   FacDtoh   Encabezado de facturas de distribucion   (T1-B1)
+--   FacDed    Detalle NCF de facturas de distribucion  (T2-B1)
+--   FpsFach   Encabezado de facturas POS               (T1-B2)
+--   SegDis    Catalogo de distribuidoras               (T3)
+--   SegSis    Catalogo de sistemas                     (T4)
+--   SegTcf    Tipos de comprobante fiscal              (T5)
+--   IteEst    Estaciones de despacho                   (T6)
+--   SegFec    Calendario de fechas                     (T9)
+--   SEGLIB.SG_DESCOMPONER_COMPROBANTE  Funcion NCF     (F)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Ambos bloques resuelven la fecha del documento mediante
+--   Inner Join a SegFec por (Ano, Mes, Dia). Las facturas
+--   siempre tienen fecha valida, por lo que no se requiere
+--   valor centinela ni COALESCE.
+--     Bloque 1: T1.DtoAno / T1.DtoMes / T1.DtoDia
+--     Bloque 2: T1.FacAno / T1.FacMes / T1.FacDia
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. El CROSS JOIN TABLE(...) puede fallar si NcfNro es nulo
+--      o esta en blanco; el WHERE NcfNro <> '  ' mitiga el
+--      caso en blanco pero no el NULL. Considerar COALESCE.
+--   2. JOIN SegSis ON SisCve = 'FA'/'FS' es un filtro de fila
+--      disfrazado de JOIN; seria mas claro como WHERE o valor
+--      literal en el SELECT.
+--   3. Unificar los alias de columna entre bloques para mayor
+--      claridad: DtoTip/FacTip y DtoSta/SitCve difieren en
+--      nombre pero ocupan la misma posicion en el UNION.
+--   4. Indexar SegFec por (FecAno, FecMes, FecDia) si no
+--      existe, para optimizar el Inner Join de fecha.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion, LEFT JOIN a SegFec
+--                           y mejoras de formato
+--   2026-08-01  L. Miranda  Cambio a Inner Join en SegFec;
+--                           facturas siempre tienen fecha
+-- ==============================================================
+
+CREATE OR REPLACE VIEW VWDGI_COMPROBANTES
+(
+    SisCve,
+    SisDes,
+    DisCve,
+    DisDes,
+    DtoTip,
+    CliCve,
+    EstNcf,
+    FecAno,
+    FecYmd,
+    Status,
+    NcfNro,
+    TcfCve,
+    TcfDes,
+    Serie_Comprobante,
+    NcfSec,
+    MonFac
+)
+AS
+
+-- ==============================================================
+-- Bloque 1: Facturas de distribucion (FacDtoh + FacDed)
+-- ==============================================================
+SELECT
+    T4.SisCve,
+    T4.SisDes,
+    T1.DisCve,
+    T3.DisDes,
+    T1.DtoTip,
+    T1.CliCve,
+    COALESCE(T6.EstNcf, '')                     As EstNcf,
+    T9.FecAno                                   As FecAno,
+    T9.FecYmd                                   As FecYmd,
+    T1.DtoSta,
+    T2.NcfNro,
+    F.NCFTIP                                    As TcfCve,
+    T5.TcfDes,
+    F.NCFNRO_OUT                                As Serie_Comprobante,
+    F.NCFSEC,
+    T1.DtoMne
+
+From       FacDtoh  T1
+Inner Join FacDed   T2
+        On T1.DisCve = T2.DisCve
+       And T1.DtoTip = T2.DtoTip
+       And T1.DtoNro = T2.DtoNro
+
+-- Descompone el NCF en tipo, serie normalizada y secuencia
+Cross Join Table(
+               SEGLIB.SG_DESCOMPONER_COMPROBANTE(T2.NcfNro)
+           )                                     F
+
+Inner Join SegDis   T3
+        On T1.DisCve = T3.DisCve
+
+Inner Join SegSis   T4
+        On T4.SisCve = 'FA'
+
+Inner Join SegTcf   T5
+        On F.NCFTIP  = T5.TcfCve
+
+Left  Join IteEst   T6
+        On T1.DisCve = T6.DisCve
+
+-- Inner Join a SegFec: la factura siempre tiene fecha valida
+Inner Join SegFec   T9
+        On T1.DtoAno = T9.FecAno
+       And T1.DtoMes = T9.FecMes
+       And T1.DtoDia = T9.FecDia
+
+Where T2.NcfNro <> '  '
+
+
+UNION ALL
+
+-- ==============================================================
+-- Bloque 2: Facturas de punto de servicio (FpsFach)
+-- ==============================================================
+SELECT
+    T4.SisCve,
+    T4.SisDes,
+    T1.DisCve,
+    T3.DisDes,
+    T1.FacTip,
+    T1.CliCve,
+    COALESCE(T6.EstNcf, '')                     As EstNcf,
+    T9.FecAno                                   As FecAno,
+    T9.FecYmd                                   As FecYmd,
+    T1.SitCve,
+    T1.NcfNro,
+    F.NCFTIP                                    As TcfCve,
+    T5.TcfDes,
+    F.NCFNRO_OUT                                As Serie_Comprobante,
+    F.NCFSEC,
+    T1.FacTin
+
+From       FpsFach  T1
+
+-- Descompone el NCF en tipo, serie normalizada y secuencia
+Cross Join Table(
+               SEGLIB.SG_DESCOMPONER_COMPROBANTE(T1.NcfNro)
+           )                                     F
+
+Inner Join SegDis   T3
+        On T1.DisCve = T3.DisCve
+
+Inner Join SegSis   T4
+        On T4.SisCve = 'FS'
+
+Inner Join SegTcf   T5
+        On F.NCFTIP  = T5.TcfCve
+
+Left  Join IteEst   T6
+        On T1.DisCve = T6.DisCve
+
+-- Inner Join a SegFec: la factura siempre tiene fecha valida
+Inner Join SegFec   T9
+        On T1.FacAno = T9.FecAno
+       And T1.FacMes = T9.FecMes
+       And T1.FacDia = T9.FecDia
+
+Where T1.NcfNro <> '  '

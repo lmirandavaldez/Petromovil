@@ -1,20 +1,25 @@
--- ============================================================
--- Vista     : VWCOG_ENTRADAS_DIARIO
+-- ==============================================================
 -- Modulo    : Contabilidad General
--- Objeto    : Detalle de entradas del diario: una fila por
+-- Programa  : SQLCG050
+-- Objeto    : VWCOG_ENTRADAS_DIARIO
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito : Detalle de entradas del diario: una fila por
 --             linea de asiento.
 --             Separa el valor en Debito o Credito segun el
 --             campo DgeOri (1=Debito, 2=Credito).
 --             Incluye descripcion de cuenta y nombre del
 --             auxiliar cuando corresponda.
 --             No aplica agrupacion; devuelve el detalle puro.
+-- --------------------------------------------------------------
 -- Tablas    : CogDged   lineas de entrada del diario (base)
 --             CogCta    catalogo de cuentas
 --             CogAuxd   catalogo de auxiliares
--- Esquema   : (default)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2  (mejorada)
+-- --------------------------------------------------------------
 -- Cambios   :
 --   v2 - Se agrega cabecera de documentacion completa.
 --        Se cambia Create View por Create Or Replace View

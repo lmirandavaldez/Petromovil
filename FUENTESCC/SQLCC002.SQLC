@@ -1,7 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Supervisores_Vendedores
--- Módulo  : Cuentas por Cobrar (CxC)
--- Objeto  : View
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC002
+-- Objeto    : VWCXC_Supervisores_Vendedores
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Muestra la relación entre supervisores y los vendedores que tienen
 --            asignados. Solo incluye supervisores que tengan al menos un vendedor
 --            activo (INNER JOIN intencional).

@@ -1,6 +1,13 @@
--- =============================================================================
--- Vista   : VWCXC_Ingresos_Aplicados
--- Módulo  : Cuentas por Cobrar (CxC)
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC005
+-- Objeto    : VWCXC_Ingresos_Aplicados
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Propósito: Presenta los documentos de cobro (CxcDocd) que corresponden a
 --            ingresos ya aplicados, filtrando por el tipo de movimiento
 --            contable (CmoRel) y el tipo de documento (CdoRel) permitidos.
