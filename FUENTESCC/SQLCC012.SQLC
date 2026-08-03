@@ -8,37 +8,38 @@
 -- Version   : 1
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Presenta la relación de comisiones asignadas a vendedores
+-- Proposito: Presenta la relacion de comisiones asignadas a vendedores
 --            externos por cliente. Para cada registro de CxcRcve muestra
 --            el nombre del vendedor externo, el nombre del cliente y el
---            valor/porcentaje de comisión acordado (RcvVa1).
--- -----------------------------------------------------------------------------
--- Tablas base:
---   CxcRcve - Relación de comisiones por vendedor externo / cliente (principal)
---   CxcVex  - Catálogo de vendedores externos
---   CxcCli  - Catálogo de clientes
--- -----------------------------------------------------------------------------
--- Relación con otras vistas:
+--            valor/porcentaje de comision acordado (RcvVa1).
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxcRcve - Relacion de comisiones por vendedor externo / cliente (principal)
+--   CxcVex  - Catalogo de vendedores externos
+--   CxcCli  - Catalogo de clientes
+-- --------------------------------------------------------------
+-- Relacion con otras vistas:
 --   Esta vista es el equivalente externo de VWCXC_Relacion_Comision_Vendedores
 --   (SQLCC011), que trabaja con vendedores internos (CxcRcv / CxcVen).
 --   Diferencias clave:
---     • CxcRcve / CxcVex  → vendedores externos (agentes / comisionistas)
---     • CxcRcv  / CxcVen  → vendedores internos de la empresa
---     • El esquema externo asocia la comisión por cliente (CliCve),
---       mientras el interno la asocia por categoría de inventario (CatCve).
--- -----------------------------------------------------------------------------
+--     • CxcRcve / CxcVex  -> vendedores externos (agentes / comisionistas)
+--     • CxcRcv  / CxcVen  -> vendedores internos de la empresa
+--     • El esquema externo asocia la comision por cliente (CliCve),
+--       mientras el interno la asocia por categoria de inventario (CatCve).
+-- --------------------------------------------------------------
 -- Notas:
 --   - Todos los JOINs son INNER: solo se muestran registros cuyo vendedor
---     externo y cliente estén completamente catalogados. Registros con
---     referencias huérfanas quedan excluidos.
---   - RcvVa1 : Valor o porcentaje de comisión del vendedor externo
---              acordado para ese cliente específico.
--- -----------------------------------------------------------------------------
+--     externo y cliente esten completamente catalogados. Registros con
+--     referencias huerfanas quedan excluidos.
+--   - RcvVa1 : Valor o porcentaje de comision del vendedor externo
+--              acordado para ese cliente especifico.
+-- --------------------------------------------------------------
 -- Historial de cambios:
---   v1  Versión original
---   v2  Alias descriptivos, INNER JOIN explícito, columnas documentadas,
---       referencia cruzada con SQLCC011, encabezado completo
--- =============================================================================
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXC_Relacion_Comision_Vendedores_Externos AS
 
@@ -51,8 +52,8 @@ SELECT
     rcve.CliCve AS CliCve,  -- Clave del cliente
     cli.CliNom  AS CliNom,  -- Nombre del cliente
 
-    -- Comisión acordada
-    rcve.RcvVa1 AS RcvVa1   -- Valor / porcentaje de comisión para este cliente
+    -- Comision acordada
+    rcve.RcvVa1 AS RcvVa1   -- Valor / porcentaje de comision para este cliente
 
 FROM CxcRcve rcve
 

@@ -1,0 +1,147 @@
+-- ==============================================================
+-- Modulo    : Contabilidad General
+-- Programa  : SQLCG003
+-- Objeto    : VWCOG_MAYOR_GENERALBCC
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito    : Mayor general por centro de costo, cuenta
+--             contable, auxiliar, ano y numero de periodo.
+--             Por cada combinacion devuelve el balance
+--             inicial, debitos, creditos y balance final
+--             del periodo.
+--             Tipo_Cuenta distingue cuentas de mayor puras
+--             (CtaTip=1 sin auxiliar) de las demas.
+--             Descripcion muestra el nombre de la cuenta o
+--             del auxiliar segun corresponda.
+--             Solo incluye periodos cerrados (PerSit = 'C').
+-- --------------------------------------------------------------
+-- --------------------------------------------------------------
+-- Cambios   :
+--   v2 - Se agrega cabecera de documentacion completa.
+--        Se agrega alias explicito As en FROM y JOINs.
+--        Se reformatea SELECT con una columna por linea
+--          y comentario descriptivo en cada campo.
+--        Se reformatea GROUP BY con una expresion por linea.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Se corrige IfNUll (casing inconsistente) a IfNull.
+--        Se califica con T1. los campos de Sum() para
+--          consistencia con el resto del SELECT.
+--        Se respeta el orden original de los campos,
+--          la logica original y el limite de 80 posiciones.
+-- ============================================================
+
+Create Or Replace View VWCOG_MAYOR_GENERALBCC As
+
+Select
+    -- --------------------------------------------------------
+    -- Dimensiones de agrupacion
+    -- --------------------------------------------------------
+    T1.PerAno                              As PerAno,
+    -- Ano contable del periodo
+
+    T1.PerNum                              As PerNum,
+    -- Numero del periodo (1..12)
+
+    T1.CcoCve                              As CcoCve,
+    -- Clave del centro de costo
+
+    T5.CcoDes                              As CcoDes,
+    -- Descripcion del centro de costo
+
+    T1.CtaCve                              As CtaCve,
+    -- Clave de la cuenta contable
+
+    T1.AuxLis                              As AuxLis,
+    -- Lista (tipo) del auxiliar; 0 = sin auxiliar
+
+    T1.AuxCve                              As AuxCve,
+    -- Clave del auxiliar; 0 = sin auxiliar
+
+    -- Tipo_Cuenta:
+    --   1 = cuenta de mayor pura (CtaTip=1, sin auxiliar)
+    --   2 = cuenta con auxiliar o de otro tipo
+    (Case When T3.CtaTip = 1
+          And  T1.AuxLis = 0
+          And  T1.AuxCve = 0
+     Then 1
+     Else 2
+     End)                                  As Tipo_Cuenta,
+
+    -- Descripcion: nombre de cuenta o de auxiliar segun caso
+    (Case When T1.AuxCve = 0
+     Then T3.CtaDes
+     Else T4.AuxNom
+     End)                                  As Descripcion,
+
+    -- --------------------------------------------------------
+    -- Metricas del periodo
+    -- --------------------------------------------------------
+    IfNull(Sum(T1.BccBip), 0)             As Balance_Inicial,
+    -- Saldo inicial del periodo
+
+    IfNull(Sum(T1.BccDeb), 0)             As Debitos,
+    -- Total de debitos del periodo
+
+    IfNull(Sum(T1.BccCre), 0)             As Creditos,
+    -- Total de creditos del periodo
+
+    IfNull(Sum(T1.BccBal), 0)             As Balance_Final
+    -- Saldo final del periodo
+
+-- ============================================================
+-- FROM y JOINs
+-- ============================================================
+From CogBcc As T1
+
+-- Periodo contable: filtra solo periodos cerrados (PerSit='C')
+Join CogPer As T2
+    On  T1.PerAno = T2.PerAno
+    And T1.PerNum = T2.PerNum
+
+-- Catalogo de cuentas: descripcion y tipo de cuenta
+Join CogCta As T3
+    On T1.CtaCve = T3.CtaCve
+
+-- Auxiliares: LEFT porque no toda cuenta tiene auxiliar
+Left Outer Join CogAuxd As T4
+    On  T1.AuxLis = T4.AuxLis
+    And T1.AuxCve = T4.AuxCve
+
+-- Centro de costo: descripcion del CCO
+Join CogCco As T5
+    On T1.CcoCve = T5.CcoCve
+
+-- ============================================================
+-- Filtro: solo periodos cerrados
+-- ============================================================
+Where T2.PerSit = 'C'
+
+-- ============================================================
+-- GROUP BY: todas las dimensiones no agregadas del SELECT
+-- ============================================================
+Group By
+    T1.PerAno,
+    T1.PerNum,
+    T1.CcoCve,
+    T5.CcoDes,
+    T1.CtaCve,
+    T1.AuxLis,
+    T1.AuxCve,
+    (Case When T3.CtaTip = 1
+          And  T1.AuxLis = 0
+          And  T1.AuxCve = 0
+     Then 1
+     Else 2
+     End),
+    (Case When T1.AuxCve = 0
+     Then T3.CtaDes
+     Else T4.AuxNom
+     End)
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.PerAno, T1.PerNum, T1.CcoCve,
+--          T1.CtaCve, T1.AuxLis, T1.AuxCve

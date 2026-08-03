@@ -5,33 +5,56 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 1
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito : Detalle de entradas del diario: una fila por
---             linea de asiento.
---             Separa el valor en Debito o Credito segun el
---             campo DgeOri (1=Debito, 2=Credito).
---             Incluye descripcion de cuenta y nombre del
---             auxiliar cuando corresponda.
---             No aplica agrupacion; devuelve el detalle puro.
+-- Proposito:
+--   Detalle de entradas del diario: una fila por linea de
+--   asiento.
+--   Separa el valor en Debito o Credito segun el campo
+--   DgeOri (1=Debito, 2=Credito).
+--   Incluye descripcion de cuenta y nombre del auxiliar
+--   cuando corresponda.
+--   No aplica agrupacion; devuelve el detalle puro.
 -- --------------------------------------------------------------
--- Tablas    : CogDged   lineas de entrada del diario (base)
---             CogCta    catalogo de cuentas
---             CogAuxd   catalogo de auxiliares
+-- Campos retornados (en orden original):
+--   PerAno   Ano contable del periodo          (CogDged)
+--   PerNum   Numero del periodo (1..12)         (CogDged)
+--   TdiCve   Clave del tipo de documento        (CogDged)
+--   DgeDoc   Numero del documento               (CogDged)
+--   DgeSec   Secuencia dentro del documento     (CogDged)
+--   DgeDe1   Descripcion libre del asiento      (CogDged)
+--   CtaCve   Clave de la cuenta contable        (CogDged)
+--   CtaDes   Descripcion de la cuenta           (CogCta)
+--   AuxCve   Clave del auxiliar; 0=sin auxiliar (CogDged)
+--   AuxNom   Nombre del auxiliar                (CogAuxd)
+--   CcoCve   Clave del centro de costo          (CogDged)
+--   Debito   Valor si DgeOri=1, sino 0          (calc)
+--   Credito  Valor si DgeOri=2, sino 0          (calc)
 -- --------------------------------------------------------------
--- Cambios   :
---   v2 - Se agrega cabecera de documentacion completa.
---        Se cambia Create View por Create Or Replace View
---          para consistencia con el resto del proyecto.
---        Se agrega alias explicito As en FROM y JOINs.
---        Se reformatea SELECT con una columna por linea
---          y comentario descriptivo en cada campo.
---        Se reformatea los CASEs con sangria uniforme.
---        Se documenta cada JOIN con su proposito.
---        Se respeta el orden original de los campos,
---          la logica original y el limite de 80 posiciones.
--- ============================================================
+-- Tablas referenciadas:
+--   CogDged   T1  Lineas de entrada del diario (tabla base)
+--   CogCta    T2  Catalogo de cuentas
+--   CogAuxd   T3  Catalogo de auxiliares
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica. Esta vista no maneja fechas calendario.
+--   PerAno y PerNum identifican el periodo contable.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar JOIN a CogCco para incluir CcoDes (nombre
+--      del centro de costo) directamente en la vista.
+--   2. Agregar JOIN a CogTdi para incluir TdiDes (nombre
+--      del tipo de documento).
+--   3. Agregar campo Numero_Documento formateado como
+--      TdiCve-NNNNNNN para consistencia con sqlcg008.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           IfNull -> Coalesce, sin acentos
+-- ==============================================================
 
 Create Or Replace View VWCOG_ENTRADAS_DIARIO As
 

@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Cuentas por Pagar
 -- Programa  : SQLCP001
 -- Objeto    : VWCXP_Maestro_Proveedores
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista maestra de proveedores de cuentas por pagar.
 --   Consolida los datos del proveedor (CxpPro) con sus
@@ -26,7 +26,7 @@
 --   Todos los joins son LEFT OUTER para preservar proveedores
 --   aunque no tengan todos los catalogos completos.
 --   No hay campos de fecha; no aplica logica de SegFec.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   ProCve                     Clave del proveedor   (T1)
 --   ProNom                     Nombre del proveedor  (T1)
@@ -61,7 +61,7 @@
 --   ProUni                     Indicador de unicidad (T1)
 --   ProSta                     Estado (codigo)       (T1)
 --   Descripcion_Status         Estado (descripcion)  (calc.)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CxpPro  T1   Maestro de proveedores (tabla base)
 --   CxpCpa  T2   Grupos de pago (condiciones de pago)
@@ -69,7 +69,7 @@
 --   CxpCri  T4   Criterios de retencion (primera retencion)
 --   CxpCri  T5   Criterios de retencion (segunda retencion)
 --   CxpCla  T6   Clasificaciones de proveedor
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de decodificacion:
 --   ProTip  1 = Local
 --           2 = Exterior
@@ -86,7 +86,7 @@
 --           S = Suspendido
 --           D = No permitir Pagos
 --           otro = espacio en blanco
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. Los CASE de decodificacion devuelven espacio (' ') para
 --      valores desconocidos en lugar de NULL o una descripcion
@@ -102,12 +102,12 @@
 --   4. Verificar indice en CxpPro(ProCve) como clave primaria
 --      y en los campos de join (CpaCve, MonCve, CriCve,
 --      CriCv2, ProCla) para optimizar los LEFT OUTER JOINs.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
 --   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXP_Maestro_Proveedores AS
 SELECT

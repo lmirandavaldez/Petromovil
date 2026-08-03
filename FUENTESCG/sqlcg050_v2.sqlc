@@ -1,0 +1,117 @@
+-- ==============================================================
+-- Modulo    : Contabilidad General
+-- Programa  : SQLCG050
+-- Objeto    : VWCOG_ENTRADAS_DIARIO
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito : Detalle de entradas del diario: una fila por
+--             linea de asiento.
+--             Separa el valor en Debito o Credito segun el
+--             campo DgeOri (1=Debito, 2=Credito).
+--             Incluye descripcion de cuenta y nombre del
+--             auxiliar cuando corresponda.
+--             No aplica agrupacion; devuelve el detalle puro.
+-- --------------------------------------------------------------
+-- Tablas    : CogDged   lineas de entrada del diario (base)
+--             CogCta    catalogo de cuentas
+--             CogAuxd   catalogo de auxiliares
+-- --------------------------------------------------------------
+-- Cambios   :
+--   v2 - Se agrega cabecera de documentacion completa.
+--        Se cambia Create View por Create Or Replace View
+--          para consistencia con el resto del proyecto.
+--        Se agrega alias explicito As en FROM y JOINs.
+--        Se reformatea SELECT con una columna por linea
+--          y comentario descriptivo en cada campo.
+--        Se reformatea los CASEs con sangria uniforme.
+--        Se documenta cada JOIN con su proposito.
+--        Se respeta el orden original de los campos,
+--          la logica original y el limite de 80 posiciones.
+-- ============================================================
+
+Create Or Replace View VWCOG_ENTRADAS_DIARIO As
+
+Select
+    -- --------------------------------------------------------
+    -- Identificacion del asiento
+    -- --------------------------------------------------------
+    T1.PerAno                              As PerAno,
+    -- Ano contable del periodo
+
+    T1.PerNum                              As PerNum,
+    -- Numero del periodo (1..12)
+
+    T1.TdiCve                              As TdiCve,
+    -- Clave del tipo de documento contable
+
+    T1.DgeDoc                              As DgeDoc,
+    -- Numero del documento
+
+    T1.DgeSec                              As DgeSec,
+    -- Numero de secuencia dentro del documento
+
+    -- --------------------------------------------------------
+    -- Descripcion de la linea
+    -- --------------------------------------------------------
+    T1.DgeDe1                              As DgeDe1,
+    -- Descripcion libre de la linea del asiento
+
+    -- --------------------------------------------------------
+    -- Cuenta contable
+    -- --------------------------------------------------------
+    T1.CtaCve                              As CtaCve,
+    -- Clave de la cuenta contable
+
+    T2.CtaDes                              As CtaDes,
+    -- Descripcion de la cuenta contable
+
+    -- --------------------------------------------------------
+    -- Auxiliar
+    -- --------------------------------------------------------
+    T1.AuxCve                              As AuxCve,
+    -- Clave del auxiliar; 0 = sin auxiliar
+
+    T3.AuxNom                              As AuxNom,
+    -- Nombre del auxiliar (NULL si no tiene auxiliar)
+
+    -- --------------------------------------------------------
+    -- Centro de costo
+    -- --------------------------------------------------------
+    T1.CcoCve                              As CcoCve,
+    -- Clave del centro de costo
+
+    -- --------------------------------------------------------
+    -- Valor separado por orientacion (DgeOri)
+    -- 1 = Debito   2 = Credito
+    -- --------------------------------------------------------
+    (Case When T1.DgeOri = 1
+     Then T1.DgeVal
+     Else 0
+     End)                                  As Debito,
+
+    (Case When T1.DgeOri = 2
+     Then T1.DgeVal
+     Else 0
+     End)                                  As Credito
+
+-- ============================================================
+-- FROM y JOINs
+-- ============================================================
+From CogDged As T1
+
+-- Catalogo de cuentas: descripcion de la cuenta
+Join CogCta As T2
+    On T1.CtaCve = T2.CtaCve
+
+-- Auxiliares: LEFT porque no toda linea tiene auxiliar
+Left Outer Join CogAuxd As T3
+    On  T1.AuxLis = T3.AuxLis
+    And T1.AuxCve = T3.AuxCve
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.PerAno, T1.PerNum, T1.TdiCve, T1.DgeDoc,
+--          T1.DgeSec

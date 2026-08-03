@@ -6,43 +6,48 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Versión   : 2.0
+-- Version   : 2`n-- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Distribución de horas extras regulares por empleado,
---            pivotada en columnas por día del mes (0131).
---            Agrupa por año, mes y empleado para aislar cada
---            período correctamente.
+-- Proposito: Distribucion de horas extras regulares por empleado,
+--            pivotada en columnas por dia del mes (0131).
+--            Agrupa por ano, mes y empleado para aislar cada
+--            periodo correctamente.
 -- Diferencia con VWNOM_DIST_HORAS_EXTRAS_TEMP (sqlnm003):
 --   - Fuente de datos: NomExtd (horas extras regulares)
 --     vs NomHord (horas extras temporales).
 --   - Campos de horas: ExtHor/ExtMin vs HorCht/HorMin.
 --   - Alias de columnas: HoraDia##/MinutosDia## vs Horas_##/Minutos_##.
 -- Correcciones v1  v2:
---   1. IfNull reemplazado por COALESCE (estándar SQL).
---   2. CAST(... AS SMALLINT) explícito en horas y minutos para
+--   1. IfNull reemplazado por COALESCE (estandar SQL).
+--   2. CAST(... AS SMALLINT) explicito en horas y minutos para
 --      tipo consistente (ExtHor/ExtMin son valores enteros).
---   3. Alias en la misma línea que la expresión.
+--   3. Alias en la misma linea que la expresion.
 --   4. JOIN SegFec documentado: es INNER JOIN intencional; registros
 --      de NomExtd sin fecha en SegFec quedan excluidos del resultado.
---   5. Capitalización SQL normalizada a mayúsculas.
---   6. Cabecera de documentación añadida.
--- Tablas base:
+--   5. Capitalizacion SQL normalizada a mayusculas.
+--   6. Cabecera de documentacion anadida.
+-- Tablas referenciadas:
 --   NomExtd (T1)  Detalle de horas extras regulares
 --   NomEmp  (T2)  Maestro de empleados
---   SegFec  (T9)  Calendario (clave FecYmd  año/mes/día)
--- ============================================================
+--   SegFec  (T9)  Calendario (clave FecYmd  ano/mes/dia)
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWNOM_TOTAL_HORAS_EXTRAS AS
 SELECT
-    -- Dimensiones de agrupación: período y empleado
+    -- Dimensiones de agrupacion: periodo y empleado
     T9.FecAno,
     T9.FecMes,
     T1.EmpCve,
     T2.EmpNom,
     T2.EmpApe,
 
-    -- Horas y minutos pivotados por día del mes (0131)
-    -- COALESCE garantiza 0 si no hay registro para ese día
+    -- Horas y minutos pivotados por dia del mes (0131)
+    -- COALESCE garantiza 0 si no hay registro para ese dia
     -- CAST(... AS SMALLINT) asegura tipo entero consistente
     COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 01 THEN T1.ExtHor END)
     AS SMALLINT), 0) AS HoraDia01,

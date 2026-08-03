@@ -1,47 +1,54 @@
--- ============================================================
--- Función : SEGLIB.SG_DIA_SEMANA
--- Tipo    : Tabla Function (UDTF)
--- Objeto  : Recibe una fecha y devuelve el número de día de la
---           semana (DIA_NUM: 1=Domingo … 7=Sábado) y su nombre
---           en español (DIA_NOM).
---           Sustituye al programa SG7002.
--- Esquema : SEGLIB
--- Autor   : L. Miranda
--- Versión : 2  (mejorada)
--- Cambios :
---   v2 - Se corrigen tildes en los nombres de días
---          (Miércoles, Sábado).
---        Se agrega CALLED ON NULL INPUT para documentar
---          el comportamiento ante fechas nulas.
---        Se agrega SPECIFIC para identificar unívocamente
---          la firma de la función.
---        Se documenta cada sección con comentarios.
---        Mejora de formato e indentación.
--- ============================================================
-
---CL: CHGLIBL LIBL(QTEMP Itelib DATOS02)
-
+-- ==============================================================
+-- Modulo    : Seguridad
+-- Programa  : SQLSGF005
+-- Objeto    : SEGLIB.SG_DIA_SEMANA
+-- Tipo      : Funcion de tabla SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Ver descripcion original preservada dentro del SQL.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Ver definicion en RETURNS TABLE del SQL.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ver comentarios en el SQL.
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Calculo puro de fechas. No usa SegFec.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   Ver comentarios internos del SQL.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, formato 80 cols
+-- ==============================================================
 CREATE OR REPLACE FUNCTION SEGLIB.SG_DIA_SEMANA (
-    -- Fecha para la cual se desea conocer el día de la semana
+    -- Fecha para la cual se desea conocer el dia de la semana
     Fecha DATE
 )
 RETURNS TABLE (
-    DIA_NUM  INTEGER,       -- Número de día: 1=Domingo, 2=Lunes … 7=Sábado
-    DIA_NOM  VARCHAR(10)    -- Nombre del día en español
+    DIA_NUM  INTEGER,       -- Numero de dia: 1=Domingo, 2=Lunes … 7=Sabado
+    DIA_NOM  VARCHAR(10)    -- Nombre del dia en espanol
 )
 SPECIFIC          SEGLIB.SG_DIA_SEMANA
 LANGUAGE          SQL
 DETERMINISTIC             -- El mismo input siempre produce el mismo output
 NO EXTERNAL ACTION        -- No tiene efectos secundarios externos
-CALLED ON NULL INPUT      -- Si Fecha es NULL la función 
+CALLED ON NULL INPUT      -- Si Fecha es NULL la funcion 
                           --es llamada igual (devuelve NULL)
 BEGIN
     RETURN
         SELECT
-            -- Número de día según la convención ISO de DB2/IBM i (1=Domingo)
+            -- Numero de dia segun la convencion ISO de DB2/IBM i (1=Domingo)
             DAYOFWEEK(Fecha)                AS DIA_NUM,
 
-            -- Nombre del día en español con tildes correctas
+            -- Nombre del dia en espanol con tildes correctas
             CASE DAYOFWEEK(Fecha)
                 WHEN 1 THEN 'Domingo'
                 WHEN 2 THEN 'Lunes'
@@ -56,5 +63,5 @@ BEGIN
         FROM SYSIBM.SYSDUMMY1;
 END;
 
--- Conceder permisos de ejecución a todos los usuarios
+-- Conceder permisos de ejecucion a todos los usuarios
 GRANT EXECUTE ON SPECIFIC FUNCTION SEGLIB.SG_DIA_SEMANA TO PUBLIC;

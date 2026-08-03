@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Interfaces Modulos Externos
 -- Programa  : SQLIT003
 -- Objeto    : VWITE_Resumen_Corte_Diario_Caburantes
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de resumen de corte diario de caburantes (combustibles
 --   principales) para interfaz con modulos externos. Es una
@@ -27,7 +27,7 @@
 --
 --   TraFem se expone en su tipo original. No hay campos de
 --   fecha por concatenar; no aplica logica de SegFec.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   Codigo_Del_Distrito  Clave del distrito         (IteTra/T1)
 --   Fecha_Emision        Fecha de la transaccion    (IteTra/T1)
@@ -38,7 +38,7 @@
 --   Precio_Promedio      Promedio de TraPve         (calc.)
 --   Importe              Suma de TraImp del grupo   (calc.)
 --   Veces                Techo(Importe / ParMti)    (calc.)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   IteTra   T1   Transacciones de interfaz (tabla base)
 --   IteEst   T2   Estaciones de servicio
@@ -46,7 +46,7 @@
 --   IteTrahC T4   Historico de transacciones procesadas
 --                 (usada solo en subconsulta NOT EXISTS)
 --   ItePar        Parametros de interfaz (clave '@', ParMti)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de exclusion NOT EXISTS (IteTrahC T4):
 --   Se excluye toda transaccion de IteTra que ya tenga un
 --   registro correspondiente en el historico IteTrahC,
@@ -55,33 +55,33 @@
 --     TraCan
 --   Esto garantiza que la vista solo devuelve transacciones
 --   pendientes de procesar, no duplicando las ya enviadas.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de calculo de Veces:
 --   ParMti se obtiene de ItePar WHERE ParCve = '@'.
 --   La subconsulta se ejecuta dos veces en la formula.
 --   Formula de techo entero:
 --     INT((SUM(TraImp) + ParMti - 1) / ParMti)
 --   Ejemplo: Importe=250, ParMti=100 -> INT(349/100) = 3
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Filtros aplicados:
 --   T1.TraCtd = 1       Solo transacciones tipo 1 (corte)
 --   T2.CliRui <> 0      Excluye estaciones sin cliente RUI
 --   T2.EstRui = 'S'     Solo estaciones activas en RUI
 --   T3.ArtPpr = 'S'     Solo articulos principales
 --   NOT EXISTS(T4)      Excluye transac. ya en historico
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Agrupacion:
 --   DisCve, TraFem, CliRui, CatCve, FacCar
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Filtro de agrupacion (HAVING):
 --   SUM(TraCan) > 0     Solo grupos con cantidad positiva
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Diferencias con sqlit001 (VWITE_Resumen_Corte_Estaciones):
 --   sqlit001 agrupa por FacFis, FacFfs, FacPam (periodo corte)
 --   sqlit003 agrupa por TraFem (fecha de emision diaria)
 --   sqlit003 agrega filtro ArtPpr = 'S' (solo principales)
 --   sqlit003 agrega NOT EXISTS contra historico IteTrahC
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. La subconsulta (SELECT ParMti FROM ItePar WHERE
 --      ParCve='@') se ejecuta dos veces en la expresion Veces.
@@ -109,12 +109,12 @@
 --   5. El JOIN a IteEst T2 usa solo DisCve; confirmar que
 --      DisCve es clave primaria en IteEst para evitar
 --      duplicados si hay multiples registros por distrito.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
 --   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWITE_Resumen_Corte_Diario_Caburantes AS
 SELECT

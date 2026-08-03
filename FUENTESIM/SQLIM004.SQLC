@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Importaciones
 -- Programa  : SQLIM004
 -- Objeto    : VWIME_Datos_Cabecera_Detalle
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de deducciones de facturas de importacion con datos
 --   de cabecera y detalle asociados. Es la tercera perspectiva
@@ -30,7 +30,7 @@
 --   No hay campos de fecha por concatenar. DtoFec, OrdFec
 --   y PlaFpl provienen de ImeFach T2 en tipo original.
 --   No aplica logica de resolucion via SegFec.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   CODIGO_DE_DISTRITO           Clave del distrito  (ImeDed/T1)
 --   TIPO_DE_DOCUMENTO            Tipo de documento   (ImeDed/T1)
@@ -59,24 +59,24 @@
 --                                NULL si sin cabecera
 --   CODIGO_IDENT_REGISTRO_FACD   RowGui detalle      (ImeFacd/T3)
 --                                NULL si sin detalle
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   ImeDed   T1   Deducciones de documentos (tabla base)
 --   ImeFach  T2   Encabezado de facturas (opcional)
 --   ImeFacd  T3   Detalle de facturas (opcional)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Patron de vistas SQLIM002/003/004:
 --   Las tres vistas son perspectivas del mismo conjunto de
 --   tablas (ImeFach, ImeFacd, ImeDed) usando la misma clave
 --   compuesta de cuatro campos. Cada una parte de una tabla
 --   distinta como base y expone RowGui de las otras dos
 --   como indicadores de completitud del documento.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Uso tipico de RowGui:
 --   CODIGO_IDENT_REGISTRO_FACH IS NULL -> deduccion sin cabecera
 --   CODIGO_IDENT_REGISTRO_FACD IS NULL -> deduccion sin detalle
 --   Ambos no nulos -> documento completo (cabecera+det.+ded.)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. El LEFT OUTER JOIN a ImeFach T2 es inusual para una
 --      deduccion: en un esquema normalizado la deduccion
@@ -95,12 +95,12 @@
 --   4. DtoFec, OrdFec y PlaFpl de ImeFach T2 seran NULL para
 --      deducciones sin cabecera. Los reportes consumidores
 --      deben manejar NULLs con COALESCE si necesario.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
 --   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWIME_Datos_Cabecera_Detalle AS
 SELECT

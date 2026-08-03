@@ -5,43 +5,69 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 1
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito : Mayor general combinado con balance por centro
---             de costo, por cuenta contable, auxiliar, ano y
---             numero de periodo.
---             Por cada combinacion expone en la misma fila:
---               - Metricas del mayor general (CogMge):
---                 Balance inicial, Debitos, Creditos y
---                 Balance final.
---               - Metricas del CCO (CogBcc):
---                 Balance inicial, Debitos, Creditos y
---                 Balance final por centro de costo.
---             Descripcion muestra el nombre de la cuenta o
---             del auxiliar segun corresponda.
---             CcoCve / Descripcion_Cco pueden ser NULL cuando
---             la cuenta no tiene movimientos en CogBcc.
---             Solo incluye periodos cerrados (PerSit = 'C').
+-- Proposito:
+--   Mayor general combinado con balance por centro de
+--   costo, por cuenta contable, auxiliar, ano y numero
+--   de periodo.
+--   Por cada combinacion expone en la misma fila:
+--     - Metricas del mayor general (CogMge):
+--       Balance inicial, Debitos, Creditos y Balance final.
+--     - Metricas del CCO (CogBcc):
+--       Balance inicial, Debitos, Creditos y Balance final
+--       por centro de costo.
+--   Descripcion muestra el nombre de la cuenta o del
+--   auxiliar segun corresponda.
+--   CcoCve / Descripcion_Cco pueden ser NULL cuando la
+--   cuenta no tiene movimientos en CogBcc.
+--   Solo incluye periodos cerrados (PerSit = 'C').
 -- --------------------------------------------------------------
--- Tablas    : CogCta    catalogo de cuentas (tabla base)
---             CogMge    movimientos del mayor general
---             CogAuxd   catalogo de auxiliares
---             CogBcc    balance por cuenta y centro de costo
---             CogCco    catalogo de centros de costo
---             CogPer    periodos contables
+-- Campos retornados (en orden original):
+--   PerAno              Ano contable del periodo      (CogMge)
+--   PerNum              Numero del periodo (1..12)    (CogMge)
+--   CtaCve              Clave de la cuenta contable   (CogCta)
+--   AuxLis              Lista (tipo) del auxiliar     (CogMge)
+--   AuxCve              Clave del auxiliar            (CogMge)
+--   Descripcion         Nombre de cuenta o auxiliar   (calc)
+--   CcoCve              Clave del centro de costo     (CogBcc)
+--   Descripcion_Cco     Descripcion del CCO           (CogCco)
+--   Balance_Inicial     Saldo inicial (mayor)         (CogMge)
+--   Debitos             Debitos del periodo (mayor)   (CogMge)
+--   Creditos            Creditos del periodo (mayor)  (CogMge)
+--   Balance_Final       Saldo final (mayor)           (CogMge)
+--   Balance_Inicial_Bcc Saldo inicial (CCO)           (CogBcc)
+--   Debitos_Bcc         Debitos del periodo (CCO)     (CogBcc)
+--   Creditos_Bcc        Creditos del periodo (CCO)    (CogBcc)
+--   Balance_Final_Bcc   Saldo final (CCO)             (CogBcc)
 -- --------------------------------------------------------------
--- Cambios   :
---   v2 - Se agrega cabecera de documentacion completa.
---        Se agrega alias explicito As en FROM y JOINs.
---        Se reformatea SELECT con una columna por linea
---          y comentario descriptivo en cada campo.
---        Se reformatea GROUP BY con una expresion por linea.
---        Se agrega ORDER BY sugerido (comentado).
---        Se corrige IfNUll (casing inconsistente) a IfNull.
---        Se respeta el orden original de los campos,
---          la logica original y el limite de 80 posiciones.
--- ============================================================
+-- Tablas referenciadas:
+--   CogCta    T1  Catalogo de cuentas (tabla base)
+--   CogMge    T2  Movimientos del mayor general
+--   CogAuxd   T3  Catalogo de auxiliares
+--   CogBcc    T4  Balance por cuenta y centro de costo
+--   CogCco    T5  Catalogo de centros de costo
+--   CogPer    T6  Periodos contables
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Filtra por T6.PerSit = 'C' (periodos cerrados).
+--   PerAno y PerNum identifican univocamente el periodo
+--   contable; no se manejan fechas calendario directas.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Separar en dos vistas (mayor puro y mayor+CCO) para
+--      simplificar el mantenimiento y las consultas.
+--   2. Agregar columna Movimiento_Neto para mayor y CCO.
+--   3. Documentar comportamiento cuando CogBcc tiene
+--      multiples filas por cuenta/periodo (suma por CCO).
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           IfNull -> Coalesce, sin acentos
+-- ==============================================================
 
 Create Or Replace View VWCOG_MAYOR_GENERAL_BCC As
 
@@ -79,32 +105,32 @@ Select
     -- --------------------------------------------------------
     -- Metricas del mayor general (CogMge)
     -- --------------------------------------------------------
-    IfNull(Sum(T2.MgeBip), 0)             As Balance_Inicial,
+    Coalesce(Sum(T2.MgeBip), 0)             As Balance_Inicial,
     -- Saldo inicial del periodo (mayor)
 
-    IfNull(Sum(T2.MgeDeb), 0)             As Debitos,
+    Coalesce(Sum(T2.MgeDeb), 0)             As Debitos,
     -- Total de debitos del periodo (mayor)
 
-    IfNull(Sum(T2.MgeCre), 0)             As Creditos,
+    Coalesce(Sum(T2.MgeCre), 0)             As Creditos,
     -- Total de creditos del periodo (mayor)
 
-    IfNull(Sum(T2.MgeBal), 0)             As Balance_Final,
+    Coalesce(Sum(T2.MgeBal), 0)             As Balance_Final,
     -- Saldo final del periodo (mayor)
 
     -- --------------------------------------------------------
     -- Metricas del balance por centro de costo (CogBcc)
     -- NULL cuando la cuenta no tiene movimientos en CogBcc
     -- --------------------------------------------------------
-    IfNull(Sum(T4.BccBip), 0)             As Balance_Inicial_Bcc,
+    Coalesce(Sum(T4.BccBip), 0)             As Balance_Inicial_Bcc,
     -- Saldo inicial del periodo (CCO)
 
-    IfNull(Sum(T4.BccDeb), 0)             As Debitos_Bcc,
+    Coalesce(Sum(T4.BccDeb), 0)             As Debitos_Bcc,
     -- Total de debitos del periodo (CCO)
 
-    IfNull(Sum(T4.BccCre), 0)             As Creditos_Bcc,
+    Coalesce(Sum(T4.BccCre), 0)             As Creditos_Bcc,
     -- Total de creditos del periodo (CCO)
 
-    IfNull(Sum(T4.BccBal), 0)             As Balance_Final_Bcc
+    Coalesce(Sum(T4.BccBal), 0)             As Balance_Final_Bcc
     -- Saldo final del periodo (CCO)
 
 -- ============================================================

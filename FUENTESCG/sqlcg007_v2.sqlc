@@ -1,0 +1,87 @@
+-- ==============================================================
+-- Modulo    : Contabilidad General
+-- Programa  : SQLCG007
+-- Objeto    : VWCOG_Saldos_Cuentas_CentroCosto
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito : Saldos del balance por cuenta contable y centro
+--             de costo, por ano y numero de periodo.
+--             Por cada combinacion devuelve el balance
+--             inicial, debitos, creditos y balance final.
+--             Excluye registros con cuenta en blanco
+--             (CtaCve = '    ').
+-- --------------------------------------------------------------
+-- Tablas    : CogBcc    balance por cuenta y centro de costo
+-- --------------------------------------------------------------
+-- Cambios   :
+--   v2 - Se agrega cabecera de documentacion completa.
+--        Se agrega alias explicito As en FROM.
+--        Se reformatea SELECT con una columna por linea
+--          y comentario descriptivo en cada campo.
+--        Se califica con T1. todos los campos para
+--          consistencia y claridad.
+--        Se reformatea GROUP BY con una columna por linea.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Se corrige IfNUll (casing inconsistente) a IfNull.
+--        Se respeta el orden original de los campos,
+--          la logica original y el limite de 80 posiciones.
+-- ============================================================
+
+Create Or Replace View VWCOG_Saldos_Cuentas_CentroCosto As
+
+Select
+    -- --------------------------------------------------------
+    -- Dimensiones de agrupacion
+    -- --------------------------------------------------------
+    T1.PerAno                              As PerAno,
+    -- Ano contable del periodo
+
+    T1.PerNum                              As PerNum,
+    -- Numero del periodo (1..12)
+
+    T1.CtaCve                              As CtaCve,
+    -- Clave de la cuenta contable
+
+    T1.CcoCve                              As CcoCve,
+    -- Clave del centro de costo
+
+    -- --------------------------------------------------------
+    -- Metricas del periodo por centro de costo
+    -- --------------------------------------------------------
+    IfNull(Sum(T1.BccBip), 0)             As Balance_Inicial_Bcc,
+    -- Saldo inicial del periodo
+
+    IfNull(Sum(T1.BccDeb), 0)             As Debitos_Bcc,
+    -- Total de debitos del periodo
+
+    IfNull(Sum(T1.BccCre), 0)             As Creditos_Bcc,
+    -- Total de creditos del periodo
+
+    IfNull(Sum(T1.BccBal), 0)             As Balance_Final_Bcc
+    -- Saldo final del periodo
+
+-- ============================================================
+-- FROM
+-- ============================================================
+From CogBcc As T1
+
+-- ============================================================
+-- Filtro: excluye cuentas en blanco
+-- ============================================================
+Where T1.CtaCve <> '    '
+
+-- ============================================================
+-- GROUP BY: todas las dimensiones no agregadas del SELECT
+-- ============================================================
+Group By
+    T1.PerAno,
+    T1.PerNum,
+    T1.CtaCve,
+    T1.CcoCve
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.PerAno, T1.PerNum, T1.CtaCve, T1.CcoCve

@@ -1,0 +1,159 @@
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC013
+-- Objeto    : VWCXC_Notas_Credito_Administrativas
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito: Presenta las notas de crédito de tipo administrativo registradas
+--            en el sistema, excluyendo los tipos 3, 5 y 6 (operativos/internos).
+--            Consolida el encabezado de la nota (CxcNchh), su detalle con el
+--            documento afectado (CxcNchd) y el historial de comprobante fiscal
+--            del documento original (CxcHncf). La fecha de la nota se obtiene
+--            desde la tabla de fechas SegFec usando los campos AÑO/MES/DÍA
+--            de transacción (NctAtr / NctMtr / NctDtr).
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcNchh - Encabezado de nota de crédito (tabla principal)
+--   CxcNchd - Detalle de nota de crédito / documento afectado
+--   CxcHncf - Historial de comprobantes fiscales del documento original
+--   SegFec  - Tabla de fechas del sistema (conversión Ano/Mes/Dia → FecYmd)
+-- -----------------------------------------------------------------------------
+-- Filtro de tipos de nota:
+--   NctTip NOT IN (3, 5, 6)
+--     Tipo 3 — Nota de crédito por ajuste de precio (operativa)
+--     Tipo 5 — Nota de crédito por devolución (operativa)
+--     Tipo 6 — Nota de crédito interna / contable
+--   Solo se incluyen los tipos administrativos (1, 2, 4 y otros no excluidos).
+-- -----------------------------------------------------------------------------
+-- Notas técnicas:
+--   - En el JOIN CxcNchh → CxcNchd: T1.DisCve = T2.DisTra (original).
+--     DisCve es la distribución del encabezado; DisTra es la distribución de
+--     transacción del detalle. La asimetría de nombre es intencional: la clave
+--     de distribución del encabezado se enlaza con el campo de distribución
+--     de transacción del detalle.
+--   - CxcHncf usa clave compuesta de 6 campos: CliCve + CdoCve + DocNum +
+--     PerAno + PerNum + DisCve — todos provenientes de CxcNchd.
+--   - T3.DocFec es una fecha ya construida en CxcHncf (no requiere SegFec),
+--     a diferencia de la Fecha_Nota_Credito que sí se construye via SegFec.
+--   - NctVI1 / NctVi2: capitalización inconsistente en el original
+--     (NctVI1 vs NctVi2); se normalizan a NctVi1 / NctVi2.
+--   - NctTml: probable campo NctTml con 't' minúscula en el original (Ncttml);
+--     se corrige la capitalización.
+-- -----------------------------------------------------------------------------
+-- Glosario de campos clave:
+--   NctNum  : Número de la nota de crédito
+--   NctTip  : Tipo de nota de crédito (filtrado: excluye 3, 5, 6)
+--   NctObs  : Observaciones / motivo de la nota de crédito
+--   RatCve  : Clave de razón / concepto de la nota
+--   NctVdp  : Valor del descuento por pronto pago aplicado
+--   NctTim  : Importe de impuesto de la nota
+--   NctTas  : Tasa de cambio de la nota
+--   NctVml  : Valor en moneda local de la nota
+--   NctVi1  : Valor de impuesto 1 de la nota
+--   NctVi2  : Valor de impuesto 2 de la nota
+--   NctTre  : Total de retenciones de la nota
+--   NctDpr  : Descuento o porcentaje adicional de la nota
+--   NcfNro  : Número de comprobante fiscal (NCF) de la nota / documento
+--   NctVtr  : Valor en moneda de transacción (detalle)
+--   NctTml  : Total en moneda local (detalle)
+--   NctVto  : Valor total del detalle
+--   NctMi1  : Monto de impuesto 1 (detalle)
+--   NctMi2  : Monto de impuesto 2 (detalle)
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1  Versión original (indentación inicial, NctVI1/Ncttml con capitalización
+--       incorrecta, alias T9 con salto numérico, JOINs implícitos)
+--   v2  Corrección de capitalización NctVi1/NctTml, alias descriptivos,
+--       INNER JOIN explícito, indentación estándar, documentación completa
+-- =============================================================================
+
+CREATE OR REPLACE VIEW VWCXC_Notas_Credito_Administrativas AS
+
+SELECT
+    -- Identificación de la nota de crédito
+    nchh.CliCve    AS CliCve,    -- Clave del cliente
+    nchh.NctNum    AS NctNum,    -- Número de la nota de crédito
+    nchh.DisCve    AS DisCve,    -- Distribución de la nota
+    nchh.VenCve    AS VenCve,    -- Clave del vendedor
+
+    -- Fecha de la nota (construida desde NctAtr/NctMtr/NctDtr vía SegFec)
+    fec.FecYmd     AS Fecha_Nota_Credito,  -- Fecha de la nota de crédito
+
+    -- Período contable de la nota
+    nchh.PerAno    AS Periodo_Contable_NC,  -- Año del período contable
+    nchh.PerNum    AS Numero_Periodo_Contable_NC, 
+                -- Número del período contable
+
+    -- Datos descriptivos y clasificación de la nota
+    nchh.NctObs    AS NctObs,    -- Observaciones / motivo
+    nchh.NctTip    AS NctTip,    -- Tipo de nota (excluye 3,5,6)
+    nchh.RatCve    AS RatCve,    -- Clave de razón / concepto
+
+    -- Valores financieros de la nota
+    nchh.NctVdp    AS NctVdp,    -- Valor descuento pronto pago
+    nchh.NctTim    AS NctTim,    -- Importe de impuesto
+    nchh.NctTas    AS NctTas,    -- Tasa de cambio
+    nchh.NctVml    AS NctVml,    -- Valor en moneda local
+    nchh.NctVi1    AS NctVi1,    -- Valor impuesto 1 (corr: NctVI1)
+    nchh.NctVi2    AS NctVi2,    -- Valor impuesto 2
+    nchh.NctTre    AS NctTre,    -- Total de retenciones
+    nchh.NctDpr    AS NctDpr,    -- Descuento / porcentaje adicional
+
+    -- Comprobante fiscal de la nota (NCF)
+    nchh.NcfNro    AS Comprobante_Nota_Credito,    -- NCF de la nota de crédito
+
+    -- Documento afectado por la nota (desde CxcNchd)
+    nchd.DisCve    AS Distrito_Documento, -- Distribución del documento
+    nchd.CdoCve    AS CdoCve,             -- Tipo de documento afectado
+    nchd.DocNum    AS DocNum,             -- Número del documento afectado
+
+    -- Fecha y período del documento afectado
+    hncf.DocFec    AS DocFec,             
+                -- Fecha del documento (desde CxcHncf)
+    nchd.PerAno    AS Periodo_Contable_Doc, 
+                -- Año del período del documento
+    nchd.PerNum    AS Numero_Periodo_Contable_Doc, 
+                -- Número del período del documento
+
+    -- Comprobante fiscal del documento original modificado (NCF)
+    hncf.NcfNro    AS Comprobante_Modificado,    
+                -- NCF del documento afectado
+
+    -- Valores del detalle de la nota
+    nchd.NctVtr    AS NctVtr,    -- Valor en moneda de transacción
+    nchd.NctTml    AS NctTml,    -- Total en moneda local (corr: Ncttml)
+    nchd.NctVto    AS NctVto,    -- Valor total del detalle
+    nchd.NctMi1    AS NctMi1,    -- Monto impuesto 1 del detalle
+    nchd.NctMi2    AS NctMi2     -- Monto impuesto 2 del detalle
+
+FROM CxcNchh nchh
+
+-- Detalle de la nota: clave compuesta CliCve + NctNum + DisTra (= DisCve del encabezado)
+-- Nota: DisCve del encabezado se cruza con DisTra del detalle (campos de propósito equivalente)
+INNER JOIN CxcNchd nchd
+    ON  nchd.CliCve = nchh.CliCve
+    AND nchd.NctNum = nchh.NctNum
+    AND nchd.DisTra = nchh.DisCve
+
+-- Historial de comprobante fiscal del documento afectado
+-- Clave compuesta de 6 campos provenientes del detalle
+INNER JOIN CxcHncf hncf
+    ON  hncf.CliCve = nchd.CliCve
+    AND hncf.CdoCve = nchd.CdoCve
+    AND hncf.DocNum = nchd.DocNum
+    AND hncf.PerAno = nchd.PerAno
+    AND hncf.PerNum = nchd.PerNum
+    AND hncf.DisCve = nchd.DisCve
+
+-- Fecha de la nota: convierte NctAtr/NctMtr/NctDtr (Año/Mes/Día) → FecYmd
+INNER JOIN SegFec fec
+    ON  fec.FecAno = nchh.NctAtr
+    AND fec.FecMes = nchh.NctMtr
+    AND fec.FecDia = nchh.NctDtr
+
+-- Solo notas de crédito administrativas (excluye tipos operativos/internos 3, 5 y 6)
+WHERE nchh.NctTip NOT IN (3, 5, 6)

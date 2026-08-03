@@ -1,0 +1,131 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Función  : SEGLIB.FA_CLASIFICACION_CLIENTE
+-- Propósito: Clasifica a un cliente según su comportamiento de
+--            compra en el período del mes correspondiente a P_FECHA,
+--            usando el patrón histórico calculado por
+--            SEGLIB.FA_PATRON_COMPRA_CLIENTE.
+-- Versión  : 2.0
+-- Parámetros:
+--   P_CUSTNO  INTEGER  Clave del cliente a clasificar.
+--   P_FECHA   DATE     Fecha tope. Define el mes de análisis y el
+--                      límite histórico de movimientos.
+-- Retorna tabla con columnas:
+--   CODIGO_CLIENTE  INTEGER       Clave del cliente.
+--   CLASIFICACION   VARCHAR(15)   Resultado de la clasificación:
+--     'NUEVO'      Primera compra registrada en el mismo mes/año
+--                  que P_FECHA (según FA_PATRON_COMPRA_CLIENTE).
+--     'REACTIVADO' Compró en el período del mes de P_FECHA y su
+--                  última compra previa al período supera el umbral
+--                  calculado en el patrón histórico.
+--     'ACTIVO'     Compró en el período del mes de P_FECHA y su
+--                  última compra previa está dentro del umbral.
+--     'INACTIVO'   No compró en el período del mes de P_FECHA, o
+--                  no se puede determinar el intervalo.
+-- Notas:
+--   - El patrón se consulta con P_TIPO='T' (todos los distribuidores).
+--   - UltimaCompra y CompraPeriodo no filtran por tipo de distribuidor
+--     (decisión de diseño: se evalúa cualquier compra del cliente).
+--   - Si P_CUSTNO o P_FECHA son NULL retorna tabla vacía.
+-- Uso:
+--   SELECT * FROM TABLE(SEGLIB.FA_CLASIFICACION_CLIENTE(
+--       1001,
+--       DATE('2026-07-23')
+--   )) AS x;
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.FA_CLASIFICACION_CLIENTE (
+    P_CUSTNO INTEGER,   -- código cliente
+    P_FECHA  DATE       -- fecha tope (define el mes de análisis)
+)
+RETURNS TABLE (
+    CODIGO_CLIENTE INTEGER,
+    CLASIFICACION  VARCHAR(15)
+)
+LANGUAGE SQL
+NOT DETERMINISTIC        -- el resultado depende del estado de las tablas
+READS SQL DATA
+RETURNS NULL ON NULL INPUT  -- si cualquier parámetro es NULL retorna vacío
+RETURN
+    -- Patrón histórico del cliente (todos los distribuidores)
+    WITH Patron AS (
+        SELECT
+            CODIGO_CLIENTE,
+            UMBRAL,
+            ES_NUEVO
+        FROM TABLE(SEGLIB.FA_PATRON_COMPRA_CLIENTE(P_CUSTNO, P_FECHA, 'T'))
+    ),
+
+    -- Primer y último día del mes correspondiente a P_FECHA
+    Periodo AS (
+        SELECT
+            DATE(TO_CHAR(P_FECHA, 'YYYY-MM') || '-01') AS PRIMER_DIA,
+            LAST_DAY(P_FECHA)                           AS ULTIMO_DIA
+        FROM SYSIBM.SYSDUMMY1
+    ),
+
+    -- Última compra del cliente ANTES del período (para calcular intervalo)
+    -- No filtra por DisTip: se considera cualquier compra del cliente
+    UltimaCompra AS (
+        SELECT
+            MAX(T9.FecIso) AS FECHA_ULTIMA
+        FROM FacDtoh T2
+        JOIN SegDis T3  ON T2.DisCve = T3.DisCve
+        JOIN SegFec T9  ON T2.DtoAno = T9.FecAno
+                       AND T2.DtoMes = T9.FecMes
+                       AND T2.DtoDia = T9.FecDia
+        -- CROSS JOIN de una fila para acceder a las fechas del período
+        JOIN Periodo PR ON 1 = 1
+        WHERE T2.CliCve  = P_CUSTNO
+          AND T9.FecIso  < PR.PRIMER_DIA
+          AND T2.DtoSta  = 'A'
+          AND T2.DtoTip  NOT IN (2, 8)
+    ),
+
+    -- Primera compra del cliente DENTRO del período del mes de P_FECHA
+    -- No filtra por DisTip: se considera cualquier compra del cliente
+    CompraPeriodo AS (
+        SELECT
+            MIN(T9.FecIso) AS FECHA_PERIODO
+        FROM FacDtoh T2
+        JOIN SegDis T3  ON T2.DisCve = T3.DisCve
+        JOIN SegFec T9  ON T2.DtoAno = T9.FecAno
+                       AND T2.DtoMes = T9.FecMes
+                       AND T2.DtoDia = T9.FecDia
+        -- CROSS JOIN de una fila para acceder a las fechas del período
+        JOIN Periodo PR ON 1 = 1
+        WHERE T2.CliCve  = P_CUSTNO
+          AND T9.FecIso  BETWEEN PR.PRIMER_DIA AND PR.ULTIMO_DIA
+          AND T2.DtoSta  = 'A'
+          AND T2.DtoTip  NOT IN (2, 8)
+    )
+
+    SELECT
+        P.CODIGO_CLIENTE,
+        CASE
+            -- Cliente cuya primera compra fue en el mes de P_FECHA
+            WHEN P.ES_NUEVO = 1
+                THEN 'NUEVO'
+
+            -- Compró en el período y el intervalo desde la última
+            -- compra supera el umbral → cliente reactivado
+            WHEN C.FECHA_PERIODO IS NOT NULL
+             AND U.FECHA_ULTIMA   IS NOT NULL
+             AND (DAYS(C.FECHA_PERIODO) - DAYS(U.FECHA_ULTIMA)) > P.UMBRAL
+                THEN 'REACTIVADO'
+
+            -- Compró en el período y el intervalo está dentro del umbral
+            WHEN C.FECHA_PERIODO IS NOT NULL
+             AND U.FECHA_ULTIMA   IS NOT NULL
+                THEN 'ACTIVO'
+
+            -- Sin compra en el período o sin historial previo comparable
+            ELSE 'INACTIVO'
+        END AS CLASIFICACION
+
+    FROM            Patron       P
+    LEFT JOIN       UltimaCompra U  ON 1 = 1
+    LEFT JOIN       CompraPeriodo C ON 1 = 1;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_CLASIFICACION_CLIENTE TO PUBLIC;

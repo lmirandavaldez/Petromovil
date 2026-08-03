@@ -1,0 +1,116 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ==============================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM005
+-- Objeto    : VWNOM_HISTORICO_CAMBIO_SALARIO
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Versión   : 2.0
+-- --------------------------------------------------------------
+-- Propósito: Historial de cambios de salario por empleado,
+--            incluyendo salario anterior, nuevo y porcentaje
+--            de variación, con la fecha efectiva del cambio y
+--            fecha de nacimiento del empleado.
+-- Correcciones v1  v2:
+--   1. Nombre de vista normalizado a mayúsculas.
+--   2. Fecha_Nacimiento protegida con CASE de validación de
+--      campos (NULL/0/rango) para evitar error en DATE().
+--      Centralizada en LATERAL FN (un solo cálculo).
+--   3. Fecha_Cambio_Salario protegida con CASE de validación
+--      de campos (NULL/0/rango) para evitar error en DATE().
+--      Centralizada en LATERAL FC (un solo cálculo).
+--   4. NomDep y NomCar cambiados a LEFT JOIN: si el empleado
+--      no tiene departamento o cargo asignado, el registro de
+--      historial se conserva (con NULLs en DepDes/CarDes).
+--   5. Capitalización SQL normalizada a mayúsculas.
+--   6. Columnas agrupadas por categoría lógica.
+--   7. Cabecera de documentación añadida.
+-- Notas:
+--   - No filtra por EmpSta: incluye empleados inactivos para
+--     preservar el historial completo de cambios.
+--   - CseSan = Salario anterior, CseSac = Salario actual/nuevo,
+--     CsePva = Porcentaje de variación.
+-- Tablas base:
+--   NomCse (T1)  Historial de cambios de salario
+--   NomEmp (T2)  Maestro de empleados
+--   NomDep (T3)  Departamentos
+--   NomCar (T4)  Cargos
+-- ============================================================
+
+CREATE OR REPLACE VIEW VWNOM_HISTORICO_CAMBIO_SALARIO AS
+SELECT
+    -- Clasificación laboral
+    T3.DepDes,
+    T4.CarDes,
+
+    -- Identificación del empleado
+    T1.EmpCve,
+    T2.EmpApe,
+    T2.EmpNom,
+
+    -- Fecha de nacimiento del empleado  centralizada en LATERAL FN
+    -- Protección: NULL/0/fuera de rango producirían error en DATE()
+    FN.Fecha_Nacimiento,
+
+    -- Datos del cambio de salario
+    T1.CseSan,   -- Salario anterior
+    T1.CseSac,   -- Salario actual/nuevo
+    T1.CsePva,   -- Porcentaje de variación
+
+    -- Fecha efectiva del cambio  centralizada en LATERAL FC
+    -- Protección: NULL/0/fuera de rango producirían error en DATE()
+    FC.Fecha_Cambio_Salario
+
+FROM NomCse T1
+-- INNER JOIN NomEmp: un registro de cambio sin empleado es inválido
+JOIN            NomEmp T2  ON T1.EmpCve = T2.EmpCve
+-- LEFT JOIN NomDep/NomCar: preserva el historial aunque el empleado
+-- no tenga departamento o cargo actualmente asignado
+LEFT OUTER JOIN NomDep T3  ON T2.DepCve = T3.DepCve
+LEFT OUTER JOIN NomCar T4  ON T2.CarCve = T4.CarCve
+
+-- LATERAL FN: fecha de nacimiento construida y validada una sola vez
+CROSS JOIN LATERAL (
+    SELECT CASE
+               WHEN T2.EmpAna IS NULL OR T2.EmpAna = 0
+                 OR T2.EmpMna IS NULL OR T2.EmpMna = 0
+                 OR T2.EmpDna IS NULL OR T2.EmpDna = 0
+                 OR T2.EmpAna < 1900  OR T2.EmpAna > 9999
+                 OR T2.EmpMna < 1     OR T2.EmpMna > 12
+                 OR T2.EmpDna < 1     OR T2.EmpDna > 31
+                   THEN DATE('1900-01-01')
+               ELSE DATE(
+                   CONCAT(SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T2.EmpAna))),
+                          TRIM(T2.EmpAna)) || '-' ||
+                   CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T2.EmpMna))),
+                          TRIM(T2.EmpMna)) || '-' ||
+                   CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T2.EmpDna))),
+                          TRIM(T2.EmpDna))
+               )
+           END AS Fecha_Nacimiento
+    FROM SYSIBM.SYSDUMMY1
+) AS FN
+
+-- LATERAL FC: fecha efectiva del cambio de salario construida y validada
+CROSS JOIN LATERAL (
+    SELECT CASE
+               WHEN T1.CseAef IS NULL OR T1.CseAef = 0
+                 OR T1.CseMef IS NULL OR T1.CseMef = 0
+                 OR T1.CseDef IS NULL OR T1.CseDef = 0
+                 OR T1.CseAef < 1900  OR T1.CseAef > 9999
+                 OR T1.CseMef < 1     OR T1.CseMef > 12
+                 OR T1.CseDef < 1     OR T1.CseDef > 31
+                   THEN DATE('1900-01-01')
+               ELSE DATE(
+                   CONCAT(SUBSTRING('0000', 0, 5 - LENGTH(TRIM(T1.CseAef))),
+                          TRIM(T1.CseAef)) || '-' ||
+                   CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.CseMef))),
+                          TRIM(T1.CseMef)) || '-' ||
+                   CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(T1.CseDef))),
+                          TRIM(T1.CseDef))
+               )
+           END AS Fecha_Cambio_Salario
+    FROM SYSIBM.SYSDUMMY1
+) AS FC;
+

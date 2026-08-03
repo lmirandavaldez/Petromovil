@@ -1,0 +1,43 @@
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC003
+-- Objeto    : VWCXC_Territorios_Zonas
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito: Expone la relación entre territorios de venta y las zonas
+--            comerciales que los componen. Un territorio puede contener
+--            múltiples zonas; solo se muestran territorios con al menos
+--            una zona asignada (INNER JOIN intencional).
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcTer  (T1) - Catálogo de territorios de venta
+--   CxcZon  (T2) - Catálogo de zonas comerciales (N zonas por territorio)
+-- -----------------------------------------------------------------------------
+-- Notas de diseño:
+--   - Se utiliza INNER JOIN porque la vista tiene como propósito mostrar
+--     únicamente combinaciones territorio-zona válidas.
+--   - Si se requieren territorios sin zonas asignadas, cambiar a
+--     LEFT OUTER JOIN y evaluar el impacto en los consumidores de la vista.
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1 - Versión original (respaldo: SQLCC003_v1.SQLC)
+--   v2 - Normalización de formato y sangría; eliminación de paréntesis
+--        redundantes en ON; documentación del objeto y columnas.
+-- =============================================================================
+Create Or Replace View VWCXC_Territorios_Zonas
+As
+Select
+    -- Territorio de venta
+    T1.TerCve,      -- Clave del territorio
+    T1.TerDes,      -- Descripción del territorio
+    -- Zona comercial asignada al territorio
+    T2.ZonCve,      -- Clave de la zona
+    T2.ZonDes       -- Descripción de la zona
+From CxcTer T1
+    -- Zonas: INNER JOIN → solo territorios con zonas asignadas
+    Join CxcZon T2
+      On T1.TerCve = T2.TerCve

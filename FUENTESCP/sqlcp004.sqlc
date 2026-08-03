@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Cuentas por Pagar
 -- Programa  : SQLCP004
 -- Objeto    : VWCXP_Documentos_Transacciones
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de transacciones de pago asociadas a documentos de
 --   cuentas por pagar. Consolida el detalle de la transaccion
@@ -32,7 +32,7 @@
 --
 --   Filtro: solo transacciones cuyo tipo de movimiento de
 --   pago (T4.MovTip) este entre 1 y 3.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   ProCve                    Clave del proveedor    (CxpDped/T1)
 --   ProNom                    Nombre del proveedor   (CxpPro/T5)
@@ -67,7 +67,7 @@
 --   Numero_Diario_Transaccion Num. diario transacc.  (CxpDped/T1)
 --   DpeTca                    Tasa de cambio transac.(CxpDped/T1)
 --   DpeVlc                    Valor en moneda local  (CxpDped/T1)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CxpDped  T1   Detalle transacciones de pago CxP (base)
 --   CxpDpeh  T2   Encabezado de documentos CxP
@@ -80,7 +80,7 @@
 --   SegFec   T10  Tabla de fechas (Fecha_Documento)
 --   SegFec   T11  Tabla de fechas (Fecha_Registro)
 --   SegFec   T12  Tabla de fechas (Fecha_Transaccion)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de resolucion de fechas:
 --   T10 : LEFT OUTER JOIN a SegFec por tres campos separados
 --         (DpeAno, DpeMes, DpeDia de CxpDpeh T2) -> FecIso.
@@ -90,13 +90,13 @@
 --         (DpeAtr, DpeMtr, DpeDtr de CxpDped T1) -> FecIso.
 --   COALESCE devuelve DATE('2039-12-31') si el JOIN es NULL.
 --   SegFec cubre el rango 1940-01-01 a 2039-12-31.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Filtros aplicados:
 --   T4.MovTip BETWEEN 1 AND 3
 --             Solo transacciones de tipos de movimiento 1, 2
 --             y 3 (pagos, anticipos y notas de credito segun
 --             la convencion del sistema).
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. CxpMov se une dos veces (T3 y T4): T3 por el movimiento
 --      del documento (T1.MovCve) y T4 por el movimiento de la
@@ -116,7 +116,7 @@
 --      confirmar que ProCve + MovCve + DpeDoc es suficiente
 --      para identificar unicamente el encabezado, o si DpeRef
 --      tambien debe incluirse (ver sqlcp003 donde si se usa).
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
@@ -124,7 +124,7 @@
 --                           JOINs a SegFec (T10, T11, T12)
 --                           convertidos a LEFT OUTER JOIN
 --                           con COALESCE DATE('2039-12-31').
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXP_Documentos_Transacciones AS
 SELECT

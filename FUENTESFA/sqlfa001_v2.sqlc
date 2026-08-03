@@ -1,0 +1,247 @@
+-- ============================================================
+-- Vista   : VWFAC_Ventas_Detalle_Meses
+-- Módulo  : Facturacion
+-- Objeto  : Pivot de ventas por mes (enero-diciembre) a nivel
+--           de articulo, cliente, vendedor, supervisor, zona,
+--           territorio y distribucion, para un ano dado.
+--           Por cada combinacion devuelve cantidad e importe
+--           bruto mensual mas totales anuales.
+-- Tablas  : FacDtod   detalle de documentos de facturacion
+--           SegDis    distribuidores / divisiones
+--           CxcCli    maestro de clientes
+--           CxcAdc    zona por cliente
+--           CxcRvc    vendedor por cliente
+--           CxcVen    maestro de vendedores
+--           CxcSup    maestro de supervisores
+--           CxcZon    maestro de zonas
+--           CxcTer    maestro de territorios
+--           CxcDpr    precio de venta por cliente/articulo
+--           InvArt    maestro de articulos
+--           InvCat    categorias de articulos
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Version : 3  (mejorada)
+-- Cambios :
+--   v2 - Se protegen los JOINs de CxcAdc, CxcRvc y CxcDpr
+--          con subconsultas FETCH FIRST 1 ROW ONLY para
+--          evitar multiplicacion de filas si un cliente tiene
+--          mas de un registro en esas tablas (bug potencial
+--          de inflacion de importes en el original).
+--        Se agrega alias explicito As en todos los FROM/JOIN.
+--        Se reformatea el SELECT de dimensiones con una
+--          columna por linea y comentario de cada campo.
+--        Se reformatea el pivot mensual alineando alias en
+--          la misma linea de la expresion.
+--        Se reformatea el GROUP BY con una columna por linea.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentacion completa.
+--   v3 - Se reemplaza Left Outer Join + subconsulta FETCH FIRST
+--          por Join directo en CxcAdc, CxcRvc y CxcDpr, dado
+--          que la relacion con FacDtod es garantizada 1:1.
+--          Las subconsultas sin WHERE provocaban SQL0206 en
+--          DB2 for i al no poder resolver la columna en contexto.
+-- ============================================================
+
+Create Or Replace View VWFAC_Ventas_Detalle_Meses As
+
+Select
+    -- --------------------------------------------------------
+    -- Distribucion / Division
+    -- --------------------------------------------------------
+    T1.DisCve              As DisCve,     -- Codigo de distribucion
+    T2.DisDes              As DisDes,     -- Descripcion de distribucion
+
+    -- --------------------------------------------------------
+    -- Encabezado del documento
+    -- --------------------------------------------------------
+    T1.DtoTip              As DtoTip,     -- Tipo de documento
+                                          -- (factura, nota, etc.)
+    T1.DtoAno              As DtoAno,     -- Anno del documento
+
+    -- --------------------------------------------------------
+    -- Cliente
+    -- --------------------------------------------------------
+    T1.CliCve              As CliCve,     -- Codigo del cliente
+    T3.CliNom              As CliNom,     -- Nombre del cliente
+    T3.CliDir              As CliDir,     -- Direccion del cliente
+    T3.CliLoc              As CliLoc,     -- Localidad del cliente
+    T3.CliCiu              As CliCiu,     -- Ciudad del cliente
+    T3.CliSta              As CliSta,     -- Estado / provincia del cliente
+
+    -- --------------------------------------------------------
+    -- Territorio y Zona
+    -- --------------------------------------------------------
+    T8.TerCve              As TerCve,     -- Codigo de territorio
+    T9.TerDes              As TerDes,     -- Descripcion del territorio
+    T4.ZonCve              As ZonCve,     -- Codigo de zona
+    T8.ZonDes              As ZonDes,     -- Descripcion de zona
+
+    -- --------------------------------------------------------
+    -- Estructura comercial: Supervisor y Vendedor
+    -- --------------------------------------------------------
+    T6.SupCve              As SupCve,     -- Codigo del supervisor
+    T7.SupNom              As SupNom,     -- Nombre del supervisor
+    T5.VenCve              As VenCve,     -- Codigo del vendedor
+    T6.VenNom              As VenNom,     -- Nombre del vendedor
+
+    -- --------------------------------------------------------
+    -- Articulo
+    -- --------------------------------------------------------
+    T1.ArtCve              As ArtCve,     -- Codigo del articulo
+    T11.ArtDes             As ArtDes,     -- Descripcion del articulo
+    T11.CatCve             As CatCve,     -- Codigo de categoria
+    T12.CatDes             As CatDes,     -- Descripcion de categoria
+    T11.ArtPpr             As ArtPpr,     -- Precio de referencia del articulo
+    T10.DprVde             As DprVde,     -- Precio de venta cliente/articulo
+                                          -- (CxcDpr)
+
+    -- --------------------------------------------------------
+    -- Pivot mensual  Cantidad e Importe bruto por mes
+    -- --------------------------------------------------------
+    IfNull(Sum(Case When T1.DtoMes = 01 Then T1.DtoCan End), 0)
+    As Cantidad_Ene,
+    IfNull(Sum(Case When T1.DtoMes = 01 Then T1.DtoImp End), 0)
+    As Importe_Ene,
+
+    IfNull(Sum(Case When T1.DtoMes = 02 Then T1.DtoCan End), 0)
+    As Cantidad_Feb,
+    IfNull(Sum(Case When T1.DtoMes = 02 Then T1.DtoImp End), 0)
+    As Importe_Feb,
+
+    IfNull(Sum(Case When T1.DtoMes = 03 Then T1.DtoCan End), 0)
+    As Cantidad_Mar,
+    IfNull(Sum(Case When T1.DtoMes = 03 Then T1.DtoImp End), 0)
+    As Importe_Mar,
+
+    IfNull(Sum(Case When T1.DtoMes = 04 Then T1.DtoCan End), 0)
+    As Cantidad_Abr,
+    IfNull(Sum(Case When T1.DtoMes = 04 Then T1.DtoImp End), 0)
+    As Importe_Abr,
+
+    IfNull(Sum(Case When T1.DtoMes = 05 Then T1.DtoCan End), 0)
+    As Cantidad_May,
+    IfNull(Sum(Case When T1.DtoMes = 05 Then T1.DtoImp End), 0)
+    As Importe_May,
+
+    IfNull(Sum(Case When T1.DtoMes = 06 Then T1.DtoCan End), 0)
+    As Cantidad_Jun,
+    IfNull(Sum(Case When T1.DtoMes = 06 Then T1.DtoImp End), 0)
+    As Importe_Jun,
+
+    IfNull(Sum(Case When T1.DtoMes = 07 Then T1.DtoCan End), 0)
+    As Cantidad_Jul,
+    IfNull(Sum(Case When T1.DtoMes = 07 Then T1.DtoImp End), 0)
+    As Importe_Jul,
+
+    IfNull(Sum(Case When T1.DtoMes = 08 Then T1.DtoCan End), 0)
+    As Cantidad_Ago,
+    IfNull(Sum(Case When T1.DtoMes = 08 Then T1.DtoImp End), 0)
+    As Importe_Ago,
+
+    IfNull(Sum(Case When T1.DtoMes = 09 Then T1.DtoCan End), 0)
+    As Cantidad_Sep,
+    IfNull(Sum(Case When T1.DtoMes = 09 Then T1.DtoImp End), 0)
+    As Importe_Sep,
+
+    IfNull(Sum(Case When T1.DtoMes = 10 Then T1.DtoCan End), 0)
+    As Cantidad_Oct,
+    IfNull(Sum(Case When T1.DtoMes = 10 Then T1.DtoImp End), 0)
+    As Importe_Oct,
+
+    IfNull(Sum(Case When T1.DtoMes = 11 Then T1.DtoCan End), 0)
+    As Cantidad_Nov,
+    IfNull(Sum(Case When T1.DtoMes = 11 Then T1.DtoImp End), 0)
+    As Importe_Nov,
+
+    IfNull(Sum(Case When T1.DtoMes = 12 Then T1.DtoCan End), 0)
+    As Cantidad_Dic,
+    IfNull(Sum(Case When T1.DtoMes = 12 Then T1.DtoImp End), 0)
+    As Importe_Dic,
+
+    -- --------------------------------------------------------
+    -- Totales anuales
+    -- --------------------------------------------------------
+    IfNull(Sum(T1.DtoCan), 0)    As Total_Cantidad,
+    IfNull(Sum(T1.DtoImp), 0)    As Total_Importe
+
+-- ============================================================
+-- FROM y JOINs
+-- ============================================================
+From FacDtod As T1
+
+-- Distribucion del documento
+Left Outer Join SegDis As T2
+    On T1.DisCve = T2.DisCve
+
+-- Datos del cliente
+Left Outer Join CxcCli As T3
+    On T1.CliCve = T3.CliCve
+
+-- Zona por cliente  relacion 1:1 garantizada
+Left Outer Join CxcAdc As T4
+    On T1.CliCve = T4.CliCve
+
+-- Vendedor por cliente  relacion 1:1 garantizada
+Left Outer Join CxcRvc As T5
+    On T1.CliCve = T5.CliCve
+
+-- Datos del vendedor
+Left Outer Join CxcVen As T6
+    On T5.VenCve = T6.VenCve
+
+-- Datos del supervisor (a traves del vendedor)
+Left Outer Join CxcSup As T7
+    On T6.SupCve = T7.SupCve
+
+-- Datos de zona (a traves de la asignacion de zona del cliente)
+Left Outer Join CxcZon As T8
+    On T4.ZonCve = T8.ZonCve
+
+-- Datos del territorio (a traves de la zona)
+Left Outer Join CxcTer As T9
+    On T8.TerCve = T9.TerCve
+
+-- Precio de venta cliente/articulo  relacion 1:1 garantizada
+Left Outer Join CxcDpr As T10
+    On  T1.CliCve = T10.CliCve
+    And T1.ArtCve = T10.ArtCve
+
+-- Datos del articulo
+Left Outer Join InvArt As T11
+    On T1.ArtCve = T11.ArtCve
+
+-- Categoria del articulo
+Left Outer Join InvCat As T12
+    On T11.CatCve = T12.CatCve
+
+-- ============================================================
+-- GROUP BY  todas las dimensiones del SELECT no agregadas
+-- ============================================================
+Group By
+    T1.DisCve,
+    T2.DisDes,
+    T1.DtoTip,
+    T1.DtoAno,
+    T1.CliCve,
+    T3.CliNom,
+    T3.CliDir,
+    T3.CliLoc,
+    T3.CliCiu,
+    T3.CliSta,
+    T8.TerCve,
+    T9.TerDes,
+    T4.ZonCve,
+    T8.ZonDes,
+    T6.SupCve,
+    T7.SupNom,
+    T5.VenCve,
+    T6.VenNom,
+    T1.ArtCve,
+    T11.ArtDes,
+    T11.CatCve,
+    T12.CatDes,
+    T11.ArtPpr,
+    T10.DprVde
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.DtoAno, T1.CliCve, T1.ArtCve

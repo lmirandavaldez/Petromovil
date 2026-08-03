@@ -1,0 +1,89 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- =============================================================================
+-- Función  : SEGLIB.CG_PERIODO_ANTERIOR
+-- Versión  : v1
+-- Archivo  : sqlcgf001_v1.sqlc
+-- Descripción:
+--   Retorna los datos del periodo contable inmediatamente anterior al
+--   periodo indicado por los parámetros p_perano y p_pernum.
+--   Devuelve una fila si existe un periodo anterior, o ninguna fila si
+--   el periodo indicado es el primero registrado.
+--
+-- Parámetros de entrada:
+--   p_perano  INTEGER  Año  del periodo de referencia  (ej: 2026)
+--   p_pernum  INTEGER  Número del periodo de referencia (ej: 6)
+--
+-- Columnas retornadas:
+--   PERANO   INTEGER      Año del periodo anterior
+--   PERNUM   INTEGER      Número del periodo anterior
+--   PERDES   VARCHAR(15)  Descripción del periodo
+--   PERSIT   CHAR(1)      Situación del periodo
+--   PERFIP   DATE         Fecha inicial del periodo
+--   PERFFP   DATE         Fecha final del periodo
+--
+-- Uso:
+--   SELECT * FROM TABLE(SEGLIB.CG_PERIODO_ANTERIOR(2026, 6));
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.CG_PERIODO_ANTERIOR (
+    p_perano INTEGER,
+    p_pernum INTEGER
+)
+RETURNS TABLE (
+    PERANO  INTEGER,
+    PERNUM  INTEGER,
+    PERDES  VARCHAR(15),
+    PERSIT  CHAR(1),
+    PERFIP  DATE,
+    PERFFP  DATE
+)
+LANGUAGE SQL
+READS SQL DATA
+RETURN
+    SELECT
+        INTEGER(ant.PERANO)                         AS PERANO,
+        INTEGER(ant.PERNUM)                         AS PERNUM,
+        ant.PERDES,
+        ant.PERSIT,
+
+        /* Fecha inicial del periodo contable */
+        DATE(
+            TIMESTAMP_FORMAT(
+                VARCHAR(ant.PerAin) CONCAT '-' CONCAT
+                VARCHAR_FORMAT(ant.PerMin, '00') CONCAT '-' CONCAT
+                VARCHAR_FORMAT(ant.PerDin, '00'),
+                'YYYY-MM-DD'
+            )
+        ) AS PERFIP,
+
+        /* Fecha final del periodo contable.
+           LAST_DAY garantiza el último día del mes incluso si PerDfi
+           no almacena el valor correcto. */
+        LAST_DAY(
+            DATE(
+                TIMESTAMP_FORMAT(
+                    VARCHAR(ant.PerAfi) CONCAT '-' CONCAT
+                    VARCHAR_FORMAT(ant.PerMfi, '00') CONCAT '-' CONCAT
+                    VARCHAR_FORMAT(ant.PerDfi, '00'),
+                    'YYYY-MM-DD'
+                )
+            )
+        ) AS PERFFP
+
+    FROM (
+        SELECT
+            PERANO, PERNUM, PERDES, PERSIT,
+            PerAin, PerMin, PerDin,
+            PerAfi, PerMfi, PerDfi
+        FROM COGPER
+        WHERE
+            INTEGER(PERANO) < p_perano
+            OR (INTEGER(PERANO) = p_perano AND INTEGER(PERNUM) < p_pernum)
+        ORDER BY
+            INTEGER(PERANO) DESC,
+            INTEGER(PERNUM) DESC
+        FETCH FIRST 1 ROW ONLY
+    ) AS ant;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.CG_PERIODO_ANTERIOR TO PUBLIC;

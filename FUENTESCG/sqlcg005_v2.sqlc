@@ -1,0 +1,165 @@
+-- ==============================================================
+-- Modulo    : Contabilidad General
+-- Programa  : SQLCG005
+-- Objeto    : VWCOG_MAYOR_GENERAL_BCC
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito : Mayor general combinado con balance por centro
+--             de costo, por cuenta contable, auxiliar, ano y
+--             numero de periodo.
+--             Por cada combinacion expone en la misma fila:
+--               - Metricas del mayor general (CogMge):
+--                 Balance inicial, Debitos, Creditos y
+--                 Balance final.
+--               - Metricas del CCO (CogBcc):
+--                 Balance inicial, Debitos, Creditos y
+--                 Balance final por centro de costo.
+--             Descripcion muestra el nombre de la cuenta o
+--             del auxiliar segun corresponda.
+--             CcoCve / Descripcion_Cco pueden ser NULL cuando
+--             la cuenta no tiene movimientos en CogBcc.
+--             Solo incluye periodos cerrados (PerSit = 'C').
+-- --------------------------------------------------------------
+-- Tablas    : CogCta    catalogo de cuentas (tabla base)
+--             CogMge    movimientos del mayor general
+--             CogAuxd   catalogo de auxiliares
+--             CogBcc    balance por cuenta y centro de costo
+--             CogCco    catalogo de centros de costo
+--             CogPer    periodos contables
+-- --------------------------------------------------------------
+-- Cambios   :
+--   v2 - Se agrega cabecera de documentacion completa.
+--        Se agrega alias explicito As en FROM y JOINs.
+--        Se reformatea SELECT con una columna por linea
+--          y comentario descriptivo en cada campo.
+--        Se reformatea GROUP BY con una expresion por linea.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Se corrige IfNUll (casing inconsistente) a IfNull.
+--        Se respeta el orden original de los campos,
+--          la logica original y el limite de 80 posiciones.
+-- ============================================================
+
+Create Or Replace View VWCOG_MAYOR_GENERAL_BCC As
+
+Select
+    -- --------------------------------------------------------
+    -- Dimensiones de agrupacion
+    -- --------------------------------------------------------
+    T2.PerAno                              As PerAno,
+    -- Ano contable del periodo
+
+    T2.PerNum                              As PerNum,
+    -- Numero del periodo (1..12)
+
+    T1.CtaCve                              As CtaCve,
+    -- Clave de la cuenta contable
+
+    T2.AuxLis                              As AuxLis,
+    -- Lista (tipo) del auxiliar; 0 = sin auxiliar
+
+    T2.AuxCve                              As AuxCve,
+    -- Clave del auxiliar; 0 = sin auxiliar
+
+    -- Descripcion: nombre de cuenta o de auxiliar segun caso
+    (Case When T2.AuxCve = 0
+     Then T1.CtaDes
+     Else T3.AuxNom
+     End)                                  As Descripcion,
+
+    T4.CcoCve                              As CcoCve,
+    -- Clave del centro de costo (NULL si no hay en CogBcc)
+
+    T5.CcoDes                              As Descripcion_Cco,
+    -- Descripcion del centro de costo
+
+    -- --------------------------------------------------------
+    -- Metricas del mayor general (CogMge)
+    -- --------------------------------------------------------
+    IfNull(Sum(T2.MgeBip), 0)             As Balance_Inicial,
+    -- Saldo inicial del periodo (mayor)
+
+    IfNull(Sum(T2.MgeDeb), 0)             As Debitos,
+    -- Total de debitos del periodo (mayor)
+
+    IfNull(Sum(T2.MgeCre), 0)             As Creditos,
+    -- Total de creditos del periodo (mayor)
+
+    IfNull(Sum(T2.MgeBal), 0)             As Balance_Final,
+    -- Saldo final del periodo (mayor)
+
+    -- --------------------------------------------------------
+    -- Metricas del balance por centro de costo (CogBcc)
+    -- NULL cuando la cuenta no tiene movimientos en CogBcc
+    -- --------------------------------------------------------
+    IfNull(Sum(T4.BccBip), 0)             As Balance_Inicial_Bcc,
+    -- Saldo inicial del periodo (CCO)
+
+    IfNull(Sum(T4.BccDeb), 0)             As Debitos_Bcc,
+    -- Total de debitos del periodo (CCO)
+
+    IfNull(Sum(T4.BccCre), 0)             As Creditos_Bcc,
+    -- Total de creditos del periodo (CCO)
+
+    IfNull(Sum(T4.BccBal), 0)             As Balance_Final_Bcc
+    -- Saldo final del periodo (CCO)
+
+-- ============================================================
+-- FROM y JOINs
+-- ============================================================
+From CogCta As T1
+
+-- Mayor general: movimientos por cuenta
+Join CogMge As T2
+    On T1.CtaCve = T2.CtaCve
+
+-- Auxiliares: LEFT porque no toda cuenta tiene auxiliar
+Left Outer Join CogAuxd As T3
+    On  T2.AuxLis = T3.AuxLis
+    And T2.AuxCve = T3.AuxCve
+
+-- Balance por CCO: LEFT porque no toda cuenta/periodo
+-- tiene movimientos por centro de costo
+Left Outer Join CogBcc As T4
+    On  T2.PerAno = T4.PerAno
+    And T2.PerNum = T4.PerNum
+    And T1.CtaCve = T4.CtaCve
+    And T2.AuxLis = T4.AuxLis
+    And T2.AuxCve = T4.AuxCve
+
+-- Centro de costo: LEFT porque T4 puede ser NULL
+Left Outer Join CogCco As T5
+    On T4.CcoCve = T5.CcoCve
+
+-- Periodo contable: filtra solo periodos cerrados
+Join CogPer As T6
+    On  T2.PerAno = T6.PerAno
+    And T2.PerNum = T6.PerNum
+
+-- ============================================================
+-- Filtro: solo periodos cerrados
+-- ============================================================
+Where T6.PerSit = 'C'
+
+-- ============================================================
+-- GROUP BY: todas las dimensiones no agregadas del SELECT
+-- ============================================================
+Group By
+    T2.PerAno,
+    T2.PerNum,
+    T1.CtaCve,
+    T2.AuxLis,
+    T2.AuxCve,
+    (Case When T2.AuxCve = 0
+     Then T1.CtaDes
+     Else T3.AuxNom
+     End),
+    T4.CcoCve,
+    T5.CcoDes
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T2.PerAno, T2.PerNum, T1.CtaCve,
+--          T2.AuxLis, T2.AuxCve, T4.CcoCve

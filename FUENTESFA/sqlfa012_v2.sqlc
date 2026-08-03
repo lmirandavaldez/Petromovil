@@ -1,0 +1,147 @@
+-- ===========================================================
+-- Vista   : VWFac_Eficiencia_Despachos
+-- Módulo  : Facturación
+-- Objeto  : Calcula la eficiencia de carga y despacho por
+--           planilla y vehículo.
+--           Compara la capacidad del vehículo (galones en
+--           FacVehgb) contra lo cargado en planilla y lo
+--           realmente despachado, calculando:
+--             Merma_Cargado    = Capacidad - Total_Cargado
+--             Eficiencia_Cargado = (Cargado / Capacidad)*100
+--             Merma_Despachado = Cargado - Total_Despachado
+--             Eficiencia_Despacho=(Despachado/Cargado)*100
+--           Solo considera planillas completadas
+--           (PlaSta='R', SitCve='Y') de vehículos propios
+--           tipo 1 o 2.
+-- CTEs    : VWFAC_Vehiculos_Gls — capacidad total por
+--               vehículo (FacVehgb + FacVeh)
+--           Resumen_Planillas_Despachadas — totales de
+--               cargado y despachado por planilla
+-- Tablas  : FacVehgb — galones base por vehículo
+--           FacVeh   — maestro de vehículos
+--           FacPlad  — detalle de planilla de carga
+--           FacPlah  — cabecera de planilla de carga
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - CORRECCIÓN: typo 'Total_Depachado' corregido a
+--          'Total_Despachado' (faltaba 's') en CTE y SELECT.
+--        Se protegen ambas divisiones con NULLIF para
+--          evitar división por cero:
+--          Eficiencia_Cargado:  NULLIF(Total_Gls,0)
+--          Eficiencia_Despachado: NULLIF(Total_Cargado,0)
+--        Se corrige referencia sin prefijo 'Total_Depachado'
+--          en Merma_Despachado a T1.Total_Despachado.
+--        Se normaliza casing: Total_GLs → T2.Total_Gls.
+--        Se consolida cada expr. del SELECT en una línea
+--          (alias en la misma línea), respetando 80 cols.
+--        Se uniforma la indentación de los dos CTEs.
+--        Se agrega alias As en FROM y JOIN del SELECT final.
+--        Se documentan filtros de estado y cálculos.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentación completa.
+-- ===========================================================
+
+Create Or Replace View VWFac_Eficiencia_Despachos As
+
+-- ===========================================================
+-- CTE 1: Capacidad total en galones por vehículo
+-- Solo vehículos propios ('P') tipo 1 o 2
+-- ===========================================================
+With VWFAC_Vehiculos_Gls As (
+    Select
+        T1.VehFic,
+        Sum(T1.VehCgb)              As Total_Gls
+    From FacVehgb As T1
+    Inner Join FacVeh As T2
+        On T1.VehFic = T2.VehFic
+    Where
+        -- Solo vehículos propios
+        T2.VehOri = 'P'
+        -- Solo livianos/medianos (tipo 1 o 2)
+        And T2.VehTip In (1, 2)
+    Group By
+        T1.VehFic
+),
+
+-- ===========================================================
+-- CTE 2: Totales de cargado y despachado por planilla
+-- Solo planillas completadas: PlaSta='R', SitCve='Y'
+-- ===========================================================
+Resumen_Planillas_Despachadas As (
+    Select
+        T1.PlaDis,
+        T1.PlaNro,
+        T2.PlaFpl,
+        T2.VehFic,
+        Sum(T1.PlaCbd)              As Total_Cargado,
+        -- CORRECCIÓN: era 'Total_Depachado' (typo)
+        Sum(T1.PlaCdc)              As Total_Despachado
+    From FacPlad As T1
+    Inner Join FacPlah As T2
+        On  T1.PlaDis = T2.PlaDis
+        And T1.PlaNro = T2.PlaNro
+    Where
+        -- Solo renglones realizados ('R'=Realizado)
+        T1.PlaSta = 'R'
+        -- Solo planillas ya procesadas ('Y'=Ya procesada)
+        And T2.SitCve = 'Y'
+    Group By
+        T1.PlaDis,
+        T1.PlaNro,
+        T2.PlaFpl,
+        T2.VehFic
+)
+
+-- ===========================================================
+-- SELECT final: métricas de eficiencia
+-- ===========================================================
+Select
+    -- -------------------------------------------------------
+    -- Identificación de la planilla
+    -- -------------------------------------------------------
+    T1.PlaDis,                              -- Distrito Planilla
+    T1.PlaNro,                              -- Nro planilla
+    T1.PlaFpl,                              -- Fecha planilla
+    T1.VehFic,                              -- Vehículo
+
+    -- -------------------------------------------------------
+    -- Capacidad y cargado
+    -- -------------------------------------------------------
+    T2.Total_Gls,                     -- Capacidad (galones)
+    T1.Total_Cargado,                 -- Bultos cargados total
+
+    -- Merma de carga = Capacidad - Cargado
+    (T2.Total_Gls - T1.Total_Cargado)  As Merma_Cargado,
+
+    -- Eficiencia de carga = (Cargado / Capacidad) * 100
+    -- NULLIF evita división por cero si Total_Gls = 0
+    ((T1.Total_Cargado
+        / NullIf(T2.Total_Gls, 0)) * 100)
+                               As Eficiencia_Cargado,
+
+    -- -------------------------------------------------------
+    -- Despachado
+    -- -------------------------------------------------------
+    T1.Total_Despachado,           -- Bultos despachados total
+
+    -- Merma de despacho = Cargado - Despachado
+    (T1.Total_Cargado
+        - T1.Total_Despachado)     As Merma_Despachado,
+
+    -- Eficiencia de despacho = (Despachado / Cargado) * 100
+    -- NULLIF evita división por cero si Total_Cargado = 0
+    ((T1.Total_Despachado
+        / NullIf(T1.Total_Cargado, 0)) * 100)
+                             As Eficiencia_Despachado
+
+From Resumen_Planillas_Despachadas As T1
+
+-- Solo planillas cuyo vehículo tiene capacidad registrada
+Inner Join VWFAC_Vehiculos_Gls As T2
+    On T1.VehFic = T2.VehFic
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.PlaFpl, T1.VehFic, T1.PlaDis, T1.PlaNro

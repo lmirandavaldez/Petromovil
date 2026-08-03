@@ -8,72 +8,73 @@
 -- Version   : 1
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Consolida la información maestra de clientes incluyendo datos
---            generales, dirección fiscal, zona comercial, territorio, vendedor,
---            supervisor, campaña, provincia, municipio y demarcación.
--- -----------------------------------------------------------------------------
--- Tablas base:
+-- Proposito: Consolida la informacion maestra de clientes incluyendo datos
+--            generales, direccion fiscal, zona comercial, territorio, vendedor,
+--            supervisor, campana, provincia, municipio y demarcacion.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
 --   CxcCli  (T1)  - Maestro de clientes
---   CxcAdc  (T2)  - Datos adicionales del cliente (zona, campaña, límite crédito)
---   CxcDgc  (T3)  - Datos de gestión comercial (ciudad, macroflota)
+--   CxcAdc  (T2)  - Datos adicionales del cliente (zona, campana, limite credito)
+--   CxcDgc  (T3)  - Datos de gestion comercial (ciudad, macroflota)
 --   CxcZon  (T4)  - Zonas comerciales
 --   CxcTer  (T5)  - Territorios de venta
---   CxcRvc  (T6)  - Relación vendedor-cliente (LEFT: cliente puede no tener vendedor)
+--   CxcRvc  (T6)  - Relacion vendedor-cliente (LEFT: cliente puede no tener vendedor)
 --   CxcVen  (T7)  - Vendedores (LEFT: dependiente de CxcRvc)
 --   CxcSup  (T8)  - Supervisores (LEFT: dependiente de CxcVen)
---   CxcCpa  (T9)  - Campañas (LEFT: cliente puede no tener campaña activa)
---   SegPrv  (T10) - Catálogo de provincias (LEFT: CliPrv puede ser nulo)
---   SegMun  (T11) - Catálogo de municipios (LEFT: CliMun puede ser nulo)
---   SegDms  (T12) - Catálogo de demarcaciones/asentamientos
+--   CxcCpa  (T9)  - Campanas (LEFT: cliente puede no tener campana activa)
+--   SegPrv  (T10) - Catalogo de provincias (LEFT: CliPrv puede ser nulo)
+--   SegMun  (T11) - Catalogo de municipios (LEFT: CliMun puede ser nulo)
+--   SegDms  (T12) - Catalogo de demarcaciones/asentamientos
 --           (LEFT: puede ser nulo)
--- -----------------------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
---   v1 - Versión original (respaldo: SQLCC001_v1.SQLC)
---   v2 - Corrección alias T7.SupCve → T8.SupCve; normalización de sangría;
---        eliminación de espacios dobles; documentación del objeto.
--- =============================================================================
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 Create Or Replace View VWCXC_Maestro_Clientes
 As
 Select
     -- Datos generales del cliente
     T1.CliCve,                  -- Clave del cliente
-    T1.CliNom,                  -- Nombre / Razón social
-    T1.CliDir,                  -- Dirección línea 1
-    T1.CliDi1,                  -- Dirección línea 2
-    T1.CliTe1,                  -- Teléfono 1
-    T1.CliTe2,                  -- Teléfono 2
-    T1.CliRnc,                  -- RNC / Identificación fiscal
+    T1.CliNom,                  -- Nombre / Razon social
+    T1.CliDir,                  -- Direccion linea 1
+    T1.CliDi1,                  -- Direccion linea 2
+    T1.CliTe1,                  -- Telefono 1
+    T1.CliTe2,                  -- Telefono 2
+    T1.CliRnc,                  -- RNC / Identificacion fiscal
     T1.CliSta,                  -- Estatus del cliente
-    -- Ubicación geográfica
+    -- Ubicacion geografica
     T1.CliPrv,                  -- Clave de provincia
-    T10.PrvDes,                 -- Descripción de provincia
+    T10.PrvDes,                 -- Descripcion de provincia
     T1.CliMun,                  -- Clave de municipio
-    T11.MunDes,                 -- Descripción de municipio
-    T1.CliDms,                  -- Clave de demarcación
-    T1.CliCpo,                  -- Código postal
+    T11.MunDes,                 -- Descripcion de municipio
+    T1.CliDms,                  -- Clave de demarcacion
+    T1.CliCpo,                  -- Codigo postal
     T1.CliSec,                  -- Sector
-    T12.DmsDes,                 -- Descripción de demarcación
-    -- Datos adicionales y crédito
-    T2.AdcLcr,                  -- Límite de crédito
-    T2.CpaCve,                  -- Clave de campaña
-    T9.CpaDes,                  -- Descripción de campaña
-    -- Datos de gestión comercial
-    T3.DgcCdd,                  -- Ciudad de gestión
+    T12.DmsDes,                 -- Descripcion de demarcacion
+    -- Datos adicionales y credito
+    T2.AdcLcr,                  -- Limite de credito
+    T2.CpaCve,                  -- Clave de campana
+    T9.CpaDes,                  -- Descripcion de campana
+    -- Datos de gestion comercial
+    T3.DgcCdd,                  -- Ciudad de gestion
     T3.DgcMfl,                  -- Macroflota
-    -- Estructura comercial: zona → territorio → supervisor → vendedor
+    -- Estructura comercial: zona -> territorio -> supervisor -> vendedor
     T2.ZonCve,                  -- Clave de zona
-    T4.ZonDes,                  -- Descripción de zona
+    T4.ZonDes,                  -- Descripcion de zona
     T4.TerCve,                  -- Clave de territorio
-    T5.TerDes,                  -- Descripción de territorio
+    T5.TerDes,                  -- Descripcion de territorio
     T8.SupCve,                  -- Clave de supervisor 
     T8.SupNom,                  -- Nombre del supervisor
     T6.VenCve,                  -- Clave del vendedor
     T7.VenNom                   -- Nombre del vendedor
 From CxcCli T1
-    -- Datos adicionales: relación obligatoria 1-1
+    -- Datos adicionales: relacion obligatoria 1-1
     Join CxcAdc T2
       On T1.CliCve = T2.CliCve
-    -- Datos de gestión comercial: relación obligatoria 1-1
+    -- Datos de gestion comercial: relacion obligatoria 1-1
     Join CxcDgc T3
       On T1.CliCve = T3.CliCve
     -- Zona comercial: obligatoria desde datos adicionales
@@ -91,18 +92,18 @@ From CxcCli T1
     -- Supervisor: depende de CxcVen
     Left Outer Join CxcSup T8
       On T7.SupCve = T8.SupCve
-    -- Campaña: opcional
+    -- Campana: opcional
     Left Outer Join CxcCpa T9
       On T2.CpaCve = T9.CpaCve
-    -- Provincia: opcional (dirección puede ser incompleta)
+    -- Provincia: opcional (direccion puede ser incompleta)
     Left Outer Join SegPrv T10
       On T1.CliPrv = T10.PrvCve
     -- Municipio: requiere provincia + municipio
     Left Outer Join SegMun T11
       On  T1.CliPrv = T11.PrvCve
      And  T1.CliMun = T11.MunCve
-    -- Demarcación / asentamiento: requiere provincia 
-    -- + municipio + demarcación + CP + sector
+    -- Demarcacion / asentamiento: requiere provincia 
+    -- + municipio + demarcacion + CP + sector
     Left Outer Join SegDms T12
       On  T1.CliPrv = T12.PrvCve
      And  T1.CliMun = T12.MunCve

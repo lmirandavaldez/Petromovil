@@ -8,46 +8,47 @@
 -- Version   : 1
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Resume, por cliente, la fecha del último cheque emitido y la
+-- Proposito: Resume, por cliente, la fecha del ultimo cheque emitido y la
 --            cantidad total de cheques registrados en CxcUlt, filtrando
---            únicamente los tipos de documento cuyo CdoRel = '02' (cheques).
+--            unicamente los tipos de documento cuyo CdoRel = '02' (cheques).
 --            La fecha se obtiene desde la tabla de fechas del sistema (SegFec)
---            usando los campos AÑO/MES/DÍA descompuestos de CxcUlt.
--- -----------------------------------------------------------------------------
--- Tablas base:
---   CxcUlt  - Últimos documentos por cliente (contadores y fecha descompuesta:
+--            usando los campos ANO/MES/DIA descompuestos de CxcUlt.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxcUlt  - Ultimos documentos por cliente (contadores y fecha descompuesta:
 --             UltAno, UltMes, UltDia; contador: UltCon)
---   CxcCdo  - Catálogo de tipos de documento (filtro: CdoRel = '02' = cheques)
---   SegFec  - Tabla de fechas del sistema (convierte Ano/Mes/Dia → FecYmd)
--- -----------------------------------------------------------------------------
+--   CxcCdo  - Catalogo de tipos de documento (filtro: CdoRel = '02' = cheques)
+--   SegFec  - Tabla de fechas del sistema (convierte Ano/Mes/Dia -> FecYmd)
+-- --------------------------------------------------------------
 -- Filtro aplicado:
---   CdoRel = '02'  →  Solo documentos de tipo cheque.
+--   CdoRel = '02'  ->  Solo documentos de tipo cheque.
 --   CxcCdo se usa exclusivamente en el WHERE (no aporta columnas al SELECT).
 --   El JOIN INNER con CxcCdo garantiza que el tipo de documento tenga
---   correspondencia en el catálogo; documentos sin tipo registrado quedan
+--   correspondencia en el catalogo; documentos sin tipo registrado quedan
 --   excluidos.
--- -----------------------------------------------------------------------------
--- Relación con otras vistas:
+-- --------------------------------------------------------------
+-- Relacion con otras vistas:
 --   Comparte estructura base con VWCXC_Ultimos_Documentos (SQLCC008).
 --   Diferencias clave:
 --     • SQLCC008 filtra por SegLdm (SisCve='CC') y agrupa por CliCve +
 --       LdmTip + LdmTor (todos los tipos del subsistema CxC).
 --     • Esta vista filtra por CxcCdo (CdoRel='02') y agrupa solo por
---       CliCve, entregando un único renglón resumen de cheques por cliente.
--- -----------------------------------------------------------------------------
--- Notas técnicas:
---   - El patrón JOIN con SegFec convierte UltAno/UltMes/UltDia en FecYmd
+--       CliCve, entregando un unico renglon resumen de cheques por cliente.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   - El patron JOIN con SegFec convierte UltAno/UltMes/UltDia en FecYmd
 --     sin construir una cadena de texto (igual que SQLCC008).
 --   - UltCon : Contador de documentos emitidos para esa clave de documento.
---   - FecYmd : Fecha en formato ISO (YYYY-MM-DD o YYYYMMDD según el motor).
+--   - FecYmd : Fecha en formato ISO (YYYY-MM-DD o YYYYMMDD segun el motor).
 --   - El alias T9 del original sugiere tablas intermedias eliminadas en
 --     versiones previas del query.
--- -----------------------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
---   v1  Versión original
---   v2  Alias descriptivos, INNER JOIN explícito, indentación estándar,
---       documentación completa, referencia cruzada con SQLCC008
--- =============================================================================
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXC_Cantidad_Cheques AS
 
@@ -57,13 +58,13 @@ SELECT
 
     -- Agregados
     MAX(fec.FecYmd)  AS Fecha_Ultimo_Doc,    
-            -- Fecha del último cheque emitido
+            -- Fecha del ultimo cheque emitido
     SUM(ult.UltCon)  AS Cantidad_Emitidos    
             -- Total de cheques emitidos por el cliente
 
 FROM CxcUlt ult
 
--- Tipo de documento: INNER — solo registros con tipo de documento en el catálogo
+-- Tipo de documento: INNER — solo registros con tipo de documento en el catalogo
 -- CxcCdo no aporta columnas al SELECT; se usa exclusivamente para el filtro WHERE
 INNER JOIN CxcCdo cdo
     ON cdo.CdoCve = ult.CdoCve
@@ -77,4 +78,4 @@ INNER JOIN SegFec fec
 WHERE cdo.CdoRel = '02'         -- Solo documentos de tipo cheque
 
 GROUP BY
-    ult.CliCve                  -- Un renglón resumen de cheques por cliente
+    ult.CliCve                  -- Un renglon resumen de cheques por cliente

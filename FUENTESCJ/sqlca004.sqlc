@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Caja
 -- Programa  : SQLCA004
 -- Objeto    : VWCAJ_Comisiones
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista consolidada de comisiones de vendedores de caja.
 --   Une mediante UNION dos fuentes de comisiones:
@@ -24,7 +24,7 @@
 --
 --   No hay campos de fecha en esta vista; no aplica logica
 --   de resolucion de fechas via SegFec.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   SupCve         Clave del supervisor           (CajcVenn/
 --                                                  CajcVex)
@@ -33,11 +33,11 @@
 --   Monto_Ingresos Suma del valor de ingresos     (calc.)
 --   Total_Comision Suma del total de comision     (calc.)
 --   Total_Galones  Suma del total de galones      (calc.)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CajcVenn   Comisiones de vendedores normales  (rama 1)
 --   CajcVex    Comisiones de vendedores externos  (rama 2)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de union:
 --   UNION (sin ALL): agrupa y suma por (SupCve, VenCve) en
 --   cada rama por separado, luego elimina filas duplicadas
@@ -46,7 +46,7 @@
 --   UNION ALL envuelto en una consulta exterior con GROUP BY,
 --   o cambiar la logica segun el requerimiento (ver sugerencia
 --   1 abajo).
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. UNION vs UNION ALL: el UNION actual elimina duplicados
 --      entre ramas pero NO suma los valores de un mismo
@@ -80,12 +80,12 @@
 --   3. Considerar agregar filtro de periodo o estado si la
 --      vista se usa en reportes de cierre, para evitar
 --      incluir comisiones de periodos anteriores no cerrados.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
 --   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCAJ_Comisiones AS
 

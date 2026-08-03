@@ -1,0 +1,55 @@
+-- ==============================================================
+-- Modulo    : Seguridad
+-- Programa  : SQLCM001
+-- Objeto    : VWCOM_Regiones_Provincias
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Devuelve el catalogo de provincias junto con la descripcion
+--   de la region a la que pertenecen. Combina la tabla de
+--   provincias (SegPrv) con la tabla de regiones (SegReg)
+--   mediante el codigo de region como clave de union.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   RegCve    Codigo de la region
+--   RegDes    Descripcion de la region
+--   PrvCve    Codigo de la provincia
+--   PrvDes    Descripcion de la provincia
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   SegPrv    Catalogo de provincias          (T1)
+--   SegReg    Catalogo de regiones            (T2)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica. Esta vista no maneja campos de fecha.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Cambiar Join por Left Join en SegReg para retener
+--      provincias cuya region no este registrada en SegReg,
+--      evitando perdida silenciosa de registros.
+--   2. Agregar ORDER BY RegCve, PrvCve para retornar el
+--      catalogo en orden natural de consulta.
+--   3. Evaluar incluir campo de estado o vigencia si las
+--      tablas lo manejan, para filtrar registros activos.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-01  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+Create Or Replace View VWCOM_Regiones_Provincias As
+
+Select
+    T1.RegCve                                   As RegCve,
+    T2.RegDes                                   As RegDes,
+    T1.PrvCve                                   As PrvCve,
+    T1.PrvDes                                   As PrvDes
+
+From       SegPrv  T1
+Inner Join SegReg  T2
+        On T1.RegCve = T2.RegCve

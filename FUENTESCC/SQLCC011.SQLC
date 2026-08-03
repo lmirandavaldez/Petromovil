@@ -8,39 +8,40 @@
 -- Version   : 1
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Presenta la configuración completa de comisiones por vendedor,
---            mostrando para cada rango de comisión (CxcRcv) el supervisor
---            del vendedor, el plan de comisión, la categoría de inventario
---            a la que aplica y los parámetros del rango (límites y factor).
--- -----------------------------------------------------------------------------
--- Tablas base:
---   CxcRcv  - Rangos de comisión por vendedor / categoría (tabla principal)
---   CxcVen  - Catálogo de vendedores (aporta VenNom y SupCve)
---   InvCat  - Catálogo de categorías de inventario
---   CxcSup  - Catálogo de supervisores de vendedores
---   CxcCpa  - Catálogo de planes / comprobantes de comisión
--- -----------------------------------------------------------------------------
+-- Proposito: Presenta la configuracion completa de comisiones por vendedor,
+--            mostrando para cada rango de comision (CxcRcv) el supervisor
+--            del vendedor, el plan de comision, la categoria de inventario
+--            a la que aplica y los parametros del rango (limites y factor).
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxcRcv  - Rangos de comision por vendedor / categoria (tabla principal)
+--   CxcVen  - Catalogo de vendedores (aporta VenNom y SupCve)
+--   InvCat  - Catalogo de categorias de inventario
+--   CxcSup  - Catalogo de supervisores de vendedores
+--   CxcCpa  - Catalogo de planes / comprobantes de comision
+-- --------------------------------------------------------------
 -- Cadena de dependencia:
---   CxcRcv → CxcVen  (por VenCve)  → nombre del vendedor y clave del supervisor
---   CxcVen → CxcSup  (por SupCve)  → nombre del supervisor
---   CxcRcv → InvCat  (por CatCve)  → descripción de la categoría
---   CxcRcv → CxcCpa  (por CpaCve)  → descripción del plan de comisión
--- -----------------------------------------------------------------------------
+--   CxcRcv -> CxcVen  (por VenCve)  -> nombre del vendedor y clave del supervisor
+--   CxcVen -> CxcSup  (por SupCve)  -> nombre del supervisor
+--   CxcRcv -> InvCat  (por CatCve)  -> descripcion de la categoria
+--   CxcRcv -> CxcCpa  (por CpaCve)  -> descripcion del plan de comision
+-- --------------------------------------------------------------
 -- Notas:
 --   - Todos los JOINs son INNER: solo se muestran rangos cuyo vendedor tenga
---     categoría, supervisor y plan de comisión completamente catalogados.
---     Rangos con alguna referencia huérfana quedan excluidos.
---   - RcvLmi : Límite inferior del rango de comisión.
---   - RcvLms : Límite superior del rango de comisión.
---   - RcvCfi : Factor (porcentaje / coeficiente) de comisión del rango.
---   - RcvMdc : Modalidad de cálculo de la comisión.
---   - CpaDes : Descripción del plan / comprobante de comisión.
--- -----------------------------------------------------------------------------
+--     categoria, supervisor y plan de comision completamente catalogados.
+--     Rangos con alguna referencia huerfana quedan excluidos.
+--   - RcvLmi : Limite inferior del rango de comision.
+--   - RcvLms : Limite superior del rango de comision.
+--   - RcvCfi : Factor (porcentaje / coeficiente) de comision del rango.
+--   - RcvMdc : Modalidad de calculo de la comision.
+--   - CpaDes : Descripcion del plan / comprobante de comision.
+-- --------------------------------------------------------------
 -- Historial de cambios:
---   v1  Versión original (incluía "T3.Catdes" con 'd' minúscula)
---   v2  Alias descriptivos, JOINs explícitos (INNER JOIN), corrección de
---       capitalización CatDes, columnas documentadas, encabezado completo
--- =============================================================================
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXC_Relacion_Comision_Vendedores AS
 
@@ -53,19 +54,19 @@ SELECT
     rcv.VenCve     AS VenCve,      -- Clave del vendedor
     ven.VenNom     AS VenNom,      -- Nombre del vendedor
 
-    -- Plan de comisión
-    rcv.CpaCve     AS CpaCve,      -- Clave del plan / comprobante de comisión
-    cpa.CpaDes     AS CpaDes,      -- Descripción del plan de comisión
+    -- Plan de comision
+    rcv.CpaCve     AS CpaCve,      -- Clave del plan / comprobante de comision
+    cpa.CpaDes     AS CpaDes,      -- Descripcion del plan de comision
 
-    -- Categoría de inventario a la que aplica el rango
-    rcv.CatCve     AS CatCve,      -- Clave de la categoría de inventario
-    cat.CatDes     AS CatDes,      -- Descripción de la categoría
+    -- Categoria de inventario a la que aplica el rango
+    rcv.CatCve     AS CatCve,      -- Clave de la categoria de inventario
+    cat.CatDes     AS CatDes,      -- Descripcion de la categoria
 
-    -- Parámetros del rango de comisión
-    rcv.RcvLmi     AS RcvLmi,      -- Límite inferior del rango
-    rcv.RcvLms     AS RcvLms,      -- Límite superior del rango
-    rcv.RcvCfi     AS RcvCfi,      -- Factor / porcentaje de comisión
-    rcv.RcvMdc     AS RcvMdc       -- Modalidad de cálculo de la comisión
+    -- Parametros del rango de comision
+    rcv.RcvLmi     AS RcvLmi,      -- Limite inferior del rango
+    rcv.RcvLms     AS RcvLms,      -- Limite superior del rango
+    rcv.RcvCfi     AS RcvCfi,      -- Factor / porcentaje de comision
+    rcv.RcvMdc     AS RcvMdc       -- Modalidad de calculo de la comision
 
 FROM CxcRcv rcv
 
@@ -73,14 +74,14 @@ FROM CxcRcv rcv
 INNER JOIN CxcVen ven
     ON ven.VenCve = rcv.VenCve
 
--- Categoría de inventario del rango
+-- Categoria de inventario del rango
 INNER JOIN InvCat cat
     ON cat.CatCve = rcv.CatCve
 
--- Supervisor del vendedor (a través de CxcVen.SupCve)
+-- Supervisor del vendedor (a traves de CxcVen.SupCve)
 INNER JOIN CxcSup sup
     ON sup.SupCve = ven.SupCve
 
--- Plan / comprobante de comisión
+-- Plan / comprobante de comision
 INNER JOIN CxcCpa cpa
     ON cpa.CpaCve = rcv.CpaCve

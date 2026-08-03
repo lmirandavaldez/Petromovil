@@ -6,49 +6,54 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Versión   : 2.0
+-- Version   : 2`n-- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Histórico anual de importes de nómina por empleado
+-- Proposito: Historico anual de importes de nomina por empleado
 --            y concepto, pivotado en columnas por mes (EneDic).
---            El importe se presenta con signo según el tipo de
+--            El importe se presenta con signo segun el tipo de
 --            concepto: CmcTip = 1  positivo (ingreso),
---            CmcTip <> 1  negativo (deducción).
+--            CmcTip <> 1  negativo (deduccion).
 -- Correcciones v1  v2:
---   1. IfNull reemplazado por COALESCE (estándar SQL).
---   2. CAST(... AS DECIMAL(15,2)) explícito en importes para
+--   1. IfNull reemplazado por COALESCE (estandar SQL).
+--   2. CAST(... AS DECIMAL(15,2)) explicito en importes para
 --      tipo consistente independiente de NgeImp.
---   3. Lógica de signo (CmcTip) factorizada en LATERAL SG:
+--   3. Logica de signo (CmcTip) factorizada en LATERAL SG:
 --      se calcula una vez y se reutiliza en los 12 meses.
---   4. Alias en la misma línea que la expresión.
+--   4. Alias en la misma linea que la expresion.
 --   5. Importe_Dec renombrado a Importe_Dic para consistencia
 --      con VWNOM_ACU_EMP_CONCEPTOSMESES (sqlnm002).
---   6. GROUP BY reestructurado con una columna por línea.
---   7. Capitalización SQL normalizada a mayúsculas.
---   8. Cabecera de documentación añadida.
+--   6. GROUP BY reestructurado con una columna por linea.
+--   7. Capitalizacion SQL normalizada a mayusculas.
+--   8. Cabecera de documentacion anadida.
 -- Notas:
---   - LEFT JOIN NomEmp intencional: NomNgeh es histórico y puede
+--   - LEFT JOIN NomEmp intencional: NomNgeh es historico y puede
 --     contener registros de empleados ya eliminados del maestro.
---   - CipAac es el año del acumulado histórico.
---   - CnoCve/TnoCve identifican el período de nómina.
--- Tablas base:
---   NomNgeh (T1)  Histórico de nóminas por empleado y concepto
+--   - CipAac es el ano del acumulado historico.
+--   - CnoCve/TnoCve identifican el periodo de nomina.
+-- Tablas referenciadas:
+--   NomNgeh (T1)  Historico de nominas por empleado y concepto
 --   NomEmp  (T2)  Maestro de empleados
---   NomCmc  (T3)  Conceptos de nómina (incluye CmcTip para signo)
---   NomCno  (T4)  Conceptos de nómina (encabezado)
---   NomTno  (T5)  Tipos de nómina
+--   NomCmc  (T3)  Conceptos de nomina (incluye CmcTip para signo)
+--   NomCno  (T4)  Conceptos de nomina (encabezado)
+--   NomTno  (T5)  Tipos de nomina
 --   NomUbi  (T6)  Ubicaciones
 --   NomDep  (T7)  Departamentos
 --   NomCar  (T8)  Cargos
---   NomCat  (T9)  Categorías
--- ============================================================
+--   NomCat  (T9)  Categorias
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWNOM_HISTORICO_NOMINAS_EMPLEADOS AS
 SELECT
-    -- Período y tipo de nómina
+    -- Periodo y tipo de nomina
     T1.CnoCve,  T4.CnoDes,
     T1.TnoCve,  T5.TnoDes,
 
-    -- Identificación del empleado
+    -- Identificacion del empleado
     T1.EmpCve,
     T2.EmpApe,
     T2.EmpNom,
@@ -60,16 +65,16 @@ SELECT
     T2.CarCve,  T8.CarDes,
     T2.CatCve,  T9.CatDes,
 
-    -- Concepto de nómina
+    -- Concepto de nomina
     T1.CmcCve,
     T3.CmcDes,
-    T3.CmcTip,  -- 1 = ingreso (positivo), otro = deducción (negativo)
+    T3.CmcTip,  -- 1 = ingreso (positivo), otro = deduccion (negativo)
 
-    -- Año del acumulado histórico
+    -- Ano del acumulado historico
     T1.CipAac,
 
-    -- Importes por mes con signo según CmcTip
-    -- La lógica de signo se factoriza en LATERAL SG (un solo cálculo)
+    -- Importes por mes con signo segun CmcTip
+    -- La logica de signo se factoriza en LATERAL SG (un solo calculo)
     -- COALESCE garantiza 0 si no hay registro para ese mes
     -- CAST asegura DECIMAL(15,2) consistente con NgeImp
     COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 01 THEN SG.ImpConSigno END)
@@ -98,7 +103,7 @@ SELECT
     AS DECIMAL(15,2)), 0) AS Importe_Dic
 
 FROM NomNgeh T1
--- LEFT JOIN intencional: NomNgeh es histórico; puede tener empleados
+-- LEFT JOIN intencional: NomNgeh es historico; puede tener empleados
 -- ya eliminados del maestro; se conservan con NULLs en sus campos
 LEFT OUTER JOIN NomEmp T2  ON T1.EmpCve = T2.EmpCve
 LEFT OUTER JOIN NomCmc T3  ON T1.CmcCve = T3.CmcCve
@@ -109,8 +114,8 @@ LEFT OUTER JOIN NomDep T7  ON T2.DepCve = T7.DepCve
 LEFT OUTER JOIN NomCar T8  ON T2.CarCve = T8.CarCve
 LEFT OUTER JOIN NomCat T9  ON T2.CatCve = T9.CatCve
 
--- LATERAL SG: importe con signo según tipo de concepto (un solo cálculo)
--- CmcTip = 1  ingreso (positivo), CmcTip <> 1  deducción (negativo)
+-- LATERAL SG: importe con signo segun tipo de concepto (un solo calculo)
+-- CmcTip = 1  ingreso (positivo), CmcTip <> 1  deduccion (negativo)
 CROSS JOIN LATERAL (
     SELECT CASE WHEN T3.CmcTip = 1
                     THEN T1.NgeImp

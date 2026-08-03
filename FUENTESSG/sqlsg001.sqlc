@@ -1,30 +1,53 @@
--- ============================================================
--- Vista   : VWSEG_Tipo_Comprobantes_Validos
--- Módulo  : Seguridad (Comunes)
--- Objeto  : Devuelve los tipos de comprobante fiscales (NCF)
---           vigentes junto con su código normalizado
---           (serie + número de dos dígitos).
--- Tabla   : SegNcf
--- Autor   : L.Miranda
--- Versión : 2  (mejorada)
--- Cambios :
---   v2 - Eliminación de ramas CASE redundantes mediante IN().
---        Uso de SubStr/RPad en lugar de Right+concat+Trim+Char
---        para mayor legibilidad.
---        Añadir comentarios descriptivos.
--- ============================================================
+-- ==============================================================
+-- Modulo    : Seguridad
+-- Programa  : SQLSG001
+-- Objeto    : VWSEG_Tipo_Comprobantes_Validos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Devuelve los tipos de comprobante fiscales (NCF) vigentes
+--   junto con su codigo normalizado (serie + numero 2 digitos).
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   SERIE_RELACIONADA   Serie del comprobante (A, B, E, etc.)
+--   TIPO_DE_COMPROBANTE Codigo numerico del tipo de comprobante
+--   NcfTipValido        Codigo normalizado (ej: A01, B11, E03)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   SegNcf    Tipos de comprobante fiscal (tabla base)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica. Esta vista no maneja campos de fecha.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Para series A, B y E: NcfTipValido = NcfSer + NcfTip con
+--      relleno a 2 digitos. Para otras series = solo NcfSer.
+--   2. El GROUP BY elimina duplicados si SegNcf tiene filas
+--      repetidas por (NcfSer, NcfTip).
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
+--                           formato 80 cols
+-- ==============================================================
+
 Create Or Replace View VWSEG_Tipo_Comprobantes_Validos As
 
 Select
     -- Serie del comprobante fiscal (A, B, E, etc.)
     NcfSer                                      As SERIE_RELACIONADA,
 
-    -- Código numérico del tipo de comprobante
+    -- Codigo numerico del tipo de comprobante
     NcfTip                                      As TIPO_DE_COMPROBANTE,
 
-    -- Código normalizado: para series A, B y E se forma como
-    -- SERIE + número de tipo con relleno a 2 dígitos (ej. A01, E11).
-    -- Para cualquier otra serie se devuelve sólo la serie.
+    -- Codigo normalizado: para series A, B y E se forma como
+    -- SERIE + numero de tipo con relleno a 2 digitos (ej. A01, E11).
+    -- Para cualquier otra serie se devuelve solo la serie.
     Case
         When NcfSer In ('A', 'B', 'E')
             Then NcfSer Concat Right('00' Concat Trim(Char(NcfTip)), 2)

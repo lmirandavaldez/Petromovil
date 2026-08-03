@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Interface Modulos Externos
 -- Programa  : SQLIM003
 -- Objeto    : VWIME_Detalle_Cabecera_Datos
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de detalle de facturas de importacion con datos de
 --   cabecera y deducciones asociadas. Es la vista inversa de
@@ -26,7 +26,7 @@
 --   No hay campos de fecha por concatenar. DtoFec, OrdFec
 --   y PlaFpl provienen de ImeFach T2 en tipo original.
 --   No aplica logica de resolucion via SegFec.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   CODIGO_DE_DISTRITO           Clave del distrito  (ImeFacd/T1)
 --   TIPO_DE_DOCUMENTO            Tipo de documento   (ImeFacd/T1)
@@ -55,12 +55,12 @@
 --                                NULL si sin cabecera
 --   CODIGO_IDENT_REGISTRO_DED    RowGui deduccion    (ImeDed/T3)
 --                                NULL si sin deduccion
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   ImeFacd  T1   Detalle de facturas de importacion (base)
 --   ImeFach  T2   Encabezado de facturas (opcional)
 --   ImeDed   T3   Deducciones del documento (opcional)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Diferencia clave con SQLIM002:
 --   SQLIM002 (base ImeFach): devuelve encabezados con
 --     indicadores de si tienen detalle y deduccion.
@@ -68,17 +68,17 @@
 --   SQLIM003 (base ImeFacd): devuelve detalles con datos
 --     del encabezado y deduccion.
 --     Util para detectar detalles sin encabezado (huerfanos).
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de JOIN:
 --   Ambos LEFT OUTER JOINs usan la clave compuesta de
 --   cuatro campos: DisCve, DtoTip, VehFic, DtoNfe.
 --   ImeFach T2: aporta datos de cabecera y su RowGui.
 --   ImeDed  T3: aporta solo RowGui como indicador.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Uso tipico de RowGui:
 --   CODIGO_IDENT_REGISTRO_FACH IS NULL -> detalle sin cabecera
 --   CODIGO_IDENT_REGISTRO_DED IS NOT NULL -> tiene deduccion
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. El LEFT OUTER JOIN a ImeFach T2 es inusual: en un
 --      esquema normalizado el detalle siempre debe tener
@@ -97,12 +97,12 @@
 --   4. Considerar si esta vista y SQLIM002 podrian unificarse
 --      en una sola con parametro de tabla base, o si la
 --      separacion responde a un patron de uso especifico.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
 --   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWIME_Detalle_Cabecera_Datos AS
 SELECT

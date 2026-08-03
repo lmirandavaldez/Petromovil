@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Caja
 -- Programa  : SQLCA002
 -- Objeto    : VWCAJ_Recibos_No_Aplicados_CXC
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de recibos de caja no aplicados a cuentas por cobrar.
 --   Agrupa por cliente, distrito, codigo de documento, numero
@@ -20,7 +20,7 @@
 --   Si la fecha no existe en el calendario, COALESCE devuelve
 --   el tope del sistema: 20391231 (equivalente YMD de
 --   DATE('2039-12-31')).
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   CliCve        Clave del cliente              (CajRech/T2)
 --   DisCve        Clave del distrito             (CajRefd/T1)
@@ -30,12 +30,12 @@
 --   PerNum        Numero del periodo             (CajRefd/T1)
 --   FecYmd        Fecha en formato YYYYMMDD      (SegFec/T9)
 --   Suma_Ingresos Suma de IngVtr del grupo       (calc.)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CajRefd  T1   Detalle de referencias de recibos (base)
 --   CajRech  T2   Encabezado de recibos de caja
 --   SegFec   T9   Tabla de fechas (Fecha del ingreso)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de resolucion de fecha:
 --   La fecha del ingreso se resuelve en dos pasos:
 --     1. LEFT OUTER JOIN a SegFec por (IngAno, IngMes, IngDia).
@@ -44,15 +44,15 @@
 --        rango de SegFec), se usa 20391231 como tope (valor
 --        YMD equivalente a DATE('2039-12-31')).
 --   SegFec cubre el rango 1940-01-01 a 2039-12-31.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Filtros aplicados:
 --   T2.SitCve = '1'   Solo recibos en estado No Aplicado
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Agrupacion:
 --   CliCve, DisCve, CdoCve, DocNum, PerAno, PerNum, FecYmd
 --   La agrupacion incluye FecYmd para que Suma_Ingresos quede
 --   segregada por fecha de ingreso dentro del mismo documento.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. Verificar indice en CajRefd(McaCve, RecNum) y
 --      CajRech(McaCve, RecNum) para optimizar el JOIN principal
@@ -64,7 +64,7 @@
 --   3. Considerar agregar CliCve al JOIN con CajRefd T1 si
 --      existe el campo, para evitar recibos cruzados entre
 --      clientes con misma maquina y numero de recibo.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
@@ -72,7 +72,7 @@
 --                           JOIN SegFec convertido a LEFT
 --                           OUTER JOIN con COALESCE tope
 --                           20391231.
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCAJ_Recibos_No_Aplicados_CXC AS
 SELECT

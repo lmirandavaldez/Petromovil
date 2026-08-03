@@ -1,0 +1,158 @@
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC014
+-- Objeto    : VWCXC_Notas_Debito_Administrativas
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito: Presenta las notas de débito de tipo administrativo (DndTip = 1)
+--            registradas en el sistema. Consolida el encabezado de la nota
+--            (CxcNdhh), su detalle con el documento afectado (CxcNdhd) y el
+--            historial de comprobante fiscal del documento original (CxcHncf).
+--            A diferencia de VWCXC_Notas_Credito_Administrativas (SQLCC013),
+--            la fecha de la nota se obtiene directamente del campo DndFec
+--            del encabezado, sin necesidad de conversión vía SegFec.
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcNdhh - Encabezado de nota de débito (tabla principal)
+--   CxcNdhd - Detalle de nota de débito / documento afectado
+--   CxcHncf - Historial de comprobantes fiscales del documento original
+-- -----------------------------------------------------------------------------
+-- Filtro de tipos de nota:
+--   DndTip IN (1)  →  Solo notas de débito administrativas (tipo 1).
+--   A diferencia de SQLCC013 (que excluye tipos con NOT IN),
+--   aquí se incluye exclusivamente el tipo 1.
+-- -----------------------------------------------------------------------------
+-- Relación con otras vistas:
+--   Esta vista es el par débito de VWCXC_Notas_Credito_Administrativas
+--   (SQLCC013). Diferencias estructurales clave:
+--     • Tablas   : CxcNdhh/CxcNdhd  (débito)  vs  CxcNchh/CxcNchd  (crédito)
+--     • Fecha    : DndFec directo del encabezado vs. construcción vía SegFec
+--     • Filtro   : DndTip IN (1)  vs  NctTip NOT IN (3,5,6)
+--     • Campos   : prefijo Dnd*  vs  prefijo Nct*
+--   La tabla de historial fiscal CxcHncf y la asimetría DisCve/DisTra
+--   en el JOIN encabezado→detalle son comunes a ambas vistas.
+-- -----------------------------------------------------------------------------
+-- Notas técnicas:
+--   - En el JOIN CxcNdhh → CxcNdhd: ndhh.DisCve = ndhd.DisTra.
+--     DisCve es la distribución del encabezado; DisTra es la distribución de
+--     transacción del detalle. Asimetría intencional, igual que en SQLCC013.
+--   - CxcHncf usa clave compuesta de 6 campos: CliCve + CdoCve + DocNum +
+--     PerAno + PerNum + DisCve — todos provenientes de CxcNdhd.
+--   - DndFec es una fecha ya construida en CxcNdhh (no requiere SegFec ni
+--     conversión de campos AÑO/MES/DÍA), a diferencia de SQLCC013.
+--   - DndVI1 / DndVi2: capitalización inconsistente en el original
+--     (DndVI1 vs DndVi2); se normalizan a DndVi1 / DndVi2.
+-- -----------------------------------------------------------------------------
+-- Glosario de campos clave:
+--   DndNro  : Número de la nota de débito
+--   DndFec  : Fecha de la nota de débito (campo DATE directo)
+--   DndTip  : Tipo de nota de débito (filtrado: solo tipo 1 = administrativo)
+--   DndObs  : Observaciones / motivo de la nota
+--   RatCve  : Clave de razón / concepto de la nota
+--   DndTas  : Tasa de cambio de la nota
+--   DndVal  : Valor total de la nota
+--   DndVml  : Valor en moneda local de la nota
+--   DndMdo  : Monto en moneda de origen / transacción
+--   DndMdl  : Monto en moneda local
+--   DndVi1  : Valor de impuesto 1 de la nota
+--   DndVi2  : Valor de impuesto 2 de la nota
+--   NcfNro  : Número de comprobante fiscal (NCF) de la nota / documento
+--   DndVtr  : Valor en moneda de transacción (detalle)
+--   DndTml  : Total en moneda local (detalle)
+--   DndVto  : Valor total del detalle
+--   DndMi1  : Monto de impuesto 1 (detalle)
+--   DndMi2  : Monto de impuesto 2 (detalle)
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1  Versión original (indentación inicial, DndVI1 con capitalización
+--       incorrecta, JOINs implícitos, sin documentación)
+--   v2  Corrección de capitalización DndVi1, alias descriptivos, INNER JOIN
+--       explícito, indentación estándar, documentación completa y referencia
+--       cruzada con SQLCC013
+-- =============================================================================
+
+CREATE OR REPLACE VIEW VWCXC_Notas_Debito_Administrativas AS
+
+SELECT
+    -- Identificación de la nota de débito
+    ndhh.DisCve       AS DisCve,    -- Distribución de la nota
+    ndhh.DndNro       AS DndNro,    -- Número de la nota de débito
+    ndhh.DndFec       AS DndFec,    -- Fecha de la nota (campo DATE directo)
+    ndhh.CliCve       AS CliCve,    -- Clave del cliente
+    ndhh.VenCve       AS VenCve,    -- Clave del vendedor
+
+    -- Período contable de la nota
+    ndhh.PerAno       AS Periodo_Contable_ND, 
+                -- Año del período contable
+    ndhh.PerNum       AS Numero_Periodo_Contable_ND,  
+                -- Número del período contable
+
+    -- Datos descriptivos y clasificación
+    ndhh.DndObs       AS DndObs,    -- Observaciones / motivo
+    ndhh.DndTip       AS DndTip,    -- Tipo de nota (solo tipo 1)
+    ndhh.RatCve       AS RatCve,    -- Clave de razón / concepto
+
+    -- Valores financieros de la nota
+    ndhh.DndTas       AS DndTas,    -- Tasa de cambio
+    ndhh.DndVal       AS DndVal,    -- Valor total de la nota
+    ndhh.DndVml       AS DndVml,    -- Valor en moneda local
+    ndhh.DndMdo       AS DndMdo,    -- Monto en moneda de origen
+    ndhh.DndMdl       AS DndMdl,    -- Monto en moneda local
+    ndhh.DndVi1       AS DndVi1,    -- Valor impuesto 1 (corr: DndVI1)
+    ndhh.DndVi2       AS DndVi2,    -- Valor impuesto 2
+
+    -- Comprobante fiscal de la nota (NCF)
+    ndhh.NcfNro       AS Comprobante_Nota_Debito, 
+                -- NCF de la nota de débito
+
+    -- Documento afectado por la nota (desde CxcNdhd)
+    ndhd.DisCve       AS Distrito_Documento,   
+               -- Distribución del documento
+    ndhd.CdoCve       AS CdoCve,    -- Tipo de documento afectado
+    ndhd.DocNum       AS DocNum,    -- Número del documento afectado
+
+    -- Fecha y período del documento afectado
+    hncf.DocFec       AS DocFec,    -- Fecha del documento (desde CxcHncf)
+    ndhd.PerAno       AS Periodo_Contable_Doc,   
+               -- Año del período del documento
+    ndhd.PerNum       AS Numero_Periodo_Contable_Doc, 
+               -- Número del período del documento
+
+    -- Comprobante fiscal del documento original modificado (NCF)
+    hncf.NcfNro       AS Comprobante_Modificado,      
+               -- NCF del documento afectado
+
+    -- Valores del detalle de la nota
+    ndhd.DndVtr       AS DndVtr,   -- Valor en moneda de transacción
+    ndhd.DndTml       AS DndTml,   -- Total en moneda local (detalle)
+    ndhd.DndVto       AS DndVto,   -- Valor total del detalle
+    ndhd.DndMi1       AS DndMi1,   -- Monto impuesto 1 del detalle
+    ndhd.DndMi2       AS DndMi2    -- Monto impuesto 2 del detalle
+
+FROM CxcNdhh ndhh
+
+-- Detalle de la nota: clave compuesta CliCve + DndNro + DisTra
+-- (= DisCve del encabezado)
+-- Nota: DisCve del encabezado se cruza con 
+-- DisTra del detalle (asimetría intencional)
+INNER JOIN CxcNdhd ndhd
+    ON  ndhd.CliCve = ndhh.CliCve
+    AND ndhd.DndNro = ndhh.DndNro
+    AND ndhd.DisTra = ndhh.DisCve
+
+-- Historial de comprobante fiscal del documento afectado
+-- Clave compuesta de 6 campos provenientes del detalle
+INNER JOIN CxcHncf hncf
+    ON  hncf.CliCve = ndhd.CliCve
+    AND hncf.CdoCve = ndhd.CdoCve
+    AND hncf.DocNum = ndhd.DocNum
+    AND hncf.PerAno = ndhd.PerAno
+    AND hncf.PerNum = ndhd.PerNum
+    AND hncf.DisCve = ndhd.DisCve
+
+-- Solo notas de débito administrativas (tipo 1)
+WHERE ndhh.DndTip IN (1)

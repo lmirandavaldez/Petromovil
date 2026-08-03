@@ -6,64 +6,69 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Versión   : 2.0
+-- Version   : 2`n-- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Historial de cambios de salario por empleado,
+-- Proposito: Historial de cambios de salario por empleado,
 --            incluyendo salario anterior, nuevo y porcentaje
---            de variación, con la fecha efectiva del cambio y
+--            de variacion, con la fecha efectiva del cambio y
 --            fecha de nacimiento del empleado.
 -- Correcciones v1  v2:
---   1. Nombre de vista normalizado a mayúsculas.
---   2. Fecha_Nacimiento protegida con CASE de validación de
+--   1. Nombre de vista normalizado a mayusculas.
+--   2. Fecha_Nacimiento protegida con CASE de validacion de
 --      campos (NULL/0/rango) para evitar error en DATE().
---      Centralizada en LATERAL FN (un solo cálculo).
---   3. Fecha_Cambio_Salario protegida con CASE de validación
+--      Centralizada en LATERAL FN (un solo calculo).
+--   3. Fecha_Cambio_Salario protegida con CASE de validacion
 --      de campos (NULL/0/rango) para evitar error en DATE().
---      Centralizada en LATERAL FC (un solo cálculo).
+--      Centralizada en LATERAL FC (un solo calculo).
 --   4. NomDep y NomCar cambiados a LEFT JOIN: si el empleado
 --      no tiene departamento o cargo asignado, el registro de
 --      historial se conserva (con NULLs en DepDes/CarDes).
---   5. Capitalización SQL normalizada a mayúsculas.
---   6. Columnas agrupadas por categoría lógica.
---   7. Cabecera de documentación añadida.
+--   5. Capitalizacion SQL normalizada a mayusculas.
+--   6. Columnas agrupadas por categoria logica.
+--   7. Cabecera de documentacion anadida.
 -- Notas:
 --   - No filtra por EmpSta: incluye empleados inactivos para
 --     preservar el historial completo de cambios.
 --   - CseSan = Salario anterior, CseSac = Salario actual/nuevo,
---     CsePva = Porcentaje de variación.
--- Tablas base:
+--     CsePva = Porcentaje de variacion.
+-- Tablas referenciadas:
 --   NomCse (T1)  Historial de cambios de salario
 --   NomEmp (T2)  Maestro de empleados
 --   NomDep (T3)  Departamentos
 --   NomCar (T4)  Cargos
--- ============================================================
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWNOM_HISTORICO_CAMBIO_SALARIO AS
 SELECT
-    -- Clasificación laboral
+    -- Clasificacion laboral
     T3.DepDes,
     T4.CarDes,
 
-    -- Identificación del empleado
+    -- Identificacion del empleado
     T1.EmpCve,
     T2.EmpApe,
     T2.EmpNom,
 
     -- Fecha de nacimiento del empleado  centralizada en LATERAL FN
-    -- Protección: NULL/0/fuera de rango producirían error en DATE()
+    -- Proteccion: NULL/0/fuera de rango producirian error en DATE()
     FN.Fecha_Nacimiento,
 
     -- Datos del cambio de salario
     T1.CseSan,   -- Salario anterior
     T1.CseSac,   -- Salario actual/nuevo
-    T1.CsePva,   -- Porcentaje de variación
+    T1.CsePva,   -- Porcentaje de variacion
 
     -- Fecha efectiva del cambio  centralizada en LATERAL FC
-    -- Protección: NULL/0/fuera de rango producirían error en DATE()
+    -- Proteccion: NULL/0/fuera de rango producirian error en DATE()
     FC.Fecha_Cambio_Salario
 
 FROM NomCse T1
--- INNER JOIN NomEmp: un registro de cambio sin empleado es inválido
+-- INNER JOIN NomEmp: un registro de cambio sin empleado es invalido
 JOIN            NomEmp T2  ON T1.EmpCve = T2.EmpCve
 -- LEFT JOIN NomDep/NomCar: preserva el historial aunque el empleado
 -- no tenga departamento o cargo actualmente asignado

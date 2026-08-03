@@ -1,0 +1,56 @@
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC004
+-- Objeto    : VWCXC_Vendedores_Comision
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito: Expone la relación entre vendedores y sus rangos/parámetros de
+--            comisión por categoría de inventario. Consolida la información
+--            de las tablas CxcVen (vendedores), CxcRcv (rangos de comisión
+--            por vendedor) e InvCat (catálogo de categorías de inventario).
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcVen  - Catálogo de vendedores
+--   CxcRcv  - Rangos y factores de comisión por vendedor / categoría
+--   InvCat  - Catálogo de categorías de inventario
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1  Versión original
+--   v2  Mejoras de legibilidad, alias descriptivos y documentación
+-- =============================================================================
+
+CREATE OR REPLACE VIEW VWCXC_Vendedores_Comision AS
+
+SELECT
+    -- Vendedor
+    ven.VenCve                  AS VenCve,   -- Clave del vendedor
+    ven.VenNom                  AS VenNom,   -- Nombre del vendedor
+
+    -- Categoría de inventario
+    rcv.CatCve                  AS CatCve,   -- Clave de la categoría
+    cat.CatDes                  AS CatDes,   -- Descripción de la categoría
+
+    -- Rangos de comisión
+    rcv.RcvLmi                  AS RcvLmi,   -- Límite inferior del rango
+    rcv.RcvLms                  AS RcvLms,   -- Límite superior del rango
+
+    -- Parámetros de cálculo de comisión
+    rcv.RcvCfi                  AS RcvCfi,   -- Factor de comisión
+    rcv.RcvPad                  AS RcvPad,   -- Porcentaje adicional
+    rcv.RcvVa1                  AS RcvVa1,   -- Valor auxiliar 1
+    rcv.RcvPo1                  AS RcvPo1,   -- Porcentaje auxiliar 1
+    rcv.RcvMdc                  AS RcvMdc    -- Modalidad de comisión
+
+FROM CxcVen  ven
+
+-- Rangos de comisión definidos para el vendedor (puede no tener ninguno)
+LEFT OUTER JOIN CxcRcv rcv
+    ON rcv.VenCve = ven.VenCve
+
+-- Descripción de la categoría asociada al rango (puede no existir en catálogo)
+LEFT OUTER JOIN InvCat cat
+    ON cat.CatCve = rcv.CatCve

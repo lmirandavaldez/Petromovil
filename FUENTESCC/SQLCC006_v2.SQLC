@@ -1,0 +1,98 @@
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC006
+-- Objeto    : VWCXC_Maestro_Clientes_Carga
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito: Consolida los datos maestros del cliente con su información
+--            geográfica (provincia, municipio, demarcación) y el vendedor
+--            asignado. Diseñada para ser usada en procesos de carga/migración
+--            de datos y reportes del maestro de clientes.
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcCli  - Catálogo maestro de clientes (tabla principal)
+--   CxcRvc  - Relación cliente-vendedor
+--   CxcVen  - Catálogo de vendedores
+--   SegPrv  - Catálogo de provincias
+--   SegMun  - Catálogo de municipios      (clave compuesta: PrvCve + MunCve)
+--   SegDms  - Catálogo de demarcaciones   (clave compuesta: PrvCve + MunCve +
+--                                          DmsCve + DmsCpo + DmsSec)
+-- -----------------------------------------------------------------------------
+-- Notas:
+--   - CliRnc : Número de Registro Nacional del Contribuyente (dato fiscal).
+--   - CliDi1 : Línea adicional de dirección (complemento de CliDir).
+--   - Los alias T10/T11/T12 del original sugieren tablas intermedias
+--     eliminadas en revisiones previas; se reemplazaron por alias descriptivos.
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1  Versión original
+--   v2  Alias descriptivos, columnas documentadas, convención UPPER CASE,
+--       encabezado completo y comentarios de JOINs complejos
+-- =============================================================================
+
+CREATE OR REPLACE VIEW VWCXC_Maestro_Clientes_Carga AS
+
+SELECT
+    -- Identificación del cliente
+    cli.CliCve  AS CliCve,      -- Clave del cliente
+    cli.CliNom  AS CliNom,      -- Nombre / razón social
+    cli.CliRnc  AS CliRnc,      -- RNC (Registro Nacional del Contribuyente)
+    cli.CliEma  AS CliEma,      -- Correo electrónico
+
+    -- Teléfonos
+    cli.CliTe1  AS CliTe1,      -- Teléfono principal
+    cli.CliTe2  AS CliTe2,      -- Teléfono secundario
+
+    -- Dirección
+    cli.CliDir  AS CliDir,      -- Dirección principal
+    cli.CliDi1  AS CliDi1,      -- Dirección complementaria (línea 2)
+
+    -- Ubicación geográfica — provincia
+    cli.CliPrv  AS CliPrv,      -- Clave de provincia
+    prv.PrvDes  AS PrvDes,      -- Descripción de la provincia
+
+    -- Ubicación geográfica — municipio
+    cli.CliMun  AS CliMun,      -- Clave de municipio
+    mun.MunDes  AS MunDes,      -- Descripción del municipio
+
+    -- Ubicación geográfica — demarcación (sector / código postal)
+    cli.CliDms  AS CliDms,      -- Clave de demarcación
+    cli.CliCpo  AS CliCpo,      -- Código postal
+    cli.CliSec  AS CliSec,      -- Sector
+    dms.DmsDes  AS DmsDes,      -- Descripción de la demarcación
+
+    -- Vendedor asignado
+    rvc.VenCve  AS VenCve,      -- Clave del vendedor
+    ven.VenNom  AS VenNom       -- Nombre del vendedor
+
+FROM CxcCli cli
+
+-- Vendedor asignado al cliente (un cliente puede no tener vendedor)
+LEFT OUTER JOIN CxcRvc rvc
+    ON rvc.CliCve = cli.CliCve
+
+-- Datos del vendedor
+LEFT OUTER JOIN CxcVen ven
+    ON ven.VenCve = rvc.VenCve
+
+-- Provincia del cliente
+LEFT OUTER JOIN SegPrv prv
+    ON prv.PrvCve = cli.CliPrv
+
+-- Municipio: clave compuesta provincia + municipio
+LEFT OUTER JOIN SegMun mun
+    ON  mun.PrvCve = cli.CliPrv
+    AND mun.MunCve = cli.CliMun
+
+-- Demarcación: clave compuesta provincia 
+-- + municipio + demarcación + CP + sector
+LEFT OUTER JOIN SegDms dms
+    ON  dms.PrvCve = cli.CliPrv
+    AND dms.MunCve = cli.CliMun
+    AND dms.DmsCve = cli.CliDms
+    AND dms.DmsCpo = cli.CliCpo
+    AND dms.DmsSec = cli.CliSec

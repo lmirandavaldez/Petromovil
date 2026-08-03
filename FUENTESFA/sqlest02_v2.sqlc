@@ -1,0 +1,76 @@
+-- ============================================================
+-- Vista   : VWEST_Estadisticas_Ventas_Productos
+-- Módulo  : Estadísticas de Ventas
+-- Objeto  : Resume las estadísticas de ventas desglosadas por
+--           producto (artículo), año y mes a partir del detalle
+--           de documentos de facturación (FacDtod).
+--           Incluye cantidades vendidas, importes brutos,
+--           descuentos, impuestos, neto a cobrar y costos.
+-- Tabla   : FacDtod  — detalle de documentos de facturación
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se normaliza el nombre de la tabla a FacDtod
+--          (original tenía FACDTOD en mayúsculas) para
+--          consistencia con el resto del sistema.
+--        Se normaliza T1.ARTCVE a T1.ArtCve para consistencia
+--          con el GROUP BY (que ya usaba ArtCve).
+--        Se normaliza T1.DtoANO a T1.DtoAno para consistencia
+--          con el GROUP BY (que ya usaba DtoAno).
+--        Se agrega alias explícito As en FROM.
+--        Se documentan todas las columnas con su significado
+--          de negocio.
+--        Se descompone ESTINV con comentario de fórmula.
+--        Se expande GROUP BY a una columna por línea.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Mejora de formato e indentación.
+--        Cabecera de documentación completa.
+-- ============================================================
+
+Create Or Replace View VWEST_Estadisticas_Ventas_Productos As
+
+Select
+    -- --------------------------------------------------------
+    -- Dimensiones de agrupación
+    -- --------------------------------------------------------
+    T1.ArtCve              As ArtCve,   -- Código del artículo / producto
+    T1.DtoAno              As EstAno,   -- Año del período
+    T1.DtoMes              As EstMes,   -- Mes del período (1–12)
+
+    -- --------------------------------------------------------
+    -- Cantidades vendidas
+    -- --------------------------------------------------------
+    Sum(T1.DtoCua)         As ESTCUA,   -- Cantidad vendida (unidades reales)
+    Sum(T1.DtoCup)         As ESTCUD,   -- Cantidad devuelta / 
+                                        -- en descuento (unidades)
+
+    -- --------------------------------------------------------
+    -- Importes de ventas
+    -- --------------------------------------------------------
+    Sum(T1.DtoImp)         As ESTIBV,   -- Importe Bruto de Ventas
+    Sum(T1.DtoMpd)         As ESTIDV,   -- Importe de Descuentos de Ventas
+    Sum(T1.DtoIm1 + T1.DtoIm2) As ESTIIV,   -- Importe de Impuestos 
+                                            -- de Ventas (tasa1 + tasa2)
+
+    -- Neto de Ventas = (Bruto − Descuento) + Impuestos
+    Sum((T1.DtoImp - T1.DtoMpd) + T1.DtoIm1 + T1.DtoIm2) As ESTINV, 
+                                          -- Importe Neto de Ventas
+
+    -- --------------------------------------------------------
+    -- Costos
+    -- --------------------------------------------------------
+    Sum(T1.DtoMcp)         As ESTCPR,   -- Costo Promedio de los 
+                                        -- artículos vendidos
+    Sum(T1.DtoMcu)         As ESTCUL    -- Costo Último de los 
+                                        -- artículos vendidos
+
+From FacDtod As T1
+
+Group By
+    T1.ArtCve,
+    T1.DtoAno,
+    T1.DtoMes
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.ArtCve, T1.DtoAno, T1.DtoMes

@@ -1,0 +1,107 @@
+-- ===========================================================
+-- Proc.   : PRO_ACTUALIZAR_MESES_INACTIVO
+-- Módulo  : Facturación
+-- Objeto  : Actualiza masivamente la tabla
+--           CLIENTE_INACTIVIDAD recalculando, para cada
+--           cliente, los meses transcurridos desde su última
+--           compra hasta hoy (CURRENT_DATE).
+--           Reglas de negocio:
+--             MESES_INACTIVO   = meses desde última compra
+--             ESTADO_CLIENTE   = 'INACTIVO' si >= 36 meses;
+--                                'ACTIVO'   si < 36 meses
+--             ES_NUEVO         = 'N' si >= 36 meses (cliente
+--                                inactivo ya no es nuevo);
+--                                sin cambio si < 36 meses
+--             FECHA_ULTIMA_INACTIVIDAD: se actualiza solo si
+--               los meses calculados >= 36 Y la última
+--               inactividad es menor que la última compra
+-- Tabla   : CLIENTE_INACTIVIDAD — registro de inactividad
+-- Paráms  : Ninguno — opera sobre toda la tabla
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se corrige el CASE de FECHA_ULTIMA_INACTIVIDAD:
+--          el original comparaba ESTADO_CLIENTE (valor
+--          anterior al UPDATE) lo que causaba que un cliente
+--          que recién pasa a INACTIVO en ese mismo UPDATE
+--          nunca actualizara FECHA_ULTIMA_INACTIVIDAD. Se
+--          corrige usando MONTHS_BETWEEN directamente en
+--          el CASE (consistente con los demás columnas).
+--        Se agrega CAST en los literales de estado para
+--          garantizar la longitud del campo destino.
+--        Se agrega SPECIFIC para identificar la firma.
+--        Se reformatea respetando 80 columnas.
+--        Se documenta la lógica de negocio de cada SET.
+--        Cabecera de documentación completa.
+--   v2.1 - Se corrige error SQL0206: la subconsulta
+--          correlacionada SET(...)=(SELECT ... WHERE
+--          CI2.ID=CI.ID) no es compatible con IBM i DB2.
+--          Se vuelve al UPDATE directo con MONTHS_BETWEEN
+--          evaluado en cada CASE — forma soportada por
+--          IBM i. La corrección del bug de
+--          FECHA_ULTIMA_INACTIVIDAD se mantiene.
+-- ===========================================================
+CL: CHGCURLIB  CURLIB("FACLIB.V2") ;
+
+CREATE OR REPLACE PROCEDURE "FACLIB.V2".PRO_ACTUALIZAR_MESES_INACTIVO ()
+SPECIFIC          PRO_ACTUALIZAR_MESES_INACTIVO
+LANGUAGE          SQL
+
+BEGIN
+
+    -- -------------------------------------------------------
+    -- Actualización masiva de inactividad de clientes.
+    -- UPDATE directo compatible con IBM i DB2.
+    -- MONTHS_BETWEEN se evalúa en cada CASE por ser la
+    -- única forma soportada (sin subconsulta correlacionada
+    -- en el SET en esta plataforma).
+    -- Umbral de inactividad: >= 36 meses (3 años).
+    -- -------------------------------------------------------
+    UPDATE CLIENTE_INACTIVIDAD
+    SET
+        -- Meses transcurridos desde la última compra a hoy
+        MESES_INACTIVO =
+            MONTHS_BETWEEN(
+                CURRENT_DATE,
+                FECHA_ULTIMA_COMPRA
+            ),
+
+        -- Estado según umbral de 36 meses
+        ESTADO_CLIENTE = CASE
+            WHEN MONTHS_BETWEEN(
+                     CURRENT_DATE, FECHA_ULTIMA_COMPRA
+                 ) >= 36
+                THEN CAST('INACTIVO' AS CHAR(10))
+            ELSE     CAST('ACTIVO'  AS CHAR(10))
+        END,
+
+        -- ES_NUEVO: 'N' si inactivo >= 36 meses;
+        -- sin cambio si aún activo
+        ES_NUEVO = CASE
+            WHEN MONTHS_BETWEEN(
+                     CURRENT_DATE, FECHA_ULTIMA_COMPRA
+                 ) >= 36
+                THEN CAST('N' AS CHAR(1))
+            ELSE ES_NUEVO
+        END,
+
+        -- FECHA_ULTIMA_INACTIVIDAD: se actualiza si los
+        -- meses >= 36 (cliente pasa a INACTIVO) Y la fecha
+        -- de inactividad registrada es anterior a la última
+        -- compra (evita sobreescribir una más reciente).
+        -- CORRECCIÓN v2: el original usaba ESTADO_CLIENTE
+        -- (valor ANTES del UPDATE), nunca capturando la
+        -- primera vez que el cliente pasa a inactivo.
+        -- Se usa MONTHS_BETWEEN directamente (consistente).
+        FECHA_ULTIMA_INACTIVIDAD = CASE
+            WHEN MONTHS_BETWEEN(
+                     CURRENT_DATE, FECHA_ULTIMA_COMPRA
+                 ) >= 36
+             AND FECHA_ULTIMA_INACTIVIDAD < FECHA_ULTIMA_COMPRA
+                THEN FECHA_ULTIMA_COMPRA
+            ELSE FECHA_ULTIMA_INACTIVIDAD
+        END;
+
+END;

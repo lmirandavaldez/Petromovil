@@ -5,31 +5,48 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 1
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito : Saldos del balance por cuenta contable y centro
---             de costo, por ano y numero de periodo.
---             Por cada combinacion devuelve el balance
---             inicial, debitos, creditos y balance final.
---             Excluye registros con cuenta en blanco
---             (CtaCve = '    ').
+-- Proposito:
+--   Saldos del balance por cuenta contable y centro de
+--   costo, por ano y numero de periodo.
+--   Por cada combinacion devuelve el balance inicial,
+--   debitos, creditos y balance final.
+--   Excluye registros con cuenta en blanco
+--   (CtaCve = '    ').
 -- --------------------------------------------------------------
--- Tablas    : CogBcc    balance por cuenta y centro de costo
+-- Campos retornados (en orden original):
+--   PerAno              Ano contable del periodo      (CogBcc)
+--   PerNum              Numero del periodo (1..12)    (CogBcc)
+--   CtaCve              Clave de la cuenta contable   (CogBcc)
+--   CcoCve              Clave del centro de costo     (CogBcc)
+--   Balance_Inicial_Bcc Saldo inicial del periodo     (CogBcc)
+--   Debitos_Bcc         Total de debitos del periodo  (CogBcc)
+--   Creditos_Bcc        Total de creditos del periodo (CogBcc)
+--   Balance_Final_Bcc   Saldo final del periodo       (CogBcc)
 -- --------------------------------------------------------------
--- Cambios   :
---   v2 - Se agrega cabecera de documentacion completa.
---        Se agrega alias explicito As en FROM.
---        Se reformatea SELECT con una columna por linea
---          y comentario descriptivo en cada campo.
---        Se califica con T1. todos los campos para
---          consistencia y claridad.
---        Se reformatea GROUP BY con una columna por linea.
---        Se agrega ORDER BY sugerido (comentado).
---        Se corrige IfNUll (casing inconsistente) a IfNull.
---        Se respeta el orden original de los campos,
---          la logica original y el limite de 80 posiciones.
--- ============================================================
+-- Tablas referenciadas:
+--   CogBcc    T1  Balance por cuenta y centro de costo
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica. Esta vista no maneja fechas calendario.
+--   PerAno y PerNum identifican el periodo contable.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar JOIN a CogCco para incluir CcoDes (nombre
+--      del centro de costo) directamente en la vista.
+--   2. Agregar JOIN a CogCta para incluir CtaDes (nombre
+--      de la cuenta) directamente en la vista.
+--   3. Evaluar si el filtro CtaCve <> '    ' debe usar
+--      Trim() para cubrir variantes con distintos espacios.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           IfNull -> Coalesce, sin acentos
+-- ==============================================================
 
 Create Or Replace View VWCOG_Saldos_Cuentas_CentroCosto As
 
@@ -52,16 +69,16 @@ Select
     -- --------------------------------------------------------
     -- Metricas del periodo por centro de costo
     -- --------------------------------------------------------
-    IfNull(Sum(T1.BccBip), 0)             As Balance_Inicial_Bcc,
+    Coalesce(Sum(T1.BccBip), 0)             As Balance_Inicial_Bcc,
     -- Saldo inicial del periodo
 
-    IfNull(Sum(T1.BccDeb), 0)             As Debitos_Bcc,
+    Coalesce(Sum(T1.BccDeb), 0)             As Debitos_Bcc,
     -- Total de debitos del periodo
 
-    IfNull(Sum(T1.BccCre), 0)             As Creditos_Bcc,
+    Coalesce(Sum(T1.BccCre), 0)             As Creditos_Bcc,
     -- Total de creditos del periodo
 
-    IfNull(Sum(T1.BccBal), 0)             As Balance_Final_Bcc
+    Coalesce(Sum(T1.BccBal), 0)             As Balance_Final_Bcc
     -- Saldo final del periodo
 
 -- ============================================================

@@ -1,22 +1,43 @@
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
--- ============================================================
--- Función  : SEGLIB.SG_TIEMPO_ANOS
--- Propósito: Calcula la diferencia en años cumplidos entre dos
---            fechas, equivalente al programa SG7006.
--- Versión  : 3.0 (función de tabla)
--- Parámetros:
+-- ==============================================================
+-- Modulo    : Contabilidad General
+-- Programa  : SQLCGF002
+-- Objeto    : SEGLIB.SG_TIEMPO_ANOS
+-- Tipo      : Funcion de tabla SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 4
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Calcula la diferencia en anos cumplidos entre dos fechas.
+--   Es la version Table Function de SG_TIEMPO_ANOS equivalente
+--   al programa SG7006.
+-- --------------------------------------------------------------
+-- Parametros de entrada:
 --   FechaDes  DATE  Fecha de inicio (desde).
---   FechaHas  DATE  Fecha de fin    (hasta).
--- Retorna tabla con columna:
---   ANOS  INTEGER  Años cumplidos entre FechaDes y FechaHas.
---                  NULL  si alguno de los parámetros es NULL.
---                  0     si FechaHas < FechaDes.
--- Uso:
---   SELECT * FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(
---       DATE('1964-07-23'),
---       DATE('2026-07-23')
---   )) AS x;
--- ============================================================
+--   FechaHas  DATE  Fecha de fin (hasta).
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   ANOS  INTEGER  Anos cumplidos (>= 0).
+--         NULL     si alguno de los parametros es NULL.
+--         0        si FechaHas < FechaDes.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   (ninguna - funcion de logica pura)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Calculo puro de anos entre fechas. No usa SegFec.
+--   RETURNS NULL ON NULL INPUT.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Para anos+meses+dias usar SEGLIB.SG_TIEMPO_EXACTO.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE FUNCTION SEGLIB.SG_TIEMPO_ANOS (
   FechaDes DATE,
@@ -28,21 +49,21 @@ RETURNS TABLE (
 LANGUAGE SQL
 DETERMINISTIC
 NO EXTERNAL ACTION
-RETURNS NULL ON NULL INPUT   -- Si cualquier parámetro es NULL, retorna tabla vacía
+RETURNS NULL ON NULL INPUT   -- Si cualquier parametro es NULL, retorna tabla vacia
 BEGIN
   DECLARE vAnos INTEGER DEFAULT 0;
 
-  -- Protección: si la fecha final es anterior a la inicial
+  -- Proteccion: si la fecha final es anterior a la inicial
   -- se devuelve 0 en lugar de un valor negativo silencioso.
   IF FechaHas < FechaDes THEN
     PIPE (0);
     RETURN;
   END IF;
 
-  -- Diferencia base en años de calendario
+  -- Diferencia base en anos de calendario
   SET vAnos = YEAR(FechaHas) - YEAR(FechaDes);
 
-  -- Ajuste: si todavía no ha pasado el aniversario en el año actual
+  -- Ajuste: si todavia no ha pasado el aniversario en el ano actual
   IF (MONTH(FechaHas) < MONTH(FechaDes))
      OR (MONTH(FechaHas) = MONTH(FechaDes) AND
          DAY(FechaHas) < DAY(FechaDes)) THEN

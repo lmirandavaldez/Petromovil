@@ -6,55 +6,60 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Versión  : 3.0
+-- Version   : 3`n-- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Maestro completo de empleados activos con datos
+-- Proposito: Maestro completo de empleados activos con datos
 --            personales, laborales, de contacto y fechas clave,
---            incluyendo años de edad y antigüedad calculados con
+--            incluyendo anos de edad y antiguedad calculados con
 --            SEGLIB.SG_TIEMPO_ANOS.
 -- Correcciones v1  v2:
 --   1. Anos_de_Edad y Anos_En_la_Empresa corregidos: se usa
---      SEGLIB.SG_TIEMPO_ANOS vía CROSS JOIN LATERAL en lugar de
---      YEAR(Current Date - Date(...)), que producía resultados
---      incorrectos por aritmética de duraciones en DB2 for i.
+--      SEGLIB.SG_TIEMPO_ANOS via CROSS JOIN LATERAL en lugar de
+--      YEAR(Current Date - Date(...)), que producia resultados
+--      incorrectos por aritmetica de duraciones en DB2 for i.
 --   2. Fecha_Fijacion, Fecha_Inicio_Vacaciones y Fecha_Fin_
---      Vacaciones protegidas con CASE de validación de campos
+--      Vacaciones protegidas con CASE de validacion de campos
 --      (NULL/0/rango) para evitar error al construir la DATE.
 --   3. Cedula_Empleado centralizada en LATERAL CE con
 --      LATERAL(VALUES(...))  elimina el CASE repetido 3 veces.
---   4. Fecha_Nacimiento centralizada en LATERAL FN (1 cálculo).
---   5. Fecha_Ingreso centralizada en LATERAL FI (1 cálculo).
+--   4. Fecha_Nacimiento centralizada en LATERAL FN (1 calculo).
+--   5. Fecha_Ingreso centralizada en LATERAL FI (1 calculo).
 --   6. T1.EmpCed calificado con alias de tabla en todos los usos.
---   7. Capitalización SQL normalizada a mayúsculas.
---   8. Cabecera de documentación añadida.
+--   7. Capitalizacion SQL normalizada a mayusculas.
+--   8. Cabecera de documentacion anadida.
 -- Correcciones v2  v3:
 --   9. LATERAL FN (nacimiento) y FI (ingreso) protegidos con
---      validación completa NULL/0/rango mes-dia, igual que las
+--      validacion completa NULL/0/rango mes-dia, igual que las
 --      fechas opcionales. Centinela DATE('1900-01-01').
 --  10. Relleno de ceros estandarizado a RIGHT('00'||TRIM(CHAR()),2)
 --      en todos los LATERAL (FN, FI)  consistencia con fechas
 --      opcionales.
--- Tablas base:
+-- Tablas referenciadas:
 --   NomEmp (T1)  Maestro de empleados
 --   NomDep (T2)  Departamentos
 --   NomCar (T3)  Cargos
---   NomCat (T4)  Categorías
---   NomCmc (T5)  Centros de costo de nómina
+--   NomCat (T4)  Categorias
+--   NomCmc (T5)  Centros de costo de nomina
 --   NomCno (T6)  Conceptos
 --   NomNac (T7)  Nacionalidades
 --   NomUbi (T8)  Ubicaciones
 --   NomPro (T9)  Provincias
 --   CogCco (T10) Centros de costo contables
--- ============================================================
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWNOM_MAESTRO_EMPLEADOS AS
 SELECT
-    -- Identificación del empleado
+    -- Identificacion del empleado
     T1.EmpCve,
     T1.EmpNom,
     T1.EmpApe,
 
-    -- Cédula formateada ###-#######-# centralizada en LATERAL CE
+    -- Cedula formateada ###-#######-# centralizada en LATERAL CE
     CE.Cedula_Empleado,
 
     -- Clasificaciones
@@ -96,19 +101,19 @@ SELECT
     -- Fecha de nacimiento centralizada en LATERAL FN
     FN.Fecha_Nacimiento,
 
-    -- Edad en años usando SG_TIEMPO_ANOS (correcto para DB2 for i)
+    -- Edad en anos usando SG_TIEMPO_ANOS (correcto para DB2 for i)
     -- YEAR(CURRENT_DATE - FechaNac) extrae solo la parte entera de
-    -- años de una DURATION, sin ajustar por si el cumpleaños ya ocurrió.
+    -- anos de una DURATION, sin ajustar por si el cumpleanos ya ocurrio.
     EA.ANOS                                     AS Anos_de_Edad,
 
     -- Fecha de ingreso centralizada en LATERAL FI
     FI.Fecha_Ingreso,
 
-    -- Años de antigüedad usando SG_TIEMPO_ANOS (correcto)
+    -- Anos de antiguedad usando SG_TIEMPO_ANOS (correcto)
     A.ANOS                                      AS Anos_En_la_Empresa,
 
-    -- Fechas opcionales con centinela DATE('1900-01-01') si campo inválido
-    -- Protección: NULL, 0, o fuera de rango producirían error en DATE()
+    -- Fechas opcionales con centinela DATE('1900-01-01') si campo invalido
+    -- Proteccion: NULL, 0, o fuera de rango producirian error en DATE()
     CASE
         WHEN T1.EmpAfi IS NULL OR T1.EmpAfi = 0
           OR T1.EmpMfi IS NULL OR T1.EmpMfi = 0
@@ -162,8 +167,8 @@ LEFT OUTER JOIN NomUbi T8  ON T1.UbiCve = T8.UbiCve
 LEFT OUTER JOIN NomPro T9  ON T1.ProCve = T9.ProCve
 LEFT OUTER JOIN CogCco T10 ON T1.CcoCve = T10.CcoCve
 
--- LATERAL CE: cédula formateada ###-#######-# (un solo CASE aplanado)
--- LATERAL(VALUES(...)) mantiene la correlación con T1 en un solo nivel
+-- LATERAL CE: cedula formateada ###-#######-# (un solo CASE aplanado)
+-- LATERAL(VALUES(...)) mantiene la correlacion con T1 en un solo nivel
 CROSS JOIN LATERAL (
     SELECT
         SUBSTR(CED_VAL, 1,  3) || '-' ||
@@ -197,7 +202,7 @@ CROSS JOIN LATERAL (
     FROM SYSIBM.SYSDUMMY1
 ) AS FN
 
--- LATERAL EA: años de edad usando SG_TIEMPO_ANOS (correcto)
+-- LATERAL EA: anos de edad usando SG_TIEMPO_ANOS (correcto)
 CROSS JOIN LATERAL (
     SELECT ANOS
     FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(FN.Fecha_Nacimiento, CURRENT_DATE))
@@ -221,7 +226,7 @@ CROSS JOIN LATERAL (
     FROM SYSIBM.SYSDUMMY1
 ) AS FI
 
--- LATERAL A: años completos de antigüedad
+-- LATERAL A: anos completos de antiguedad
 CROSS JOIN LATERAL (
     SELECT ANOS
     FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(FI.Fecha_Ingreso, CURRENT_DATE))

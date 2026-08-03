@@ -1,38 +1,65 @@
 -- ==============================================================
 -- Modulo    : Contabilidad General
--- Programa  : SQLCG003
+-- Programa  : SQLCG004
 -- Objeto    : VWCOG_MAYOR_GENERALBCC
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 1
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito    : Mayor general por centro de costo, cuenta
---             contable, auxiliar, ano y numero de periodo.
---             Por cada combinacion devuelve el balance
---             inicial, debitos, creditos y balance final
---             del periodo.
---             Tipo_Cuenta distingue cuentas de mayor puras
---             (CtaTip=1 sin auxiliar) de las demas.
---             Descripcion muestra el nombre de la cuenta o
---             del auxiliar segun corresponda.
---             Solo incluye periodos cerrados (PerSit = 'C').
+-- Proposito:
+--   Mayor general por centro de costo, cuenta contable,
+--   auxiliar, ano y numero de periodo.
+--   Por cada combinacion devuelve el balance inicial,
+--   debitos, creditos y balance final del periodo.
+--   Tipo_Cuenta distingue cuentas de mayor puras
+--   (CtaTip=1 sin auxiliar) de las demas.
+--   Descripcion muestra el nombre de la cuenta o del
+--   auxiliar segun corresponda.
+--   Solo incluye periodos cerrados (PerSit = 'C').
 -- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   PerAno          Ano contable del periodo        (CogBcc)
+--   PerNum          Numero del periodo (1..12)      (CogBcc)
+--   CcoCve          Clave del centro de costo       (CogBcc)
+--   CcoDes          Descripcion del centro de costo (CogCco)
+--   CtaCve          Clave de la cuenta contable     (CogBcc)
+--   AuxLis          Lista (tipo) del auxiliar       (CogBcc)
+--   AuxCve          Clave del auxiliar              (CogBcc)
+--   Tipo_Cuenta     1=mayor pura, 2=con auxiliar    (calc)
+--   Descripcion     Nombre de cuenta o auxiliar     (calc)
+--   Balance_Inicial Saldo inicial del periodo       (CogBcc)
+--   Debitos         Total de debitos del periodo    (CogBcc)
+--   Creditos        Total de creditos del periodo   (CogBcc)
+--   Balance_Final   Saldo final del periodo         (CogBcc)
 -- --------------------------------------------------------------
--- Cambios   :
---   v2 - Se agrega cabecera de documentacion completa.
---        Se agrega alias explicito As en FROM y JOINs.
---        Se reformatea SELECT con una columna por linea
---          y comentario descriptivo en cada campo.
---        Se reformatea GROUP BY con una expresion por linea.
---        Se agrega ORDER BY sugerido (comentado).
---        Se corrige IfNUll (casing inconsistente) a IfNull.
---        Se califica con T1. los campos de Sum() para
---          consistencia con el resto del SELECT.
---        Se respeta el orden original de los campos,
---          la logica original y el limite de 80 posiciones.
--- ============================================================
+-- Tablas referenciadas:
+--   CogBcc    T1  Balance por cuenta y centro de costo
+--   CogPer    T2  Periodos contables
+--   CogCta    T3  Catalogo de cuentas
+--   CogAuxd   T4  Catalogo de auxiliares
+--   CogCco    T5  Catalogo de centros de costo
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Filtra por T2.PerSit = 'C' (periodos cerrados).
+--   PerAno y PerNum identifican univocamente el periodo
+--   contable; no se manejan fechas calendario directas.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar columna Movimiento_Neto = BccDeb - BccCre
+--      para simplificar calculos en capas superiores.
+--   2. Evaluar unificar con VWCOG_MAYOR_GENERAL (sqlcg003)
+--      mediante LEFT JOIN a CogBcc para obtener vista unica.
+--   3. Exponer PerSit para permitir filtros adicionales.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           correccion Programa SQLCG003->004,
+--                           IfNull -> Coalesce, sin acentos
+-- ==============================================================
 
 Create Or Replace View VWCOG_MAYOR_GENERALBCC As
 
@@ -80,16 +107,16 @@ Select
     -- --------------------------------------------------------
     -- Metricas del periodo
     -- --------------------------------------------------------
-    IfNull(Sum(T1.BccBip), 0)             As Balance_Inicial,
+    Coalesce(Sum(T1.BccBip), 0)             As Balance_Inicial,
     -- Saldo inicial del periodo
 
-    IfNull(Sum(T1.BccDeb), 0)             As Debitos,
+    Coalesce(Sum(T1.BccDeb), 0)             As Debitos,
     -- Total de debitos del periodo
 
-    IfNull(Sum(T1.BccCre), 0)             As Creditos,
+    Coalesce(Sum(T1.BccCre), 0)             As Creditos,
     -- Total de creditos del periodo
 
-    IfNull(Sum(T1.BccBal), 0)             As Balance_Final
+    Coalesce(Sum(T1.BccBal), 0)             As Balance_Final
     -- Saldo final del periodo
 
 -- ============================================================

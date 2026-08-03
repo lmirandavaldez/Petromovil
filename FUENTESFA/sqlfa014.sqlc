@@ -1,59 +1,41 @@
--- ===========================================================
--- Vista   : VWFAC_SUBDIVIDIR_MONTOS_UNICO_INGRESO_DEFINITIVO
--- Módulo  : Facturación
--- Objeto  : Calcula, por pedido definitivo y artículo, el
---           número de veces (Veces) que se debe subdividir
---           el importe para el proceso de Único Ingreso,
---           usando el monto máximo por transacción (ParMti)
---           definido en ItePar para la clave '@'.
---           Fórmula: Veces = Ceil(Importe / ParMti)
---             = Int((Importe + ParMti - 1) / ParMti)
---           Variante DEFINITIVA de la vista TEMPORAL
---           (sqlfa013): usa FacOrdd/FacOrdh en lugar de
---           Facortd/Facorth.
---           Solo incluye pedidos de:
---             - Distritos tipo 'S' (Supermercado) o
---               'E' (Especial)
---             - Clientes con TcfCve 12 o 32 (tipos de
---               comprobante para Único Ingreso)
---             - Almacenes de venta ('S') tipo 'G'
---               (General) o 'E' (Especial)
---           Solo renglones con cantidad > 0 e importe > 0.
--- Tablas  : FacOrdd  — detalle de pedidos definitivos
---           FacOrdh  — encabezado de pedidos definitivos
---           SegDis   — distritos (filtra tipo S/E)
---           CxcAdc   — tipo de comprobante por cliente
---           InvAlm   — almacenes (filtra tipo G/E, venta S)
---           SegFec   — calendario (fecha del pedido)
---           ItePar   — parámetros del sistema (ParMti/'@')
--- Esquema : (default)
--- Autor   : L. Miranda
--- Copyright: Miranda Valdez, S. A., 1997
--- Versión : 2  (mejorada)
--- Cambios :
---   v2 - Se elimina la doble subconsulta correlacionada
---          sobre ItePar reemplazándola por un CTE que
---          lee ParMti una sola vez (mejor rendimiento).
---        Los JOINs de CxcAdc e InvAlm se mantienen en
---          forma directa con sus filtros en la cláusula
---          ON: el GROUP BY consolida duplicados si un
---          cliente tiene más de un registro coincidente.
---        Se cambia INNER JOIN SegFec a LEFT OUTER JOIN
---          para preservar pedidos con fecha no en SegFec
---          (Fecha_Pedido = NULL en esos casos).
---        Se agrega alias As en FROM y todos los JOINs.
---        Se reformatea respetando 80 columnas.
---        Se documenta cada JOIN, filtro y cálculo.
---        Se agrega ORDER BY sugerido (comentado).
---        Cabecera de documentación completa.
--- ===========================================================
+-- ==============================================================
+-- Modulo    : Facturacion
+-- Programa  : SQLFA014
+-- Objeto    : VWFAC_SUBDIVIDIR_MONTOS_UNICO_INGRESO_DEFINITIVO
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Ver descripcion en comentarios dentro del SQL.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Ver definicion en el SELECT del SQL.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ver comentarios en los JOINs del SQL.
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Ver comentarios en el SQL.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   Ver seccion Cambios en el historial del archivo original.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
+--                           formato 80 cols
+-- ==============================================================
 
 Create Or Replace View
     VWFAC_SUBDIVIDIR_MONTOS_UNICO_INGRESO_DEFINITIVO As
 
 -- ===========================================================
 -- CTE: leer ParMti una sola vez en lugar de dos subconsultas
--- ParCve='@' = monto máximo por transacción de único ingreso
+-- ParCve='@' = monto maximo por transaccion de unico ingreso
 -- ===========================================================
 With Par_Monto As (
     Select ParMti
@@ -64,7 +46,7 @@ With Par_Monto As (
 
 Select
     -- -------------------------------------------------------
-    -- Dimensiones de agrupación
+    -- Dimensiones de agrupacion
     -- -------------------------------------------------------
     T1.DisCve           As Codigo_Del_Distrito,
     T2.AlmCve           As Codigo_Almacen,
@@ -74,7 +56,7 @@ Select
     T1.ArtCve           As Codigo_Articulo,
 
     -- -------------------------------------------------------
-    -- Métricas del pedido
+    -- Metricas del pedido
     -- -------------------------------------------------------
     Sum(T1.OrdCan)      As Total_Cantidad,
     Avg(T1.OrdPve)      As Precio_Promedio,
@@ -82,13 +64,13 @@ Select
 
     -- Veces = Ceil(Importe / ParMti)
     --       = Int((Importe + ParMti - 1) / ParMti)
-    -- Divide el importe total en bloques de tamaño ParMti
+    -- Divide el importe total en bloques de tamano ParMti
     Int((Sum(T1.OrdImp) + P.ParMti - 1)
         / P.ParMti)     As Veces
 
 From FacOrdd As T1
 
--- Encabezado del pedido definitivo (almacén, cliente, fecha)
+-- Encabezado del pedido definitivo (almacen, cliente, fecha)
 Inner Join FacOrdh As T2
     On  T1.DisCve = T2.DisCve
     And T1.OrdNro = T2.OrdNro
@@ -98,33 +80,33 @@ Inner Join SegDis As T3
     On  T1.DisCve = T3.DisCve
     And T3.DisTip In ('S', 'E')
 
--- Tipo de comprobante del cliente para Único Ingreso:
--- TcfCve 12=Registro Único de Ingresos,
--- 32=Fact. p/Régimen Especial de Tributación.
+-- Tipo de comprobante del cliente para Unico Ingreso:
+-- TcfCve 12=Registro Unico de Ingresos,
+-- 32=Fact. p/Regimen Especial de Tributacion.
 -- JOIN directo: el GROUP BY consolida duplicados si
--- el cliente tiene más de un registro en CxcAdc
+-- el cliente tiene mas de un registro en CxcAdc
 Inner Join CxcAdc As T4
     On  T1.DisCve = T4.DisCve
     And T2.CliCve = T4.CliCve
     And T4.TcfCve In (12, 32)
 
--- Almacén de venta activo ('S') tipo 'G'=General o
+-- Almacen de venta activo ('S') tipo 'G'=General o
 -- 'E'=Especial. JOIN directo: el GROUP BY consolida
--- duplicados si hay más de un almacén coincidente
+-- duplicados si hay mas de un almacen coincidente
 Inner Join InvAlm As T5
     On  T1.DisCve = T5.DisCve
     And T2.AlmCve = T5.AlmCve
     And T5.AlmVen = 'S'
     And T5.AlmTip In ('G', 'E')
 
--- Calendario: fecha del pedido (año+mes+día → FecYmd)
+-- Calendario: fecha del pedido (ano+mes+dia -> FecYmd)
 -- LEFT para conservar pedidos con fecha no en SegFec
 Left Outer Join SegFec As T9
     On  T2.OrdAno = T9.FecAno
     And T2.OrdMes = T9.FecMes
     And T2.OrdDia = T9.FecDia
 
--- Parámetro de monto máximo (leído una sola vez por CTE)
+-- Parametro de monto maximo (leido una sola vez por CTE)
 Cross Join Par_Monto As P
 
 Group By

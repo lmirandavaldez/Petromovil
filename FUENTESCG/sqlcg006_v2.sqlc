@@ -1,0 +1,327 @@
+-- ==============================================================
+-- Modulo    : Contabilidad General
+-- Programa  : SQLCG006
+-- Objeto    : VWCOG_MAYOR_GENERAL_Bcc_MESES
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito : Pivot mensual combinado del mayor general y del
+--             balance por centro de costo, por cuenta contable,
+--             auxiliar y ano.
+--             Por cada combinacion expone en la misma fila
+--             dos series de columnas mensuales (enero-diciembre):
+--               - Serie Mge: movimiento neto y balance del
+--                 mayor general (CogMge).
+--               - Serie Bcc: movimiento neto y balance por
+--                 centro de costo (CogBcc).
+--             Tipo_Cuenta distingue cuentas de mayor puras
+--             (CtaTip=1 sin auxiliar) de las demas.
+--             Descripcion muestra el nombre de la cuenta o
+--             del auxiliar segun corresponda.
+--             CcoCve / Descripcion_Cco pueden ser NULL cuando
+--             la cuenta no tiene movimientos en CogBcc.
+--             Solo incluye periodos cerrados (PerSit = 'C').
+-- --------------------------------------------------------------
+-- Tablas    : CogCta    catalogo de cuentas (tabla base)
+--             CogMge    movimientos del mayor general
+--             CogAuxd   catalogo de auxiliares
+--             CogBcc    balance por cuenta y centro de costo
+--             CogCco    catalogo de centros de costo
+--             CogPer    periodos contables
+-- --------------------------------------------------------------
+-- Cambios   :
+--   v2 - Se agrega cabecera de documentacion completa.
+--        Se agrega alias explicito As en FROM y JOINs.
+--        Se reformatea SELECT con una columna por linea
+--          y comentario descriptivo en cada campo.
+--        Se reformatea el doble pivot mensual alineando
+--          el alias As en la misma linea de la expresion.
+--        Se reformatea GROUP BY con una expresion por linea.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Se respeta el orden original de los campos,
+--          la logica original y el limite de 80 posiciones.
+-- ============================================================
+
+Create Or Replace View VWCOG_MAYOR_GENERAL_Bcc_MESES As
+
+Select
+    -- --------------------------------------------------------
+    -- Dimensiones de agrupacion
+    -- --------------------------------------------------------
+    T2.PerAno                              As PerAno,
+    -- Ano contable del periodo
+
+    T1.CtaCve                              As CtaCve,
+    -- Clave de la cuenta contable
+
+    T2.AuxLis                              As AuxLis,
+    -- Lista (tipo) del auxiliar; 0 = sin auxiliar
+
+    T2.AuxCve                              As AuxCve,
+    -- Clave del auxiliar; 0 = sin auxiliar
+
+    -- Tipo_Cuenta:
+    --   1 = cuenta de mayor pura (CtaTip=1, sin auxiliar)
+    --   2 = cuenta con auxiliar o de otro tipo
+    (Case When T1.CtaTip = 1
+          And  T2.AuxLis = 0
+          And  T2.AuxCve = 0
+     Then 1
+     Else 2
+     End)                                  As Tipo_Cuenta,
+
+    -- Descripcion: nombre de cuenta o de auxiliar segun caso
+    (Case When T2.AuxCve = 0
+     Then T1.CtaDes
+     Else T3.AuxNom
+     End)                                  As Descripcion,
+
+    T4.CcoCve                              As CcoCve,
+    -- Clave del centro de costo (NULL si no hay en CogBcc)
+
+    T5.CcoDes                              As Descripcion_Cco,
+    -- Descripcion del centro de costo
+
+    -- --------------------------------------------------------
+    -- Pivot mensual mayor general (CogMge)
+    -- Movimiento_Mge = Debito - Credito del mayor
+    -- Balance_Mge    = Saldo acumulado del mayor
+    -- --------------------------------------------------------
+    IfNull(Sum(Case When T2.PerNum = 01
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Ene,
+    IfNull(Sum(Case When T2.PerNum = 01
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Ene,
+
+    IfNull(Sum(Case When T2.PerNum = 02
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Feb,
+    IfNull(Sum(Case When T2.PerNum = 02
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Feb,
+
+    IfNull(Sum(Case When T2.PerNum = 03
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Mar,
+    IfNull(Sum(Case When T2.PerNum = 03
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Mar,
+
+    IfNull(Sum(Case When T2.PerNum = 04
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Abr,
+    IfNull(Sum(Case When T2.PerNum = 04
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Abr,
+
+    IfNull(Sum(Case When T2.PerNum = 05
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_May,
+    IfNull(Sum(Case When T2.PerNum = 05
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_May,
+
+    IfNull(Sum(Case When T2.PerNum = 06
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Jun,
+    IfNull(Sum(Case When T2.PerNum = 06
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Jun,
+
+    IfNull(Sum(Case When T2.PerNum = 07
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Jul,
+    IfNull(Sum(Case When T2.PerNum = 07
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Jul,
+
+    IfNull(Sum(Case When T2.PerNum = 08
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Ago,
+    IfNull(Sum(Case When T2.PerNum = 08
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Ago,
+
+    IfNull(Sum(Case When T2.PerNum = 09
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Sep,
+    IfNull(Sum(Case When T2.PerNum = 09
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Sep,
+
+    IfNull(Sum(Case When T2.PerNum = 10
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Oct,
+    IfNull(Sum(Case When T2.PerNum = 10
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Oct,
+
+    IfNull(Sum(Case When T2.PerNum = 11
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Nov,
+    IfNull(Sum(Case When T2.PerNum = 11
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Nov,
+
+    IfNull(Sum(Case When T2.PerNum = 12
+               Then (T2.MgeDeb - T2.MgeCre)
+               End), 0)                    As Movimiento_Mge_Dic,
+    IfNull(Sum(Case When T2.PerNum = 12
+               Then T2.MgeBal
+               End), 0)                    As Balance_Mge_Dic,
+
+    -- --------------------------------------------------------
+    -- Pivot mensual centro de costo (CogBcc)
+    -- Movimiento_Bcc = Debito - Credito del CCO
+    -- Balance_Bcc    = Saldo acumulado del CCO
+    -- 0 cuando la cuenta no tiene movimientos en CogBcc
+    -- --------------------------------------------------------
+    IfNull(Sum(Case When T4.PerNum = 01
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Ene,
+    IfNull(Sum(Case When T4.PerNum = 01
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Ene,
+
+    IfNull(Sum(Case When T4.PerNum = 02
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Feb,
+    IfNull(Sum(Case When T4.PerNum = 02
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Feb,
+
+    IfNull(Sum(Case When T4.PerNum = 03
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Mar,
+    IfNull(Sum(Case When T4.PerNum = 03
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Mar,
+
+    IfNull(Sum(Case When T4.PerNum = 04
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Abr,
+    IfNull(Sum(Case When T4.PerNum = 04
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Abr,
+
+    IfNull(Sum(Case When T4.PerNum = 05
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_May,
+    IfNull(Sum(Case When T4.PerNum = 05
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_May,
+
+    IfNull(Sum(Case When T4.PerNum = 06
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Jun,
+    IfNull(Sum(Case When T4.PerNum = 06
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Jun,
+
+    IfNull(Sum(Case When T4.PerNum = 07
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Jul,
+    IfNull(Sum(Case When T4.PerNum = 07
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Jul,
+
+    IfNull(Sum(Case When T4.PerNum = 08
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Ago,
+    IfNull(Sum(Case When T4.PerNum = 08
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Ago,
+
+    IfNull(Sum(Case When T4.PerNum = 09
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Sep,
+    IfNull(Sum(Case When T4.PerNum = 09
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Sep,
+
+    IfNull(Sum(Case When T4.PerNum = 10
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Oct,
+    IfNull(Sum(Case When T4.PerNum = 10
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Oct,
+
+    IfNull(Sum(Case When T4.PerNum = 11
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Nov,
+    IfNull(Sum(Case When T4.PerNum = 11
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Nov,
+
+    IfNull(Sum(Case When T4.PerNum = 12
+               Then (T4.BccDeb - T4.BccCre)
+               End), 0)                    As Movimiento_Bcc_Dic,
+    IfNull(Sum(Case When T4.PerNum = 12
+               Then T4.BccBal
+               End), 0)                    As Balance_Bcc_Dic
+
+-- ============================================================
+-- FROM y JOINs
+-- ============================================================
+From CogCta As T1
+
+-- Mayor general: movimientos por cuenta
+Join CogMge As T2
+    On T1.CtaCve = T2.CtaCve
+
+-- Auxiliares: LEFT porque no toda cuenta tiene auxiliar
+Left Outer Join CogAuxd As T3
+    On  T2.AuxLis = T3.AuxLis
+    And T2.AuxCve = T3.AuxCve
+
+-- Balance por CCO: LEFT porque no toda cuenta/periodo
+-- tiene movimientos por centro de costo
+Left Outer Join CogBcc As T4
+    On  T2.PerAno = T4.PerAno
+    And T2.PerNum = T4.PerNum
+    And T1.CtaCve = T4.CtaCve
+    And T2.AuxLis = T4.AuxLis
+    And T2.AuxCve = T4.AuxCve
+
+-- Centro de costo: LEFT porque T4 puede ser NULL
+Left Outer Join CogCco As T5
+    On T4.CcoCve = T5.CcoCve
+
+-- Periodo contable: filtra solo periodos cerrados
+Join CogPer As T6
+    On  T2.PerAno = T6.PerAno
+    And T2.PerNum = T6.PerNum
+
+-- ============================================================
+-- Filtro: solo periodos cerrados
+-- ============================================================
+Where T6.PerSit = 'C'
+
+-- ============================================================
+-- GROUP BY: todas las dimensiones no agregadas del SELECT
+-- ============================================================
+Group By
+    T2.PerAno,
+    T1.CtaCve,
+    T2.AuxLis,
+    T2.AuxCve,
+    (Case When T1.CtaTip = 1
+          And  T2.AuxLis = 0
+          And  T2.AuxCve = 0
+     Then 1
+     Else 2
+     End),
+    (Case When T2.AuxCve = 0
+     Then T1.CtaDes
+     Else T3.AuxNom
+     End),
+    T4.CcoCve,
+    T5.CcoDes
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T2.PerAno, T1.CtaCve, T2.AuxLis,
+--          T2.AuxCve, T4.CcoCve

@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Interface Modulos Externos
 -- Programa  : SQLIM002
 -- Objeto    : VWIME_Cabecera_Detalle_Datos
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de cabecera de documentos de importacion con
 --   indicadores de existencia de detalle y deducciones.
@@ -26,7 +26,7 @@
 --   No hay campos de fecha por concatenar. DtoFec, OrdFec
 --   y PlaFpl se exponen en su tipo original de la tabla.
 --   No aplica logica de resolucion via SegFec.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   CODIGO_DE_DISTRITO           Clave del distrito  (ImeFach/T1)
 --   TIPO_DE_DOCUMENTO            Tipo de documento   (ImeFach/T1)
@@ -46,25 +46,25 @@
 --                                NULL si sin detalle
 --   CODIGO_IDENT_REGISTRO_DED    RowGui deduccion    (ImeDed/T3)
 --                                NULL si sin deduccion
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   ImeFach  T1   Encabezado de facturas de importacion (base)
 --   ImeFacd  T2   Detalle de facturas de importacion (opcional)
 --   ImeDed   T3   Deducciones del documento (opcional)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de JOIN:
 --   Ambos LEFT OUTER JOINs usan la misma clave compuesta
 --   de cuatro campos: DisCve, DtoTip, VehFic, DtoNfe.
 --   Solo se recupera RowGui de cada tabla relacionada para
 --   indicar presencia (no NULL) o ausencia (NULL) del
 --   registro relacionado.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Uso tipico de RowGui:
 --   CODIGO_IDENT_REGISTRO_FACD IS NOT NULL -> tiene detalle
 --   CODIGO_IDENT_REGISTRO_DED  IS NOT NULL -> tiene deduccion
 --   Permite filtrar documentos incompletos en la consulta
 --   consumidora sin necesidad de subconsultas EXISTS.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. DtoFec y OrdFec se exponen en tipo raw con alias que
 --      sugieren su naturaleza (FECHA_, _AMD). Si son numericos
@@ -86,12 +86,12 @@
 --   5. Los alias estan en MAYUSCULAS; el resto del sistema
 --      usa mixto (PascalCase). Mantener la convencion del
 --      modulo original pero documentar para consistencia.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
 --   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWIME_Cabecera_Detalle_Datos AS
 SELECT

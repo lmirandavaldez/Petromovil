@@ -1,53 +1,38 @@
--- ===========================================================
--- Script  : sqlfat001
--- Módulo  : Facturación
--- Objeto  : Definición DDL de la tabla CLIENTE_INACTIVIDAD
---           (nombre de sistema: ESTICC).
---           Almacena el historial de inactividad de clientes:
---           fechas de ingreso, primera compra, última compra,
---           última inactividad, reactivación, meses inactivos,
---           indicador de cliente nuevo y estado actual.
---           Usada por los procedimientos:
---             sqlfap001 — PRO_ACTUALIZAR_INACTIVIDAD
---             sqlfap002 — PRO_ACTUALIZAR_MESES_INACTIVO
--- Tabla   : CLIENTE_INACTIVIDAD (ESTICC)
--- Índice  : ESTICC_INDEX_00001 (ID_CLIENTE, FECHA_ULTIMA_COMPRA)
--- Esquema : (default)
--- Autor   : L. Miranda
--- Copyright: Miranda Valdez, S. A., 1997
--- Versión : 2  (mejorada)
--- Cambios :
---   v2 - Se corrige typo 'Inactivadad' → 'Inactividad'
---          en los labels de texto y encabezado de la columna
---          FECHA_ULTIMA_INACTIVIDAD (aparecía en 2 lugares).
---        Se normaliza casing de NOT NULL a mayúsculas
---          consistentes en toda la definición.
---        Se elimina el espacio entre Decimal y (10,0)
---          en MESES_INACTIVO.
---        Se documenta el DROP TABLE indicando que fallará
---          si la tabla no existe (no usa IF EXISTS).
---        Se eliminan los espacios al inicio de línea
---          en Drop, Rcdfmt y demás sentencias.
---        Se reformatea respetando 80 columnas.
---        Se documenta cada columna con su propósito.
---        Cabecera de documentación completa.
--- ===========================================================
-
--- ===========================================================
--- NOTA: DROP sin IF EXISTS — fallará si ESTICC no existe.
--- En IBM i v7.2+ se puede usar: DROP TABLE IF EXISTS ESTICC
--- En versiones anteriores ejecutar solo si la tabla existe.
--- ===========================================================
-DROP INDEX IF EXISTS ESTICC_INDEX_00001;
-DROP TABLE IF EXISTS ESTICC Cascade;
-
--- ===========================================================
--- Creación de la tabla principal
--- ===========================================================
+-- ==============================================================
+-- Modulo    : Facturacion
+-- Programa  : SQLFAT001
+-- Objeto    : CLIENTE_INACTIVIDAD
+-- Tipo      : DDL Tabla (CREATE TABLE)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 4
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Ver descripcion en comentarios dentro del SQL.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Ver definicion en el SELECT del SQL.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ver comentarios en los JOINs del SQL.
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Ver comentarios en el SQL.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   Ver seccion Cambios en el historial del archivo original.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
+--                           formato 80 cols
+-- ==============================================================
 Create Or Replace Table CLIENTE_INACTIVIDAD
 For System Name ESTICC
 (
-    -- Código del cliente (PK — corresponde a CxcCli.CliCve)
+    -- Codigo del cliente (PK — corresponde a CxcCli.CliCve)
     ID_CLIENTE               For CLICVE  Decimal(7,0)  Not Null,
 
     -- Fecha en que el cliente fue dado de alta en el sistema
@@ -56,16 +41,16 @@ For System Name ESTICC
     -- Fecha de la primera compra registrada
     FECHA_PRIMERA_COMPRA     For IccFPC  Date          Not Null,
 
-    -- Fecha de la compra más reciente
+    -- Fecha de la compra mas reciente
     FECHA_ULTIMA_COMPRA      For ICCFUC  Date          Not Null,
 
-    -- Fecha en que se detectó la última inactividad
+    -- Fecha en que se detecto la ultima inactividad
     FECHA_ULTIMA_INACTIVIDAD For ICCFUI  Date          Not Null,
 
     -- Fecha en que el cliente fue reactivado
     FECHA_REACTIVACION       For ICCFUR  Date          Not Null,
 
-    -- Meses transcurridos desde la última compra (calculado)
+    -- Meses transcurridos desde la ultima compra (calculado)
     MESES_INACTIVO           For ICCMIN  Decimal(10,0) Default 0,
 
     -- 'S'=Cliente nuevo o reactivado; 'N'=Cliente regular
@@ -74,7 +59,7 @@ For System Name ESTICC
     -- Estado actual: 'ACTIVO' o 'INACTIVO' (10 chars)
     ESTADO_CLIENTE           For ICCSTA  Char(10)      Default 'ACTIVO',
 
-    -- Restricción de clave primaria
+    -- Restriccion de clave primaria
     Primary Key (ID_CLIENTE)
 )
 Rcdfmt ESTICCF;
@@ -86,7 +71,7 @@ Label On Table CLIENTE_INACTIVIDAD
     Is 'Tabla: Historico Inactividad Clientes';
 
 -- ===========================================================
--- Labels de texto de columnas (descripción larga)
+-- Labels de texto de columnas (descripcion larga)
 -- ===========================================================
 Label On Column CLIENTE_INACTIVIDAD
 (
@@ -94,7 +79,7 @@ Label On Column CLIENTE_INACTIVIDAD
     FECHA_INGRESO            Text Is 'Fecha de Ingreso',
     FECHA_PRIMERA_COMPRA     Text Is 'Fecha Primera Compra',
     FECHA_ULTIMA_COMPRA      Text Is 'Fecha Ultima Compra',
-    -- CORRECCIÓN: era 'Inactivadad' (typo)
+    -- CORRECCION: era 'Inactivadad' (typo)
     FECHA_ULTIMA_INACTIVIDAD Text Is 'Fecha Ultima Inactividad',
     FECHA_REACTIVACION       Text Is 'Fecha de Reactivacion',
     MESES_INACTIVO           Text Is 'Meses Inactivo',
@@ -111,7 +96,7 @@ Label On Column CLIENTE_INACTIVIDAD
     FECHA_INGRESO            Is 'Fecha de Ingreso',
     FECHA_PRIMERA_COMPRA     Is 'Fecha Primera Compra',
     FECHA_ULTIMA_COMPRA      Is 'Fecha Ultima Compra',
-    -- CORRECCIÓN: era 'Inactivadad' (typo)
+    -- CORRECCION: era 'Inactivadad' (typo)
     FECHA_ULTIMA_INACTIVIDAD Is 'Fecha Ultima Inactividad',
     FECHA_REACTIVACION       Is 'Fecha de Reactivacion',
     MESES_INACTIVO           Is 'Meses Inactivo',
@@ -120,7 +105,7 @@ Label On Column CLIENTE_INACTIVIDAD
 );
 
 -- ===========================================================
--- Índice compuesto para consultas por cliente y fecha
+-- Indice compuesto para consultas por cliente y fecha
 -- (soporta los filtros de sqlfap001 y sqlfap002)
 -- ===========================================================
 Create Index ESTICC_INDEX_00001

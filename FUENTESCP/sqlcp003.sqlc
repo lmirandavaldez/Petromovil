@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Cuentas por Pagar
 -- Programa  : SQLCP003
 -- Objeto    : VWCXP_Documentos_Al_Cierre
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de documentos de cuentas por pagar al momento del
 --   cierre de periodo. Consolida el historico de documentos
@@ -25,7 +25,7 @@
 --
 --   Si alguna fecha no existe en SegFec, COALESCE devuelve
 --   el tope del sistema: DATE('2039-12-31').
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   Peanci            Ano del periodo de cierre  (CxpHDpeh/T1)
 --   PeNuci            Numero del periodo cierre  (CxpHDpeh/T1)
@@ -49,7 +49,7 @@
 --   DpeVml            Valor en moneda local      (CxpHDpeh/T1)
 --   DpeBce            Balance del documento      (CxpHDpeh/T1)
 --   DpeBml            Balance en moneda local    (CxpHDpeh/T1)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CxpHDpeh T1   Historico de documentos CxP al cierre (base)
 --   CxpPro   T2   Proveedores
@@ -58,7 +58,7 @@
 --   CxpDpeh  T5   Encabezado de documentos CxP (activo)
 --   SegFec   T9   Tabla de fechas (Fecha_Documento)
 --   SegFec   T10  Tabla de fechas (Fecha_Transaccion)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de resolucion de fechas:
 --   T9  : LEFT OUTER JOIN a SegFec por campo numerico FecYmd
 --         (DpeFec = FecYmd YYYYMMDD) -> devuelve FecIso.
@@ -66,7 +66,7 @@
 --         (DpeFtr = FecYMd YYYYMMDD) -> devuelve FecIso.
 --   COALESCE devuelve DATE('2039-12-31') si el JOIN es NULL.
 --   SegFec cubre el rango 1940-01-01 a 2039-12-31.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de JOIN CxpDpeh T5:
 --   El historico (CxpHDpeh) no almacena campos descriptivos
 --   del documento (NcfNro, DpeDr1, DpeDr2, DpeCon). Estos
@@ -74,7 +74,7 @@
 --   clave compuesta: ProCve + MovCve + DpeDoc + DpeRef.
 --   Si el documento activo fue eliminado o no existe, el
 --   JOIN (INNER) excluira el registro historico de la vista.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. El JOIN a CxpDpeh T5 es INNER JOIN: si un documento
 --      del historico no tiene correspondencia en el activo
@@ -91,7 +91,7 @@
 --   4. DpeVml y DpeBml (valores en moneda local) son propios
 --      del historico; su presencia confirma que se aplico
 --      conversion de moneda en el proceso de cierre.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
@@ -99,7 +99,7 @@
 --                           JOINs a SegFec (T9, T10)
 --                           convertidos a LEFT OUTER JOIN
 --                           con COALESCE DATE('2039-12-31').
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXP_Documentos_Al_Cierre AS
 SELECT

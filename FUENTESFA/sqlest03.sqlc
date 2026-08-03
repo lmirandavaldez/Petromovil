@@ -1,48 +1,34 @@
--- ============================================================
--- Vista   : VWEST_Estadisticas_Ventas_Vendedor
--- Módulo  : Estadísticas de Ventas
--- Objeto  : Resume las estadísticas de ventas desglosadas por
---           vendedor, año y mes.
---           Relaciona el detalle de facturación (FacDtod) con
---           el encabezado (FacDtoh) y la tabla de asignación
---           cliente-vendedor (CxcRvc) para obtener el código
---           de vendedor (VenCve).
---           Cuando el cliente no tiene vendedor en CxcRvc,
---           se usa el vendedor registrado en FacDtoh.
---           Incluye importes brutos, descuentos, impuestos,
---           neto a cobrar y costos.
--- Tablas  : FacDtod   detalle de documentos de facturación
---           FacDtoh   encabezado de documentos de facturación
---           CxcRvc    asignación cliente-vendedor (CxC)
--- Esquema : (default)
--- Autor   : L. Miranda
--- Versión : 3  (mejorada)
--- Cambios :
---   v2 - Se reemplaza JOIN por LEFT JOIN para preservar líneas
---          de detalle cuyos clientes no tengan vendedor asignado
---          en CxcRvc (con LEFT JOIN VenCve = NULL para esos
---          casos, evitando exclusión silenciosa de ventas).
---        Se agrega FETCH FIRST 1 ROW en la subconsulta de
---          vendedor para prevenir duplicación de filas cuando
---          un cliente tiene más de un registro en CxcRvc.
---        Se agrega alias explícito As en FROM y JOIN.
---        Se documenta el JOIN y todas las columnas con su
---          significado de negocio.
---        Se descompone ESTINV con comentario de fórmula.
---        Se expande GROUP BY a una columna por línea.
---        Se agrega ORDER BY sugerido (comentado).
---        Mejora de formato e indentación.
---        Cabecera de documentación completa.
---   v3 - Se agrega JOIN con FacDtoh para obtener el vendedor
---          cuando el cliente no tiene asignación en CxcRvc.
---        Se usa COALESCE(T2.VenCve, T3.VenCve) para resolver
---          el vendedor: primero CxcRvc, luego FacDtoh.
---        Se usa CTE (WITH) para resolver el Coalesce antes del
---          GROUP BY, evitando SQL0122 (expresión en GROUP BY
---          no soportada en DB2 for i).
---        Subconsulta de CxcRvc agrupada con GROUP BY + MIN
---          para garantizar relación 1:1 sin SQL0206.
--- ============================================================
+-- ==============================================================
+-- Modulo    : Estadisticas de Ventas
+-- Programa  : SQLEST03
+-- Objeto    : VWEST_Estadisticas_Ventas_Vendedor
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Ver descripcion en comentarios dentro del SQL.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Ver definicion en el SELECT del SQL.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ver comentarios en los JOINs del SQL.
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Ver comentarios en el SQL.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   Ver seccion Cambios en el historial del archivo original.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
+--                           formato 80 cols
+-- ==============================================================
 
 Create Or Replace View VWEST_Estadisticas_Ventas_Vendedor As
 
@@ -83,16 +69,16 @@ With Base As (
 -- Consulta externa: agrupa por columnas simples del CTE.
 -- DB2 for i requiere columnas simples en GROUP BY, sin expresiones.
 Select
-    Base.VenCve                        As VenCve,   -- Código del vendedor
-    Base.EstAno                        As EstAno,   -- Año del período
-    Base.EstMes                        As EstMes,   -- Mes del período (1..12)
+    Base.VenCve                        As VenCve,   -- Codigo del vendedor
+    Base.EstAno                        As EstAno,   -- Ano del periodo
+    Base.EstMes                        As EstMes,   -- Mes del periodo (1..12)
     Sum(Base.DtoImp)                   As ESTIBV,   -- Importe Bruto de Ventas
     Sum(Base.DtoMpd)                   As ESTIDV,   -- Importe de Descuentos
     Sum(Base.DtoIm1 + Base.DtoIm2)     As ESTIIV,   -- Importe de Impuestos
     Sum((Base.DtoImp - Base.DtoMpd)
         + Base.DtoIm1 + Base.DtoIm2)   As ESTINV,   -- Importe Neto de Ventas
     Sum(Base.DtoMcp)                   As ESTCPR,   -- Costo Promedio
-    Sum(Base.DtoMcu)                   As ESTCUL    -- Costo Último
+    Sum(Base.DtoMcu)                   As ESTCUL    -- Costo Ultimo
 
 From Base
 

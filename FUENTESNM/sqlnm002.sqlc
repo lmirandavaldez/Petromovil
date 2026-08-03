@@ -6,42 +6,47 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Versión   : 2.0
+-- Version   : 2`n-- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Acumulado anual de importes de nómina por empleado
+-- Proposito: Acumulado anual de importes de nomina por empleado
 --            y concepto, pivotado en columnas por mes (EneDic).
 --            Incluye todos los empleados y estados (sin filtro
---            de EmpSta) para permitir consultas históricas.
+--            de EmpSta) para permitir consultas historicas.
 -- Correcciones v1  v2:
---   1. IfNull reemplazado por COALESCE (estándar SQL).
---   2. CAST(... AS DECIMAL(15,2)) explícito en importes para
+--   1. IfNull reemplazado por COALESCE (estandar SQL).
+--   2. CAST(... AS DECIMAL(15,2)) explicito en importes para
 --      garantizar tipo consistente independiente de AecImd.
---   3. Alias en la misma línea que la expresión.
---   4. Capitalización SQL normalizada a mayúsculas.
---   5. Alineación consistente entre SELECT y GROUP BY.
---   6. Cabecera de documentación añadida.
+--   3. Alias en la misma linea que la expresion.
+--   4. Capitalizacion SQL normalizada a mayusculas.
+--   5. Alineacion consistente entre SELECT y GROUP BY.
+--   6. Cabecera de documentacion anadida.
 -- Columnas clave:
---   AecAno      Año del acumulado (permite filtrar por año).
---   CmcCve/Des  Concepto de nómina agrupador.
+--   AecAno      Ano del acumulado (permite filtrar por ano).
+--   CmcCve/Des  Concepto de nomina agrupador.
 --   CmcTip      Tipo de concepto.
---   CmcCla      Clasificación del concepto.
+--   CmcCla      Clasificacion del concepto.
 --   CtaCve/Des  Cuenta contable asociada al concepto.
 --   Importe_Ene..Dic  Suma de importes por mes (0 si sin movimiento).
--- Tablas base:
+-- Tablas referenciadas:
 --   NomEmp  (T1)  Maestro de empleados
 --   NomAecd (T2)  Acumulado de conceptos por empleado y mes
---   NomCmc  (T3)  Conceptos de nómina
+--   NomCmc  (T3)  Conceptos de nomina
 --   NomDep  (T4)  Departamentos
 --   CogCco  (T5)  Centros de costo contables
 --   CogCta  (T6)  Cuentas contables
 --   NomUbi  (T7)  Ubicaciones
 --   NomCar  (T8)  Cargos
---   NomCat  (T9)  Categorías
--- ============================================================
+--   NomCat  (T9)  Categorias
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWNOM_ACU_EMP_CONCEPTOSMESES AS
 SELECT
-    -- Identificación del empleado
+    -- Identificacion del empleado
     T1.EmpCve,
     T1.EmpApe,
     T1.EmpNom,
@@ -54,7 +59,7 @@ SELECT
     T1.CatCve,  T9.CatDes,
     T1.CcoCve,  T5.CcoDes,
 
-    -- Concepto de nómina y cuenta contable
+    -- Concepto de nomina y cuenta contable
     T2.CmcCve,
     T3.CmcDes,
     T3.CmcTip,
@@ -62,7 +67,7 @@ SELECT
     T3.CtaCve,
     T6.CtaDes,
 
-    -- Año del acumulado (dimensión de análisis histórico)
+    -- Ano del acumulado (dimension de analisis historico)
     T2.AecAno,
 
     -- Importes acumulados por mes  COALESCE garantiza 0 si sin movimiento

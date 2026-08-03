@@ -1,21 +1,38 @@
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
--- ============================================================
--- Vista   : VWNOM_MAESTRO_EMPLEADOS_V2
--- Propósito: Maestro de empleados activos con antigüedad
---            desglosada en años, meses y días usando las
---            funciones de tabla SEGLIB.SG_TIEMPO_*.
--- Versión : 2.0
--- Corrección v1→v2:
---   Las funciones SG_TIEMPO_ANOS, SG_TIEMPO_MESES y
---   SG_TIEMPO_DIAS son funciones de TABLA (RETURNS TABLE).
---   No pueden usarse directamente en la lista SELECT como
---   funciones escalares (causa SQL0390).
---   Solución: se usan CROSS JOIN LATERAL (TABLE(...)) para
---   obtener el valor de cada función en la cláusula FROM.
---   Adicionalmente, la construcción de Fecha_Ingreso se
---   centraliza en un primer LATERAL para eliminar la
---   repetición de la expresión en 4 lugares.
--- ============================================================
+-- ==============================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM001X2
+-- Objeto    : VWNOM_MAESTRO_EMPLEADOS_V2
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Maestro de empleados activos con antiguedad desglosada en
+--   anos, meses y dias usando las funciones de tabla
+--   SEGLIB.SG_TIEMPO_*. Las funciones se invocan correctamente
+--   via CROSS JOIN LATERAL para evitar SQL0390.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   (Ver SELECT en el SQL)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   NomEmp  (T1)  Maestro de empleados (tabla base)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Fechas calculadas via LATERAL usando DATE(ano-mes-dia)
+--   con validacion de NULL y rango.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Ver versiones posteriores (sqlnm001) para mejoras.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, formato 80 cols
+-- ==============================================================
 
 Create Or Replace View VWNOM_MAESTRO_EMPLEADOS_V2 (
     EmpCve,
@@ -38,7 +55,7 @@ SELECT
 FROM NomEmp T1
 
 -- LATERAL 1: construye Fecha_Ingreso una sola vez
--- evita repetir la misma expresión en cada función
+-- evita repetir la misma expresion en cada funcion
 CROSS JOIN LATERAL (
     SELECT DATE(
         Concat(Substring('0000', 0, 5 - Length(Trim(T1.EmpAin))),
@@ -51,8 +68,8 @@ CROSS JOIN LATERAL (
     FROM SYSIBM.SYSDUMMY1
 ) AS FI
 
--- LATERAL 2: años completos de antigüedad
--- SG_TIEMPO_ANOS es función de tabla → se llama con TABLE(...)
+-- LATERAL 2: anos completos de antiguedad
+-- SG_TIEMPO_ANOS es funcion de tabla -> se llama con TABLE(...)
 CROSS JOIN LATERAL (
     SELECT ANOS
     FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(
@@ -61,8 +78,8 @@ CROSS JOIN LATERAL (
     ))
 ) AS A
 
--- LATERAL 3: meses fraccionarios de antigüedad
--- SG_TIEMPO_MESES es función de tabla → se llama con TABLE(...)
+-- LATERAL 3: meses fraccionarios de antiguedad
+-- SG_TIEMPO_MESES es funcion de tabla -> se llama con TABLE(...)
 CROSS JOIN LATERAL (
     SELECT MESES
     FROM TABLE(SEGLIB.SG_TIEMPO_MESES(
@@ -71,8 +88,8 @@ CROSS JOIN LATERAL (
     ))
 ) AS M
 
--- LATERAL 4: días fraccionarios de antigüedad
--- SG_TIEMPO_DIAS es función de tabla → se llama con TABLE(...)
+-- LATERAL 4: dias fraccionarios de antiguedad
+-- SG_TIEMPO_DIAS es funcion de tabla -> se llama con TABLE(...)
 -- IncluirDia = 1 para replicar el comportamiento de SG7006
 CROSS JOIN LATERAL (
     SELECT DIAS

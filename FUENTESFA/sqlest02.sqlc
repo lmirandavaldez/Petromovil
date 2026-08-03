@@ -1,42 +1,44 @@
--- ============================================================
--- Vista   : VWEST_Estadisticas_Ventas_Productos
--- Módulo  : Estadísticas de Ventas
--- Objeto  : Resume las estadísticas de ventas desglosadas por
---           producto (artículo), año y mes a partir del detalle
---           de documentos de facturación (FacDtod).
---           Incluye cantidades vendidas, importes brutos,
---           descuentos, impuestos, neto a cobrar y costos.
--- Tabla   : FacDtod  — detalle de documentos de facturación
--- Esquema : (default)
--- Autor   : L. Miranda
--- Versión : 2  (mejorada)
--- Cambios :
---   v2 - Se normaliza el nombre de la tabla a FacDtod
---          (original tenía FACDTOD en mayúsculas) para
---          consistencia con el resto del sistema.
---        Se normaliza T1.ARTCVE a T1.ArtCve para consistencia
---          con el GROUP BY (que ya usaba ArtCve).
---        Se normaliza T1.DtoANO a T1.DtoAno para consistencia
---          con el GROUP BY (que ya usaba DtoAno).
---        Se agrega alias explícito As en FROM.
---        Se documentan todas las columnas con su significado
---          de negocio.
---        Se descompone ESTINV con comentario de fórmula.
---        Se expande GROUP BY a una columna por línea.
---        Se agrega ORDER BY sugerido (comentado).
---        Mejora de formato e indentación.
---        Cabecera de documentación completa.
--- ============================================================
+-- ==============================================================
+-- Modulo    : Estadisticas de Ventas
+-- Programa  : SQLEST02
+-- Objeto    : VWEST_Estadisticas_Ventas_Productos
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Ver descripcion en comentarios dentro del SQL.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Ver definicion en el SELECT del SQL.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ver comentarios en los JOINs del SQL.
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Ver comentarios en el SQL.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   Ver seccion Cambios en el historial del archivo original.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
+--                           formato 80 cols
+-- ==============================================================
 
 Create Or Replace View VWEST_Estadisticas_Ventas_Productos As
 
 Select
     -- --------------------------------------------------------
-    -- Dimensiones de agrupación
+    -- Dimensiones de agrupacion
     -- --------------------------------------------------------
-    T1.ArtCve              As ArtCve,   -- Código del artículo / producto
-    T1.DtoAno              As EstAno,   -- Año del período
-    T1.DtoMes              As EstMes,   -- Mes del período (1–12)
+    T1.ArtCve              As ArtCve,   -- Codigo del articulo / producto
+    T1.DtoAno              As EstAno,   -- Ano del periodo
+    T1.DtoMes              As EstMes,   -- Mes del periodo (1–12)
 
     -- --------------------------------------------------------
     -- Cantidades vendidas
@@ -61,9 +63,9 @@ Select
     -- Costos
     -- --------------------------------------------------------
     Sum(T1.DtoMcp)         As ESTCPR,   -- Costo Promedio de los 
-                                        -- artículos vendidos
-    Sum(T1.DtoMcu)         As ESTCUL    -- Costo Último de los 
-                                        -- artículos vendidos
+                                        -- articulos vendidos
+    Sum(T1.DtoMcu)         As ESTCUL    -- Costo Ultimo de los 
+                                        -- articulos vendidos
 
 From FacDtod As T1
 

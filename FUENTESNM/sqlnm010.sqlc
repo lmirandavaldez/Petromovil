@@ -1,11 +1,12 @@
--- =============================================================================
+-- ==============================================================
 -- Modulo    : Nomina de Empleados
 -- Programa  : SQLNM010
 -- Objeto    : VWNOM_MAESTRO_EMPLEADOS_ACTIVOS_CANCELADOS
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Versión   : 2.0
+-- Version   : 3
+-- Proyecto  : Petromovil
 -- --------------------------------------------------------------
 -- Descripcion:
 --   Expone todos los datos maestros de empleados independientemente de su
@@ -43,7 +44,12 @@
 --   Todos los JOINs son LEFT OUTER para conservar empleados cuya tabla
 --   auxiliar aun no tenga registro.
 --   EmpSta: A=Activo, C=Cancelado
--- =============================================================================
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 Create Or Replace View VWNOM_MAESTRO_EMPLEADOS_ACTIVOS_CANCELADOS As
 Select
     T1.EmpCve,

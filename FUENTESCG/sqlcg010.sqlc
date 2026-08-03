@@ -5,47 +5,87 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 1
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito    : Detalle del diario general completo: una fila
---             por linea de asiento contable.
---             Extiende VWCOG_Diario_General_2 con:
---               - TdiCve y DgeDoc explícitos (sin formatear).
---               - DgeSec: secuencia de la linea del asiento.
---               - Fecha_Aplicacion: fecha de aplicacion del
---                 encabezado (AplAno+AplMes+AplDia de CogHdgh
---                 resuelta via SegFec T11).
---               - AplUsr y UsrNom: usuario que aplico el
---                 asiento (de CogHdgh y SegUsr).
---             CogHdgh es Left Outer Join (asientos pueden no
---             tener encabezado registrado).
---             Separa el valor en Debito o Credito segun
---             DgeOri (1=Debito, 2=Credito).
---             No aplica agrupacion; devuelve el detalle puro.
+-- Proposito:
+--   Detalle del diario general completo: una fila por linea
+--   de asiento contable.
+--   Extiende VWCOG_Diario_General_2 (sqlcg009) con:
+--     - TdiCve y DgeDoc explícitos sin formatear.
+--     - DgeSec: secuencia de la linea del asiento.
+--     - Fecha_Aplicacion: AplAno+AplMes+AplDia de CogHdgh
+--       resuelta via SegFec T11.
+--     - AplUsr y UsrNom: usuario que aplico el asiento
+--       (de CogHdgh y SegUsr).
+--   CogHdgh es Left Outer Join (asientos pueden no tener
+--   encabezado registrado).
+--   Separa el valor en Debito o Credito segun DgeOri
+--   (1=Debito, 2=Credito).
+--   No aplica agrupacion; devuelve el detalle puro.
 -- --------------------------------------------------------------
--- Tablas    : CogHdgd   lineas del diario general (tabla base)
---             CogTdi    tipos de documento contable
---             CogPer    periodos contables
---             CogCta    catalogo de cuentas
---             CogAuxd   catalogo de auxiliares
---             CogCco    catalogo de centros de costo
---             CxpCfa    clasificacion de formas de pago (CxP)
---             CogHdgh   encabezado del diario general
---             SegUsr    usuarios del sistema
---             SegFec T10 fecha del documento (DgeAno/Mes/Dia)
---             SegFec T11 fecha de aplicacion (AplAno/Mes/Dia)
+-- Campos retornados (en orden original):
+--   PerAno            Ano contable del periodo       (CogHdgd)
+--   PerNum            Numero del periodo (1..12)     (CogHdgd)
+--   PerDes            Descripcion del periodo        (CogPer)
+--   TdiDes            Tipo de documento contable     (CogTdi)
+--   TdiCve            Clave del tipo de documento    (CogHdgd)
+--   DgeDoc            Numero del documento           (CogHdgd)
+--   Fecha_Documento   Fecha ISO del documento        (SegFec)
+--   Fecha_Aplicacion  Fecha ISO de aplicacion        (SegFec)
+--   DgeDes            Descripcion del encabezado     (CogHdgh)
+--   DgeSec            Secuencia de la linea          (CogHdgd)
+--   CtaCve            Clave de la cuenta contable    (CogHdgd)
+--   AuxCve            Clave del auxiliar             (CogHdgd)
+--   Descripcion       Nombre de cuenta o auxiliar    (calc)
+--   CcoCve            Clave del centro de costo      (CogHdgd)
+--   CcoDes            Descripcion del CCO            (CogCco)
+--   DgeDe1            Descripcion libre del asiento  (CogHdgd)
+--   Debito            Valor si DgeOri=1, sino 0      (calc)
+--   Credito           Valor si DgeOri=2, sino 0      (calc)
+--   CfaCve            Clave de forma de pago CxP     (CogHdgd)
+--   CfaDes            Descripcion de forma de pago   (CxpCfa)
+--   DgeTid            Tipo de identificacion fiscal  (CogHdgd)
+--   DgeIde            Numero de identificacion fiscal(CogHdgd)
+--   NcfNro            Numero de comprobante fiscal   (CogHdgd)
+--   AplUsr            Usuario que aplico el asiento  (CogHdgh)
+--   UsrNom            Nombre del usuario             (SegUsr)
 -- --------------------------------------------------------------
--- Cambios   :
---   v2 - Se agrega cabecera de documentacion completa.
---        Se agrega alias explicito As en FROM y JOINs.
---        Se reformatea SELECT con una columna por linea
---          y comentario descriptivo en cada campo.
---        Se reformatea los CASEs con sangria uniforme.
---        Se documenta cada JOIN con su proposito.
---        Se respeta el orden original de los campos,
---          la logica original y el limite de 80 posiciones.
--- ============================================================
+-- Tablas referenciadas:
+--   CogHdgd   T1   Lineas del diario general (tabla base)
+--   CogTdi    T2   Tipos de documento contable
+--   CogPer    T3   Periodos contables
+--   CogCta    T4   Catalogo de cuentas
+--   CogAuxd   T5   Catalogo de auxiliares
+--   CogCco    T6   Catalogo de centros de costo
+--   CxpCfa    T7   Clasificacion de formas de pago (CxP)
+--   CogHdgh   T8   Encabezado del diario general
+--   SegUsr    T9   Usuarios del sistema
+--   SegFec    T10  Fecha del documento (DgeAno/Mes/Dia)
+--   SegFec    T11  Fecha de aplicacion (AplAno/Mes/Dia)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Fecha_Documento: Left Outer Join a SegFec T10 por
+--   DgeAno+DgeMes+DgeDia -> FecIso.
+--   Fecha_Aplicacion: Left Outer Join a SegFec T11 por
+--   AplAno+AplMes+AplDia de CogHdgh -> FecIso.
+--   Ambos son Left Outer Join para tolerar fechas
+--   ausentes del calendario sin perder filas.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar columna Numero_Documento formateado
+--      (TdiCve-NNNNNNN) para consistencia con sqlcg008/009.
+--   2. Evaluar indice por PerAno+PerNum+TdiCve+DgeDoc
+--      para mejorar rendimiento en consultas frecuentes.
+--   3. Documentar explicitamente que DgeDes puede ser NULL
+--      cuando el asiento no tiene encabezado en CogHdgh.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           IfNull -> Coalesce, sin acentos
+-- ==============================================================
 
 Create Or Replace View VWCOG_Diario_General_3 As
 

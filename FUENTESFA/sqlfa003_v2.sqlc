@@ -1,0 +1,124 @@
+-- ============================================================
+-- Vista   : VWFAC_Ventas_Vendedor_Cliente_Articulos_Dias
+-- Módulo  : Facturación
+-- Objeto  : Pivot de cantidades vendidas por día del mes
+--           (Dia01…Dia31), desglosado por año, mes, vendedor,
+--           cliente y artículo.
+--           Excluye documentos de tipo 3 (notas de crédito /
+--           devoluciones). Solo incluye artículos existentes
+--           en el maestro InvArt y clientes con vendedor
+--           asignado en CxcRvc.
+-- Tablas  : FacDtod  — detalle de documentos de facturación
+--           InvArt   — maestro de artículos (filtra artículos
+--                      válidos en catálogo)
+--           CxcRvc   — vendedor por cliente
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se reemplaza INNER JOIN CxcRvc por LEFT OUTER JOIN
+--          con subconsulta FETCH FIRST 1 ROW ONLY para:
+--          a) Evitar multiplicación de filas cuando un cliente
+--             tiene más de un vendedor (bug potencial de
+--             inflación de cantidades en el original).
+--          b) Conservar ventas de clientes sin vendedor
+--             asignado (VenCve = NULL en esos casos).
+--        Se reemplaza INNER JOIN InvArt por LEFT OUTER JOIN
+--          para conservar líneas de artículos no catalogados
+--          (si se desea excluirlos, revertir a INNER JOIN).
+--        Se agrega COALESCE en WHERE para manejar NULLs
+--          defensivamente sobre DtoTip.
+--        Se agrega As en todos los alias del pivot (Dia01…).
+--        Se agrega alias explícito As en todos los FROM/JOIN.
+--        Se reformatea SELECT, FROM, JOINs, WHERE y GROUP BY
+--          con una columna/condición por línea y comentarios.
+--        Se agrega Total_Cantidad anual al final del pivot.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentación completa.
+-- ============================================================
+
+Create Or Replace View VWFAC_Ventas_Vendedor_Cliente_Articulos_Dias As
+
+Select
+    -- --------------------------------------------------------
+    -- Dimensiones de agrupación
+    -- --------------------------------------------------------
+    T1.DtoAno               As DtoAno,      -- Año del período
+    T1.DtoMes               As DtoMes,      -- Mes del período (1–12)
+    T3.VenCve               As VenCve,      -- Código del vendedor 
+                                            -- (NULL si sin asignación)
+    T1.CliCve               As CliCve,      -- Código del cliente
+    T1.ArtCve               As ArtCve,      -- Código del artículo
+
+    -- --------------------------------------------------------
+    -- Pivot diario — Cantidad vendida por día del mes
+    -- --------------------------------------------------------
+    IfNull(Sum(Case When T1.DtoDia = 01 Then T1.DtoCua End), 0)       As Dia01,
+    IfNull(Sum(Case When T1.DtoDia = 02 Then T1.DtoCua End), 0)       As Dia02,
+    IfNull(Sum(Case When T1.DtoDia = 03 Then T1.DtoCua End), 0)       As Dia03,
+    IfNull(Sum(Case When T1.DtoDia = 04 Then T1.DtoCua End), 0)       As Dia04,
+    IfNull(Sum(Case When T1.DtoDia = 05 Then T1.DtoCua End), 0)       As Dia05,
+    IfNull(Sum(Case When T1.DtoDia = 06 Then T1.DtoCua End), 0)       As Dia06,
+    IfNull(Sum(Case When T1.DtoDia = 07 Then T1.DtoCua End), 0)       As Dia07,
+    IfNull(Sum(Case When T1.DtoDia = 08 Then T1.DtoCua End), 0)       As Dia08,
+    IfNull(Sum(Case When T1.DtoDia = 09 Then T1.DtoCua End), 0)       As Dia09,
+    IfNull(Sum(Case When T1.DtoDia = 10 Then T1.DtoCua End), 0)       As Dia10,
+    IfNull(Sum(Case When T1.DtoDia = 11 Then T1.DtoCua End), 0)       As Dia11,
+    IfNull(Sum(Case When T1.DtoDia = 12 Then T1.DtoCua End), 0)       As Dia12,
+    IfNull(Sum(Case When T1.DtoDia = 13 Then T1.DtoCua End), 0)       As Dia13,
+    IfNull(Sum(Case When T1.DtoDia = 14 Then T1.DtoCua End), 0)       As Dia14,
+    IfNull(Sum(Case When T1.DtoDia = 15 Then T1.DtoCua End), 0)       As Dia15,
+    IfNull(Sum(Case When T1.DtoDia = 16 Then T1.DtoCua End), 0)       As Dia16,
+    IfNull(Sum(Case When T1.DtoDia = 17 Then T1.DtoCua End), 0)       As Dia17,
+    IfNull(Sum(Case When T1.DtoDia = 18 Then T1.DtoCua End), 0)       As Dia18,
+    IfNull(Sum(Case When T1.DtoDia = 19 Then T1.DtoCua End), 0)       As Dia19,
+    IfNull(Sum(Case When T1.DtoDia = 20 Then T1.DtoCua End), 0)       As Dia20,
+    IfNull(Sum(Case When T1.DtoDia = 21 Then T1.DtoCua End), 0)       As Dia21,
+    IfNull(Sum(Case When T1.DtoDia = 22 Then T1.DtoCua End), 0)       As Dia22,
+    IfNull(Sum(Case When T1.DtoDia = 23 Then T1.DtoCua End), 0)       As Dia23,
+    IfNull(Sum(Case When T1.DtoDia = 24 Then T1.DtoCua End), 0)       As Dia24,
+    IfNull(Sum(Case When T1.DtoDia = 25 Then T1.DtoCua End), 0)       As Dia25,
+    IfNull(Sum(Case When T1.DtoDia = 26 Then T1.DtoCua End), 0)       As Dia26,
+    IfNull(Sum(Case When T1.DtoDia = 27 Then T1.DtoCua End), 0)       As Dia27,
+    IfNull(Sum(Case When T1.DtoDia = 28 Then T1.DtoCua End), 0)       As Dia28,
+    IfNull(Sum(Case When T1.DtoDia = 29 Then T1.DtoCua End), 0)       As Dia29,
+    IfNull(Sum(Case When T1.DtoDia = 30 Then T1.DtoCua End), 0)       As Dia30,
+    IfNull(Sum(Case When T1.DtoDia = 31 Then T1.DtoCua End), 0)       As Dia31,
+
+    -- --------------------------------------------------------
+    -- Total mensual de cantidad
+    -- --------------------------------------------------------
+    IfNull(Sum(T1.DtoCua), 0)    As Total_Cantidad
+
+From FacDtod As T1
+
+-- Artículos: LEFT para conservar líneas con artículos no
+-- catalogados en InvArt. Cambiar a INNER JOIN si se desea
+-- filtrar solo artículos existentes en el maestro.
+Left Outer Join InvArt As T2
+    On T1.ArtCve = T2.ArtCve
+
+-- Vendedor por cliente — subconsulta 1:1 para evitar
+-- multiplicación de filas cuando un cliente tiene más de un
+-- vendedor en CxcRvc. LEFT para conservar ventas sin vendedor.
+Left Outer Join (
+    Select CliCve, VenCve
+    From   CxcRvc
+    Fetch First 1 Row Only
+) As T3
+    On T1.CliCve = T3.CliCve
+
+Where
+    -- Excluir tipo 3 (notas de crédito / devoluciones)
+    -- COALESCE defensivo: si DtoTip fuera NULL, se trata como 0
+    COALESCE(T1.DtoTip, 0) <> 3
+
+Group By
+    T1.DtoAno,
+    T1.DtoMes,
+    T3.VenCve,
+    T1.CliCve,
+    T1.ArtCve
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By T1.DtoAno, T1.DtoMes, T3.VenCve, T1.CliCve, T1.ArtCve

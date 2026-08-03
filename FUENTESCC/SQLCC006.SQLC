@@ -8,62 +8,63 @@
 -- Version   : 1
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Consolida los datos maestros del cliente con su información
---            geográfica (provincia, municipio, demarcación) y el vendedor
---            asignado. Diseñada para ser usada en procesos de carga/migración
+-- Proposito: Consolida los datos maestros del cliente con su informacion
+--            geografica (provincia, municipio, demarcacion) y el vendedor
+--            asignado. Disenada para ser usada en procesos de carga/migracion
 --            de datos y reportes del maestro de clientes.
--- -----------------------------------------------------------------------------
--- Tablas base:
---   CxcCli  - Catálogo maestro de clientes (tabla principal)
---   CxcRvc  - Relación cliente-vendedor
---   CxcVen  - Catálogo de vendedores
---   SegPrv  - Catálogo de provincias
---   SegMun  - Catálogo de municipios      (clave compuesta: PrvCve + MunCve)
---   SegDms  - Catálogo de demarcaciones   (clave compuesta: PrvCve + MunCve +
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxcCli  - Catalogo maestro de clientes (tabla principal)
+--   CxcRvc  - Relacion cliente-vendedor
+--   CxcVen  - Catalogo de vendedores
+--   SegPrv  - Catalogo de provincias
+--   SegMun  - Catalogo de municipios      (clave compuesta: PrvCve + MunCve)
+--   SegDms  - Catalogo de demarcaciones   (clave compuesta: PrvCve + MunCve +
 --                                          DmsCve + DmsCpo + DmsSec)
--- -----------------------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Notas:
---   - CliRnc : Número de Registro Nacional del Contribuyente (dato fiscal).
---   - CliDi1 : Línea adicional de dirección (complemento de CliDir).
+--   - CliRnc : Numero de Registro Nacional del Contribuyente (dato fiscal).
+--   - CliDi1 : Linea adicional de direccion (complemento de CliDir).
 --   - Los alias T10/T11/T12 del original sugieren tablas intermedias
 --     eliminadas en revisiones previas; se reemplazaron por alias descriptivos.
--- -----------------------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
---   v1  Versión original
---   v2  Alias descriptivos, columnas documentadas, convención UPPER CASE,
---       encabezado completo y comentarios de JOINs complejos
--- =============================================================================
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXC_Maestro_Clientes_Carga AS
 
 SELECT
-    -- Identificación del cliente
+    -- Identificacion del cliente
     cli.CliCve  AS CliCve,      -- Clave del cliente
-    cli.CliNom  AS CliNom,      -- Nombre / razón social
+    cli.CliNom  AS CliNom,      -- Nombre / razon social
     cli.CliRnc  AS CliRnc,      -- RNC (Registro Nacional del Contribuyente)
-    cli.CliEma  AS CliEma,      -- Correo electrónico
+    cli.CliEma  AS CliEma,      -- Correo electronico
 
-    -- Teléfonos
-    cli.CliTe1  AS CliTe1,      -- Teléfono principal
-    cli.CliTe2  AS CliTe2,      -- Teléfono secundario
+    -- Telefonos
+    cli.CliTe1  AS CliTe1,      -- Telefono principal
+    cli.CliTe2  AS CliTe2,      -- Telefono secundario
 
-    -- Dirección
-    cli.CliDir  AS CliDir,      -- Dirección principal
-    cli.CliDi1  AS CliDi1,      -- Dirección complementaria (línea 2)
+    -- Direccion
+    cli.CliDir  AS CliDir,      -- Direccion principal
+    cli.CliDi1  AS CliDi1,      -- Direccion complementaria (linea 2)
 
-    -- Ubicación geográfica — provincia
+    -- Ubicacion geografica — provincia
     cli.CliPrv  AS CliPrv,      -- Clave de provincia
-    prv.PrvDes  AS PrvDes,      -- Descripción de la provincia
+    prv.PrvDes  AS PrvDes,      -- Descripcion de la provincia
 
-    -- Ubicación geográfica — municipio
+    -- Ubicacion geografica — municipio
     cli.CliMun  AS CliMun,      -- Clave de municipio
-    mun.MunDes  AS MunDes,      -- Descripción del municipio
+    mun.MunDes  AS MunDes,      -- Descripcion del municipio
 
-    -- Ubicación geográfica — demarcación (sector / código postal)
-    cli.CliDms  AS CliDms,      -- Clave de demarcación
-    cli.CliCpo  AS CliCpo,      -- Código postal
+    -- Ubicacion geografica — demarcacion (sector / codigo postal)
+    cli.CliDms  AS CliDms,      -- Clave de demarcacion
+    cli.CliCpo  AS CliCpo,      -- Codigo postal
     cli.CliSec  AS CliSec,      -- Sector
-    dms.DmsDes  AS DmsDes,      -- Descripción de la demarcación
+    dms.DmsDes  AS DmsDes,      -- Descripcion de la demarcacion
 
     -- Vendedor asignado
     rvc.VenCve  AS VenCve,      -- Clave del vendedor
@@ -88,8 +89,8 @@ LEFT OUTER JOIN SegMun mun
     ON  mun.PrvCve = cli.CliPrv
     AND mun.MunCve = cli.CliMun
 
--- Demarcación: clave compuesta provincia 
--- + municipio + demarcación + CP + sector
+-- Demarcacion: clave compuesta provincia 
+-- + municipio + demarcacion + CP + sector
 LEFT OUTER JOIN SegDms dms
     ON  dms.PrvCve = cli.CliPrv
     AND dms.MunCve = cli.CliMun

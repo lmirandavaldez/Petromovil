@@ -1,32 +1,33 @@
--- =============================================================================
+-- ==============================================================
 -- Modulo    : Nomina de Empleados
 -- Programa  : SQLNM009
 -- Objeto    : VWNOM_ACUMULADOS_CLASE_TIPO_CONCEPTOS
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Versión   : 2.0
+-- Version   : 3
+-- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Descripción:
---   Presenta acumulados de importes de nómina por empleado, ciclo, período
+-- Descripcion:
+--   Presenta acumulados de importes de nomina por empleado, ciclo, periodo
 --   y concepto de movimiento, clasificando el importe como Ingreso o Descuento
---   según el tipo de concepto (CmcTip).
+--   segun el tipo de concepto (CmcTip).
 --
 --   A diferencia de VWNOM_HISTORICO_NOMINAS_DETALLE (sqlnm008), esta vista
 --   no incluye las columnas de Cantidad (NgeCan) ni Valor (NgeVal);
---   su propósito es obtener únicamente los acumulados monetarios agrupados
+--   su proposito es obtener unicamente los acumulados monetarios agrupados
 --   por clase y tipo de concepto.
 --
 -- Tablas involucradas:
---   NomNgeh  - Movimientos de nómina (detalle histórico)
+--   NomNgeh  - Movimientos de nomina (detalle historico)
 --   NomEmp   - Empleados
---   NomCmc   - Conceptos de movimiento de nómina
---   NomCno   - Tipos de ciclo de nómina
---   NomTno   - Tipos de nómina
+--   NomCmc   - Conceptos de movimiento de nomina
+--   NomCno   - Tipos de ciclo de nomina
+--   NomTno   - Tipos de nomina
 --   NomUbi   - Ubicaciones (centros de trabajo)
 --   NomDep   - Departamentos
 --   NomCar   - Cargos / Puestos
---   NomCat   - Categorías
+--   NomCat   - Categorias
 --
 -- Columnas calculadas:
 -- Ingresos   - Suma del importe cuando CmcTip = 1  (percepciones)
@@ -34,22 +35,27 @@
 --
 -- Notas:
 --   * Se usan LEFT OUTER JOIN para conservar todos los movimientos aunque
---     alguna tabla maestra no tenga registro asociado (datos huérfanos).
---   * CipAno / CipNum identifican el año y número de período de nómina.
+--     alguna tabla maestra no tenga registro asociado (datos huerfanos).
+--   * CipAno / CipNum identifican el ano y numero de periodo de nomina.
 --   * CmcTip determina la naturaleza del concepto:
---       1        Percepción  (suma en Ingresos)
---       distinto  Deducción  (suma en Descuentos)
--- =============================================================================
+--       1        Percepcion  (suma en Ingresos)
+--       distinto  Deduccion  (suma en Descuentos)
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 Create Or Replace View VWNOM_ACUMULADOS_CLASE_TIPO_CONCEPTOS
 AS
 Select
     -- -------------------------------------------------------------------------
-    -- Ciclo y tipo de nómina
+    -- Ciclo y tipo de nomina
     -- -------------------------------------------------------------------------
-    T1.CnoCve,                          -- Clave del ciclo de nómina
-    T4.CnoDes,                          -- Descripción del ciclo de nómina
-    T1.TnoCve,                          -- Clave del tipo de nómina
-    T5.TnoDes,                          -- Descripción del tipo de nómina
+    T1.CnoCve,                          -- Clave del ciclo de nomina
+    T4.CnoDes,                          -- Descripcion del ciclo de nomina
+    T1.TnoCve,                          -- Clave del tipo de nomina
+    T5.TnoDes,                          -- Descripcion del tipo de nomina
 
     -- -------------------------------------------------------------------------
     -- Datos del empleado
@@ -59,29 +65,29 @@ Select
     T2.EmpNom,                          -- Nombre(s) del empleado
 
     -- -------------------------------------------------------------------------
-    -- Clasificación organizacional del empleado
+    -- Clasificacion organizacional del empleado
     -- -------------------------------------------------------------------------
-    T2.UbiCve,                          -- Clave de ubicación
-    T6.UbiDes,                          -- Descripción de ubicación
+    T2.UbiCve,                          -- Clave de ubicacion
+    T6.UbiDes,                          -- Descripcion de ubicacion
     T2.DepCve,                          -- Clave de departamento
-    T7.DepDes,                          -- Descripción de departamento
+    T7.DepDes,                          -- Descripcion de departamento
     T2.CarCve,                          -- Clave de cargo / puesto
-    T8.CarDes,                          -- Descripción de cargo / puesto
-    T2.CatCve,                          -- Clave de categoría
-    T9.CatDes,                          -- Descripción de categoría
+    T8.CarDes,                          -- Descripcion de cargo / puesto
+    T2.CatCve,                          -- Clave de categoria
+    T9.CatDes,                          -- Descripcion de categoria
 
     -- -------------------------------------------------------------------------
-    -- Concepto de movimiento de nómina
+    -- Concepto de movimiento de nomina
     -- -------------------------------------------------------------------------
     T1.CmcCve,                     -- Clave del concepto de movimiento
-    T3.CmcDes,                     -- Descripción del concepto
-    T3.CmcTip,                     -- Tipo: 1 = Percepción, otro = Deducción
+    T3.CmcDes,                     -- Descripcion del concepto
+    T3.CmcTip,                     -- Tipo: 1 = Percepcion, otro = Deduccion
 
     -- -------------------------------------------------------------------------
-    -- Período de nómina
+    -- Periodo de nomina
     -- -------------------------------------------------------------------------
-    T1.CipAno,                          -- Año del período de nómina
-    T1.CipNum,                          -- Número del período de nómina
+    T1.CipAno,                          -- Ano del periodo de nomina
+    T1.CipNum,                          -- Numero del periodo de nomina
 
     -- -------------------------------------------------------------------------
     -- Acumulados monetarios por clase y tipo de concepto
@@ -89,15 +95,15 @@ Select
     Sum(Case When T3.CmcTip =  1 Then T1.NgeImp Else 0 End)        As Ingresos,
     Sum(Case When T3.CmcTip <> 1 Then T1.NgeImp Else 0 End)        As Descuentos
 
-From NomNgeh T1                                       -- Movimientos históricos
+From NomNgeh T1                                       -- Movimientos historicos
 Left Outer Join NomEmp T2 On (T1.EmpCve = T2.EmpCve)  -- Datos del empleado
 Left Outer Join NomCmc T3 On (T1.CmcCve = T3.CmcCve)  -- Concepto de movimiento
-Left Outer Join NomCno T4 On (T1.CnoCve = T4.CnoCve)  -- Ciclo de nómina
-Left Outer Join NomTno T5 On (T1.TnoCve = T5.TnoCve)  -- Tipo de nómina
-Left Outer Join NomUbi T6 On (T2.UbiCve = T6.UbiCve) --Ubicación del empleado
+Left Outer Join NomCno T4 On (T1.CnoCve = T4.CnoCve)  -- Ciclo de nomina
+Left Outer Join NomTno T5 On (T1.TnoCve = T5.TnoCve)  -- Tipo de nomina
+Left Outer Join NomUbi T6 On (T2.UbiCve = T6.UbiCve) --Ubicacion del empleado
 Left Outer Join NomDep T7 On (T2.DepCve = T7.DepCve) --Departamento del empleado
 Left Outer Join NomCar T8 On (T2.CarCve = T8.CarCve) --Cargo/puesto del empleado
-Left Outer Join NomCat T9 On (T2.CatCve = T9.CatCve) --Categoría del empleado
+Left Outer Join NomCat T9 On (T2.CatCve = T9.CatCve) --Categoria del empleado
 
 Group By
     T1.CnoCve, T4.CnoDes,

@@ -1,0 +1,184 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ==============================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM004
+-- Objeto    : VWNOM_TOTAL_HORAS_EXTRAS
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Versión   : 2.0
+-- --------------------------------------------------------------
+-- Propósito: Distribución de horas extras regulares por empleado,
+--            pivotada en columnas por día del mes (0131).
+--            Agrupa por año, mes y empleado para aislar cada
+--            período correctamente.
+-- Diferencia con VWNOM_DIST_HORAS_EXTRAS_TEMP (sqlnm003):
+--   - Fuente de datos: NomExtd (horas extras regulares)
+--     vs NomHord (horas extras temporales).
+--   - Campos de horas: ExtHor/ExtMin vs HorCht/HorMin.
+--   - Alias de columnas: HoraDia##/MinutosDia## vs Horas_##/Minutos_##.
+-- Correcciones v1  v2:
+--   1. IfNull reemplazado por COALESCE (estándar SQL).
+--   2. CAST(... AS SMALLINT) explícito en horas y minutos para
+--      tipo consistente (ExtHor/ExtMin son valores enteros).
+--   3. Alias en la misma línea que la expresión.
+--   4. JOIN SegFec documentado: es INNER JOIN intencional; registros
+--      de NomExtd sin fecha en SegFec quedan excluidos del resultado.
+--   5. Capitalización SQL normalizada a mayúsculas.
+--   6. Cabecera de documentación añadida.
+-- Tablas base:
+--   NomExtd (T1)  Detalle de horas extras regulares
+--   NomEmp  (T2)  Maestro de empleados
+--   SegFec  (T9)  Calendario (clave FecYmd  año/mes/día)
+-- ============================================================
+
+CREATE OR REPLACE VIEW VWNOM_TOTAL_HORAS_EXTRAS AS
+SELECT
+    -- Dimensiones de agrupación: período y empleado
+    T9.FecAno,
+    T9.FecMes,
+    T1.EmpCve,
+    T2.EmpNom,
+    T2.EmpApe,
+
+    -- Horas y minutos pivotados por día del mes (0131)
+    -- COALESCE garantiza 0 si no hay registro para ese día
+    -- CAST(... AS SMALLINT) asegura tipo entero consistente
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 01 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia01,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 01 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia01,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 02 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia02,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 02 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia02,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 03 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia03,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 03 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia03,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 04 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia04,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 04 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia04,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 05 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia05,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 05 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia05,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 06 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia06,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 06 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia06,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 07 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia07,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 07 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia07,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 08 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia08,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 08 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia08,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 09 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia09,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 09 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia09,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 10 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia10,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 10 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia10,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 11 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia11,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 11 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia11,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 12 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia12,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 12 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia12,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 13 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia13,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 13 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia13,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 14 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia14,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 14 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia14,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 15 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia15,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 15 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia15,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 16 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia16,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 16 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia16,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 17 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia17,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 17 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia17,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 18 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia18,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 18 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia18,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 19 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia19,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 19 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia19,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 20 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia20,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 20 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia20,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 21 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia21,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 21 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia21,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 22 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia22,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 22 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia22,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 23 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia23,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 23 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia23,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 24 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia24,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 24 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia24,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 25 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia25,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 25 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia25,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 26 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia26,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 26 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia26,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 27 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia27,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 27 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia27,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 28 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia28,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 28 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia28,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 29 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia29,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 29 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia29,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 30 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia30,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 30 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia30,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 31 THEN T1.ExtHor END)
+    AS SMALLINT), 0) AS HoraDia31,
+    COALESCE(CAST(SUM(CASE WHEN T9.FecDia = 31 THEN T1.ExtMin END)
+    AS SMALLINT), 0) AS MinutosDia31
+
+FROM NomExtd T1
+-- LEFT OUTER JOIN: empleados sin registro en NomEmp
+-- aparecen con EmpNom/EmpApe NULL
+LEFT OUTER JOIN NomEmp T2  ON T1.EmpCve = T2.EmpCve
+-- INNER JOIN intencional: excluye registros de NomExtd sin fecha en SegFec
+JOIN            SegFec T9  ON T1.HorFec = T9.FecYmd
+
+GROUP BY
+    T9.FecAno,
+    T9.FecMes,
+    T1.EmpCve,
+    T2.EmpNom,
+    T2.EmpApe;

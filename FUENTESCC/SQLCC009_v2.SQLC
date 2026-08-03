@@ -1,0 +1,103 @@
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC009
+-- Objeto    : VWCXC_Direcciones_Despacho
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito: Presenta todas las direcciones de despacho registradas para cada
+--            cliente activo (CliSta = 'A'), enriquecidas con la descripción
+--            geográfica completa (provincia, municipio, demarcación) y los
+--            datos de contacto de cada dirección, incluyendo coordenadas GPS.
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcCli  - Catálogo maestro de clientes (tabla principal; filtro CliSta='A')
+--   CxcDdc  - Direcciones de despacho por cliente
+--   SegPrv  - Catálogo de provincias
+--   SegMun  - Catálogo de municipios      (clave compuesta: PrvCve + MunCve)
+--   SegDms  - Catálogo de demarcaciones   (clave compuesta: PrvCve + MunCve +
+--                                          DmsCve + DmsCpo + DmsSec)
+-- -----------------------------------------------------------------------------
+-- Notas:
+--   - Solo se muestran clientes con estado 'A' (Activo); clientes inactivos o
+--     suspendidos quedan excluidos por el filtro WHERE.
+--   - CxcDdc es LEFT OUTER desde CxcCli: un cliente activo aparece en el
+--     resultado aunque no tenga ninguna dirección de despacho registrada.
+--   - La jerarquía geográfica (Prv → Mun → Dms) es idéntica a la de la vista
+--     VWCXC_Maestro_Clientes_Carga, pero referenciada desde CxcDdc en lugar
+--     de CxcCli.
+--   - DdcDi1 : Línea adicional de dirección de despacho 
+--     (complemento de DdcDir).
+--   - DdcFax : Número de fax (campo legado, puede estar vacío).
+--   - DdcLat / DdcLog : Coordenadas GPS de la dirección (latitud / longitud).
+--   - T10/T11/T12 en el original sugieren tablas intermedias eliminadas en
+--     versiones previas; reemplazados por alias descriptivos.
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1  Versión original
+--   v2  Alias descriptivos, indentación estándar, columnas documentadas,
+--       convención UPPER CASE, encabezado completo
+-- =============================================================================
+
+CREATE OR REPLACE VIEW VWCXC_Direcciones_Despacho AS
+
+SELECT
+    -- Cliente
+    cli.CliCve       AS CliCve,      -- Clave del cliente
+    cli.CliNom       AS CliNom,      -- Nombre del cliente
+
+    -- Dirección de despacho
+    ddc.DdcCve       AS DdcCve,      -- Clave de la dirección de despacho
+    ddc.DdcNom       AS DdcNom,      -- Nombre / descripción de la dirección
+    ddc.DdcDir       AS DdcDir,      -- Dirección principal de despacho
+    ddc.DdcDi1       AS DdcDi1,      -- Dirección complementaria (línea 2)
+
+    -- Ubicación geográfica — provincia
+    ddc.DdcPrv       AS DdcPrv,      -- Clave de provincia
+    prv.PrvDes       AS PrvDes,      -- Descripción de la provincia
+
+    -- Ubicación geográfica — municipio
+    ddc.DdcMun       AS DdcMun,      -- Clave de municipio
+    mun.MunDes       AS MunDes,      -- Descripción del municipio
+
+    -- Ubicación geográfica — demarcación
+    ddc.DdcDms       AS DdcDms,      -- Clave de demarcación
+    dms.DmsDes       AS DmsDes,      -- Descripción de la demarcación
+
+    -- Contacto de la dirección
+    ddc.DdcTe1       AS DdcTe1,      -- Teléfono principal de despacho
+    ddc.DdcTe2       AS DdcTe2,      -- Teléfono secundario de despacho
+    ddc.DdcFax       AS DdcFax,      -- Fax (campo legado)
+
+    -- Coordenadas GPS
+    ddc.DdcLat       AS DdcLat,      -- Latitud de la dirección
+    ddc.DdcLog       AS DdcLog       -- Longitud de la dirección
+
+FROM CxcCli cli
+
+-- Direcciones de despacho del cliente (puede no tener ninguna registrada)
+LEFT OUTER JOIN CxcDdc ddc
+    ON ddc.CliCve = cli.CliCve
+
+-- Provincia de la dirección de despacho
+LEFT OUTER JOIN SegPrv prv
+    ON prv.PrvCve = ddc.DdcPrv
+
+-- Municipio: clave compuesta provincia + municipio
+LEFT OUTER JOIN SegMun mun
+    ON  mun.PrvCve = ddc.DdcPrv
+    AND mun.MunCve = ddc.DdcMun
+
+-- Demarcación: clave compuesta provincia 
+-- + municipio + demarcación + CP + sector
+LEFT OUTER JOIN SegDms dms
+    ON  dms.PrvCve = ddc.DdcPrv
+    AND dms.MunCve = ddc.DdcMun
+    AND dms.DmsCve = ddc.DdcDms
+    AND dms.DmsCpo = ddc.DdcCpo
+    AND dms.DmsSec = ddc.DdcSec
+
+WHERE cli.CliSta = 'A'      -- Solo clientes activos

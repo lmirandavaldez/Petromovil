@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Egresos
 -- Programa  : SQLEC001
 -- Objeto    : VWEMC_Cronologico_Cheques
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista cronologica de cheques y transferencias emitidos.
 --   Consolida el encabezado del cheque (CogCheh) con el banco
@@ -23,7 +23,7 @@
 --   se resuelve via LEFT OUTER JOIN a SegFec T9. Si la fecha
 --   no existe en el calendario, COALESCE devuelve el tope
 --   del sistema: DATE('2039-12-31').
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   BanCve           Clave del banco              (CogCheh/T1)
 --   BanNom           Nombre del banco             (CogBan/T2)
@@ -40,7 +40,7 @@
 --   SecTas           Tasa de cambio               (CogCheh/T1)
 --   Monto_Documento  Monto si vigente, 0 si canc. (calc.)
 --   Status_Documento Estado vigente/cancelado     (calc.)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CogCheh  T1   Encabezado de cheques (tabla base)
 --   CogBan   T2   Bancos (aporta cuenta y auxiliar contable)
@@ -48,7 +48,7 @@
 --   CogCta   T4   Plan de cuentas contables
 --   CogAuxd  T5   Detalle de auxiliares contables (opcional)
 --   SegFec   T9   Tabla de fechas (Fecha_Del_Cheque)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de resolucion de fecha:
 --   La fecha del cheque se resuelve en dos pasos:
 --     1. LEFT OUTER JOIN a SegFec T9 por (CheAno, CheMes,
@@ -56,7 +56,7 @@
 --     2. COALESCE: si el JOIN devuelve NULL, se usa el tope
 --        DATE('2039-12-31').
 --   SegFec cubre el rango 1940-01-01 a 2039-12-31.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de decodificacion:
 --   SecTtr  1     = Cheque
 --           otro  = Transf. (nota: 'Trasnf' en original;
@@ -65,7 +65,7 @@
 --           <> 0  -> Descripcion = AuxNom (auxiliar)
 --   SitCve  = 2   -> Monto_Documento = SecMch, Status = Vigente
 --           otro  -> Monto_Documento = 0,     Status = Cancelado
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. El literal 'Trasnf' en el CASE de SecTtr tiene un
 --      error de tipografia (letra 'n' y 's' invertidas).
@@ -85,7 +85,7 @@
 --      WHERE T1.SitCve = 2 en la consulta consumidora.
 --   5. Verificar indice en CogCheh(BanCve) y CogBan(BanCve)
 --      para optimizar el JOIN principal.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
@@ -94,7 +94,7 @@
 --                           DATE(CONCAT...) a LEFT OUTER
 --                           JOIN SegFec T9 con COALESCE
 --                           DATE('2039-12-31').
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWEMC_Cronologico_Cheques AS
 SELECT

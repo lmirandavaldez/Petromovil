@@ -1,0 +1,43 @@
+-- ==============================================================
+-- Modulo    : Cuentas por Cobrar 
+-- Programa  : SQLCC002
+-- Objeto    : VWCXC_Supervisores_Vendedores
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito: Muestra la relación entre supervisores y los vendedores que tienen
+--            asignados. Solo incluye supervisores que tengan al menos un vendedor
+--            activo (INNER JOIN intencional).
+-- -----------------------------------------------------------------------------
+-- Tablas base:
+--   CxcSup  (T1) - Catálogo de supervisores
+--   CxcVen  (T2) - Catálogo de vendedores (un vendedor pertenece a un supervisor)
+-- -----------------------------------------------------------------------------
+-- Notas de diseño:
+--   - Se utiliza INNER JOIN porque la vista tiene como propósito mostrar
+--     únicamente las combinaciones supervisor-vendedor válidas.
+--   - Si se requieren supervisores sin vendedores asignados, cambiar a
+--     LEFT OUTER JOIN y considerar renombrar la vista.
+-- -----------------------------------------------------------------------------
+-- Historial de cambios:
+--   v1 - Versión original (respaldo: SQLCC002_v1.SQLC)
+--   v2 - Normalización de formato y sangría; eliminación de paréntesis
+--        redundantes en ON; documentación del objeto y columnas.
+-- =============================================================================
+Create Or Replace View VWCXC_Supervisores_Vendedores
+As
+Select
+    -- Supervisor
+    T1.SupCve,      -- Clave del supervisor
+    T1.SupNom,      -- Nombre del supervisor
+    -- Vendedor asignado
+    T2.VenCve,      -- Clave del vendedor
+    T2.VenNom,      -- Nombre del vendedor
+    T2.VenSta       -- Estatus del vendedor
+From CxcSup T1
+    -- Vendedores: INNER JOIN → solo supervisores con vendedores asignados
+    Join CxcVen T2
+      On T1.SupCve = T2.SupCve

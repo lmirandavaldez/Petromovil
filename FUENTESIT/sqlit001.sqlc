@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Interfaces Modulos Externos
 -- Programa  : SQLIT001
 -- Objeto    : VWITE_Resumen_Corte_Estaciones
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de resumen de corte de estaciones de servicio para
 --   interfaz con modulos externos. Agrupa las transacciones
@@ -26,7 +26,7 @@
 --   No hay campos de fecha por concatenar; FacFis, FacFfs y
 --   FacPam se exponen en su tipo original de la tabla.
 --   No aplica logica de resolucion via SegFec.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   Codigo_Del_Distrito  Clave del distrito         (IteTra/T1)
 --   Fecha_Inicio_Corte   Fecha inicio del corte     (IteTra/T1)
@@ -39,13 +39,13 @@
 --   Precio_Promedio      Promedio de TraPve         (calc.)
 --   Importe              Suma de TraImp del grupo   (calc.)
 --   Veces                Techo(Importe / ParMti)    (calc.)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   IteTra  T1   Transacciones de interfaz (tabla base)
 --   IteEst  T2   Estaciones de servicio
 --   InvArt  T3   Articulos de inventario
 --   ItePar       Parametros de interfaz (subconsulta, clave '@')
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de calculo de Veces:
 --   ParMti se obtiene de ItePar WHERE ParCve = '@'.
 --   La subconsulta se ejecuta dos veces en la formula:
@@ -54,18 +54,18 @@
 --   garantiza al menos 1 cuando el importe es positivo.
 --   Ejemplo: Importe=250, ParMti=100 -> INT((250+99)/100)
 --            = INT(349/100) = INT(3.49) = 3
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Filtros aplicados:
 --   T1.TraCtd = 1       Solo transacciones tipo 1 (corte)
 --   T2.CliRui <> 0      Excluye estaciones sin cliente RUI
 --   T2.EstRui = 'S'     Solo estaciones activas en RUI
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Agrupacion:
 --   DisCve, FacFis, FacFfs, FacPam, CliRui, CatCve, FacCar
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Filtro de agrupacion (HAVING):
 --   SUM(TraCan) > 0     Solo grupos con cantidad positiva
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. La subconsulta (Select ParMti From ItePar Where
 --      ParCve='@') se ejecuta dos veces dentro de la misma
@@ -94,12 +94,12 @@
 --      un promedio simple puede no reflejar el precio ponderado
 --      por cantidad. Considerar SUM(TraImp)/SUM(TraCan) para
 --      precio promedio ponderado si es mas apropiado.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
 --   2026-08-02  L. Miranda  Documentacion y formato 80 cols.
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWITE_Resumen_Corte_Estaciones AS
 SELECT

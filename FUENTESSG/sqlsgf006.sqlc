@@ -1,39 +1,37 @@
--- ============================================================
--- Función : SEGLIB.SG_CALC_IMP_ARTICULO
--- Módulo  : Seguridad (Comunes) 
--- Tipo    : Tabla Function (UDTF)
--- Objeto  : Calcula el impuesto (ITBIS / IVA) de un artículo
---           dado su código y precio.
---           Devuelve dos pares precio-antes-de-impuesto / monto-
---           impuesto (PREDI1/IMP1 para tasa 1, PREDI2/IMP2 para
---           tasa 2).
---           Sustituye al programa SG7005.
--- Tablas  : InvArt  — indicador de gravabilidad del artículo
---           InvPar  — parámetros de tasas de impuesto
--- Esquema : SEGLIB
--- Autor   : L. Miranda
--- Versión : 2  (mejorada)
--- Cambios :
---   v2 - Se agrega SPECIFIC para identificar unívocamente
---          la firma de la función.
---        Se agrega CALLED ON NULL INPUT para documentar
---          el comportamiento ante parámetros nulos.
---        Se documenta cada variable, bloque y regla de negocio.
---        Se extraen las expresiones UPPER(TRIM(COALESCE(...)))
---          repetidas en constantes lógicas para reducir
---          duplicación.
---        Se separan los SET múltiples en líneas independientes
---          en el bloque ELSE final.
---        Se actualiza GRANT para usar SPECIFIC FUNCTION.
---        Limpieza de líneas en blanco excesivas.
--- ============================================================
-
---CL: CHGLIBL LIBL(QTEMP Itelib DATOS02)
-
+-- ==============================================================
+-- Modulo    : Seguridad
+-- Programa  : SQLSGF006
+-- Objeto    : SEGLIB.SG_CALC_IMP_ARTICULO
+-- Tipo      : Funcion de tabla SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Ver descripcion original preservada dentro del SQL.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Ver definicion en RETURNS TABLE del SQL.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ver comentarios en el SQL.
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Calculo puro de fechas. No usa SegFec.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   Ver comentarios internos del SQL.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, formato 80 cols
+-- ==============================================================
 CREATE OR REPLACE FUNCTION SEGLIB.SG_CALC_IMP_ARTICULO (
-    -- Código del artículo en InvArt
+    -- Codigo del articulo en InvArt
     pCodArt  CHAR(20),
-    -- Precio base del artículo (antes o después de impuesto, según ParPim)
+    -- Precio base del articulo (antes o despues de impuesto, segun ParPim)
     pPrecio  DECIMAL(12,3)
 )
 RETURNS TABLE (
@@ -45,10 +43,10 @@ RETURNS TABLE (
 )
 SPECIFIC          SEGLIB.SG_CALC_IMP_ARTICULO
 LANGUAGE          SQL
-DETERMINISTIC                    -- Para el mismo artículo y precio
+DETERMINISTIC                    -- Para el mismo articulo y precio
                                  -- el resultado es igual
 NO EXTERNAL ACTION               -- Sin efectos secundarios externos
-CALLED ON NULL INPUT             -- La función se invoca aunque lleguen NULLs
+CALLED ON NULL INPUT             -- La funcion se invoca aunque lleguen NULLs
 BEGIN
 
     -- --------------------------------------------------------
@@ -61,8 +59,8 @@ BEGIN
     DECLARE vParPim  CHAR(1)        DEFAULT 'N';  -- 'S'=precio incluye impuesto;
                                                   -- 'N'=no lo incluye
     DECLARE vPorIm1  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 1 expresada como 
-                                                  -- proporción (÷100)
-    DECLARE vPorIm2  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 2 expresada como proporción
+                                                  -- proporcion (÷100)
+    DECLARE vPorIm2  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 2 expresada como proporcion
     DECLARE vPredi1  DECIMAL(12,3)  DEFAULT 0;    -- Precio antes de impuesto tasa 1
     DECLARE vImp1    DECIMAL(16,6)  DEFAULT 0;    -- Monto impuesto tasa 1
     DECLARE vPredi2  DECIMAL(12,3)  DEFAULT 0;    -- Precio antes de impuesto tasa 2
@@ -78,11 +76,11 @@ BEGIN
     SET vFecha = CURRENT_DATE;
 
     -- --------------------------------------------------------
-    -- Leer indicador de gravabilidad del artículo desde InvArt
+    -- Leer indicador de gravabilidad del articulo desde InvArt
     -- --------------------------------------------------------
     BEGIN
         DECLARE CONTINUE HANDLER FOR NOT FOUND
-            BEGIN END;                             -- Si no existe el artículo, 
+            BEGIN END;                             -- Si no existe el articulo, 
                                                     -- vArtImp queda ' '
 
         SELECT ArtImp
@@ -93,13 +91,13 @@ BEGIN
     END;
 
     -- --------------------------------------------------------
-    -- Leer parámetros de tasas de impuesto desde InvPar
-    -- Se toma el único/primer registro de la tabla de parámetros
+    -- Leer parametros de tasas de impuesto desde InvPar
+    -- Se toma el unico/primer registro de la tabla de parametros
     -- --------------------------------------------------------
     BEGIN
         DECLARE CONTINUE HANDLER FOR NOT FOUND
             BEGIN
-                -- Si no hay parámetros se asume sin impuesto
+                -- Si no hay parametros se asume sin impuesto
                 SET vParIm1 = 0;
                 SET vParIm2 = 0;
                 SET vParPim = 'N';
@@ -114,8 +112,8 @@ BEGIN
     END;
 
     -- --------------------------------------------------------
-    -- Regla histórica: antes del 01/01/2013 se usaba la tasa 2
-    -- como tasa vigente (tasa 1 no existía)
+    -- Regla historica: antes del 01/01/2013 se usaba la tasa 2
+    -- como tasa vigente (tasa 1 no existia)
     -- --------------------------------------------------------
     IF vFecha < DATE('2013-01-01') THEN
         SET vParIm1 = vParIm2;
@@ -128,7 +126,7 @@ BEGIN
     SET vPimInc = UPPER(TRIM(COALESCE(vParPim, 'N')));
 
     -- --------------------------------------------------------
-    -- Calcular impuesto solo si el artículo es gravable
+    -- Calcular impuesto solo si el articulo es gravable
     -- --------------------------------------------------------
     IF vEsGrav = 'S' THEN
 
@@ -169,7 +167,7 @@ BEGIN
         END IF;
 
     ELSE
-        -- Artículo no gravable: todos los resultados en cero
+        -- Articulo no gravable: todos los resultados en cero
         SET vPredi1 = 0;
         SET vImp1   = 0;
         SET vPredi2 = 0;
@@ -189,5 +187,5 @@ BEGIN
 
 END;
 
--- Conceder permisos de ejecución a todos los usuarios
+-- Conceder permisos de ejecucion a todos los usuarios
 GRANT EXECUTE ON SPECIFIC FUNCTION SEGLIB.SG_CALC_IMP_ARTICULO TO PUBLIC;

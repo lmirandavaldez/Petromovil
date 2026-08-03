@@ -8,43 +8,45 @@
 -- Version   : 1
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Presenta los documentos de cobro (CxcDocd) que corresponden a
+-- Proposito: Presenta los documentos de cobro (CxcDocd) que corresponden a
 --            ingresos ya aplicados, filtrando por el tipo de movimiento
 --            contable (CmoRel) y el tipo de documento (CdoRel) permitidos.
---            Incluye las fechas de documento y transacción reconstruidas a
---            partir de los campos de año, mes y día almacenados por separado,
---            así como el vendedor asignado al cliente vía CxcRvc.
--- -----------------------------------------------------------------------------
--- Tablas base:
+--            Incluye las fechas de documento y transaccion reconstruidas a
+--            partir de los campos de ano, mes y dia almacenados por separado,
+--            asi como el vendedor asignado al cliente via CxcRvc.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
 --   CxcDocd - Documentos de cobro (tabla principal)
---   CxcCmo  - Catálogo de movimientos contables  (solo filtro WHERE)
---   CxcRvc  - Relación cliente-vendedor           (aporta VenCve al SELECT)
---   CxcCdo  - Catálogo de tipos de documento      (solo filtro WHERE)
--- -----------------------------------------------------------------------------
+--   CxcCmo  - Catalogo de movimientos contables  (solo filtro WHERE)
+--   CxcRvc  - Relacion cliente-vendedor           (aporta VenCve al SELECT)
+--   CxcCdo  - Catalogo de tipos de documento      (solo filtro WHERE)
+-- --------------------------------------------------------------
 -- Filtros aplicados:
---   CmoRel IN ('01','09') — movimientos de ingreso / reversión de ingreso
+--   CmoRel IN ('01','09') — movimientos de ingreso / reversion de ingreso
 --   CdoRel IN ('01','09','10','11') — tipos de documento de cobro aplicados
--- -----------------------------------------------------------------------------
--- Nota técnica:
---   La función SUBSTRING usa índice base-0 (dialecto IBM DB2/i).
---   El patrón Concat(Substring('0000',0,5-Length(Trim(campo))),Trim(campo))
---   rellena con ceros por la izquierda hasta completar 4 (año) o 2 (mes/día)
---   dígitos, formando una cadena ISO 'AAAA-MM-DD' convertida luego con DATE().
--- -----------------------------------------------------------------------------
+-- --------------------------------------------------------------
+-- Nota tecnica:
+--   La funcion SUBSTRING usa indice base-0 (dialecto IBM DB2/i).
+--   El patron Concat(Substring('0000',0,5-Length(Trim(campo))),Trim(campo))
+--   rellena con ceros por la izquierda hasta completar 4 (ano) o 2 (mes/dia)
+--   digitos, formando una cadena ISO 'AAAA-MM-DD' convertida luego con DATE().
+-- --------------------------------------------------------------
 -- Historial de cambios:
---   v1  Versión original
---   v2  Mejoras de legibilidad, alias descriptivos, uso de IN, documentación
--- =============================================================================
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXC_Ingresos_Aplicados AS
 
 SELECT
-    -- Identificación del documento
+    -- Identificacion del documento
     doc.CliCve               AS CliCve,          -- Clave del cliente
     doc.CdoCve               AS CdoCve,          -- Tipo de documento
-    doc.DocNum               AS DocNum,          -- Número de documento
+    doc.DocNum               AS DocNum,          -- Numero de documento
 
-    -- Fecha del documento (reconstruida desde campos AÑO/MES/DIA)
+    -- Fecha del documento (reconstruida desde campos ANO/MES/DIA)
     DATE(
         CONCAT(SUBSTRING('0000', 0, 5 - LENGTH(TRIM(doc.DocAno))), 
         TRIM(doc.DocAno)) || '-' ||
@@ -53,14 +55,14 @@ SELECT
         CONCAT(SUBSTRING('00',   0, 3 - LENGTH(TRIM(doc.DocDia))), 
         TRIM(doc.DocDia))         AS Fecha_Documento,
 
-    -- Distribución y vendedor
-    doc.DisCve               AS DisCve,          -- Clave de distribución
-    doc.DisTra               AS DisTra,          -- Tipo de transacción de distribución
+    -- Distribucion y vendedor
+    doc.DisCve               AS DisCve,          -- Clave de distribucion
+    doc.DisTra               AS DisTra,          -- Tipo de transaccion de distribucion
     rvc.VenCve               AS VenCve,          -- Vendedor asignado al cliente
 
-    -- Período contable
-    doc.PerAno               AS PerAno,          -- Año del período
-    doc.PerNum               AS PerNum,          -- Número del período
+    -- Periodo contable
+    doc.PerAno               AS PerAno,          -- Ano del periodo
+    doc.PerNum               AS PerNum,          -- Numero del periodo
 
     -- Importes y referencias
     doc.DocTas               AS DocTas,          -- Tasa de cambio aplicada
@@ -68,7 +70,7 @@ SELECT
     doc.CmoCve               AS CmoCve,          -- Clave del movimiento contable
     doc.DocRef               AS DocRef,          -- Referencia del documento
 
-    -- Fecha de transacción (reconstruida desde campos AÑO/MES/DIA de transacción)
+    -- Fecha de transaccion (reconstruida desde campos ANO/MES/DIA de transaccion)
     DATE(
         CONCAT(SUBSTRING('0000', 0, 5 - LENGTH(TRIM(doc.DocAtr))), 
         TRIM(doc.DocAtr)) || '-' ||
@@ -78,18 +80,18 @@ SELECT
         TRIM(doc.DocDtr)))  AS Fecha_Transaccion,
 
     -- Totales y estado
-    doc.DocTtr               AS DocTtr,          -- Total de la transacción
+    doc.DocTtr               AS DocTtr,          -- Total de la transaccion
     doc.DocVlc               AS DocVlc,          -- Valor en moneda local
     doc.DocVto               AS DocVto,          -- Valor total original
     doc.DocPri               AS DocPri,          -- Precio / importe primario
     doc.Status               AS Status,          -- Estado del documento
 
-    -- Componentes de fecha documento (año / mes / día en bruto)
+    -- Componentes de fecha documento (ano / mes / dia en bruto)
     doc.DocAno               AS DocAno,
     doc.DocMes               AS DocMes,
     doc.DocDia               AS DocDia,
 
-    -- Componentes de fecha transacción (año / mes / día en bruto)
+    -- Componentes de fecha transaccion (ano / mes / dia en bruto)
     doc.DocAtr               AS DocAtr,
     doc.DocMtr               AS DocMtr,
     doc.DocDtr               AS DocDtr
@@ -108,6 +110,6 @@ LEFT OUTER JOIN CxcRvc rvc
 LEFT OUTER JOIN CxcCdo cdo
     ON cdo.CdoCve = doc.CdoCve
 
-WHERE cmo.CmoRel IN ('01', '09')   -- Ingreso / reversión de ingreso
+WHERE cmo.CmoRel IN ('01', '09')   -- Ingreso / reversion de ingreso
   AND cdo.CdoRel IN ('01', '09', '10', '11')   
                                    -- Tipos de documento de cobro aplicados

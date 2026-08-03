@@ -8,20 +8,22 @@
 -- Version   : 1
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Expone la relación entre vendedores y sus rangos/parámetros de
---            comisión por categoría de inventario. Consolida la información
---            de las tablas CxcVen (vendedores), CxcRcv (rangos de comisión
---            por vendedor) e InvCat (catálogo de categorías de inventario).
--- -----------------------------------------------------------------------------
--- Tablas base:
---   CxcVen  - Catálogo de vendedores
---   CxcRcv  - Rangos y factores de comisión por vendedor / categoría
---   InvCat  - Catálogo de categorías de inventario
--- -----------------------------------------------------------------------------
+-- Proposito: Expone la relacion entre vendedores y sus rangos/parametros de
+--            comision por categoria de inventario. Consolida la informacion
+--            de las tablas CxcVen (vendedores), CxcRcv (rangos de comision
+--            por vendedor) e InvCat (catalogo de categorias de inventario).
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxcVen  - Catalogo de vendedores
+--   CxcRcv  - Rangos y factores de comision por vendedor / categoria
+--   InvCat  - Catalogo de categorias de inventario
+-- --------------------------------------------------------------
 -- Historial de cambios:
---   v1  Versión original
---   v2  Mejoras de legibilidad, alias descriptivos y documentación
--- =============================================================================
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXC_Vendedores_Comision AS
 
@@ -30,27 +32,27 @@ SELECT
     ven.VenCve                  AS VenCve,   -- Clave del vendedor
     ven.VenNom                  AS VenNom,   -- Nombre del vendedor
 
-    -- Categoría de inventario
-    rcv.CatCve                  AS CatCve,   -- Clave de la categoría
-    cat.CatDes                  AS CatDes,   -- Descripción de la categoría
+    -- Categoria de inventario
+    rcv.CatCve                  AS CatCve,   -- Clave de la categoria
+    cat.CatDes                  AS CatDes,   -- Descripcion de la categoria
 
-    -- Rangos de comisión
-    rcv.RcvLmi                  AS RcvLmi,   -- Límite inferior del rango
-    rcv.RcvLms                  AS RcvLms,   -- Límite superior del rango
+    -- Rangos de comision
+    rcv.RcvLmi                  AS RcvLmi,   -- Limite inferior del rango
+    rcv.RcvLms                  AS RcvLms,   -- Limite superior del rango
 
-    -- Parámetros de cálculo de comisión
-    rcv.RcvCfi                  AS RcvCfi,   -- Factor de comisión
+    -- Parametros de calculo de comision
+    rcv.RcvCfi                  AS RcvCfi,   -- Factor de comision
     rcv.RcvPad                  AS RcvPad,   -- Porcentaje adicional
     rcv.RcvVa1                  AS RcvVa1,   -- Valor auxiliar 1
     rcv.RcvPo1                  AS RcvPo1,   -- Porcentaje auxiliar 1
-    rcv.RcvMdc                  AS RcvMdc    -- Modalidad de comisión
+    rcv.RcvMdc                  AS RcvMdc    -- Modalidad de comision
 
 FROM CxcVen  ven
 
--- Rangos de comisión definidos para el vendedor (puede no tener ninguno)
+-- Rangos de comision definidos para el vendedor (puede no tener ninguno)
 LEFT OUTER JOIN CxcRcv rcv
     ON rcv.VenCve = ven.VenCve
 
--- Descripción de la categoría asociada al rango (puede no existir en catálogo)
+-- Descripcion de la categoria asociada al rango (puede no existir en catalogo)
 LEFT OUTER JOIN InvCat cat
     ON cat.CatCve = rcv.CatCve

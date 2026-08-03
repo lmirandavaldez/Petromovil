@@ -1,0 +1,132 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ==============================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM007
+-- Objeto    : VWNOM_HISTORICO_NOMINAS_EMPLEADOS
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Versión   : 2.0
+-- --------------------------------------------------------------
+-- Propósito: Histórico anual de importes de nómina por empleado
+--            y concepto, pivotado en columnas por mes (EneDic).
+--            El importe se presenta con signo según el tipo de
+--            concepto: CmcTip = 1  positivo (ingreso),
+--            CmcTip <> 1  negativo (deducción).
+-- Correcciones v1  v2:
+--   1. IfNull reemplazado por COALESCE (estándar SQL).
+--   2. CAST(... AS DECIMAL(15,2)) explícito en importes para
+--      tipo consistente independiente de NgeImp.
+--   3. Lógica de signo (CmcTip) factorizada en LATERAL SG:
+--      se calcula una vez y se reutiliza en los 12 meses.
+--   4. Alias en la misma línea que la expresión.
+--   5. Importe_Dec renombrado a Importe_Dic para consistencia
+--      con VWNOM_ACU_EMP_CONCEPTOSMESES (sqlnm002).
+--   6. GROUP BY reestructurado con una columna por línea.
+--   7. Capitalización SQL normalizada a mayúsculas.
+--   8. Cabecera de documentación añadida.
+-- Notas:
+--   - LEFT JOIN NomEmp intencional: NomNgeh es histórico y puede
+--     contener registros de empleados ya eliminados del maestro.
+--   - CipAac es el año del acumulado histórico.
+--   - CnoCve/TnoCve identifican el período de nómina.
+-- Tablas base:
+--   NomNgeh (T1)  Histórico de nóminas por empleado y concepto
+--   NomEmp  (T2)  Maestro de empleados
+--   NomCmc  (T3)  Conceptos de nómina (incluye CmcTip para signo)
+--   NomCno  (T4)  Conceptos de nómina (encabezado)
+--   NomTno  (T5)  Tipos de nómina
+--   NomUbi  (T6)  Ubicaciones
+--   NomDep  (T7)  Departamentos
+--   NomCar  (T8)  Cargos
+--   NomCat  (T9)  Categorías
+-- ============================================================
+
+CREATE OR REPLACE VIEW VWNOM_HISTORICO_NOMINAS_EMPLEADOS AS
+SELECT
+    -- Período y tipo de nómina
+    T1.CnoCve,  T4.CnoDes,
+    T1.TnoCve,  T5.TnoDes,
+
+    -- Identificación del empleado
+    T1.EmpCve,
+    T2.EmpApe,
+    T2.EmpNom,
+    T2.EmpSta,
+
+    -- Clasificaciones laborales
+    T2.UbiCve,  T6.UbiDes,
+    T2.DepCve,  T7.DepDes,
+    T2.CarCve,  T8.CarDes,
+    T2.CatCve,  T9.CatDes,
+
+    -- Concepto de nómina
+    T1.CmcCve,
+    T3.CmcDes,
+    T3.CmcTip,  -- 1 = ingreso (positivo), otro = deducción (negativo)
+
+    -- Año del acumulado histórico
+    T1.CipAac,
+
+    -- Importes por mes con signo según CmcTip
+    -- La lógica de signo se factoriza en LATERAL SG (un solo cálculo)
+    -- COALESCE garantiza 0 si no hay registro para ese mes
+    -- CAST asegura DECIMAL(15,2) consistente con NgeImp
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 01 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Ene,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 02 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Feb,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 03 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Mar,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 04 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Abr,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 05 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_May,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 06 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Jun,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 07 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Jul,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 08 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Ago,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 09 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Sep,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 10 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Oct,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 11 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Nov,
+    COALESCE(CAST(SUM(CASE WHEN T1.CipMac = 12 THEN SG.ImpConSigno END)
+    AS DECIMAL(15,2)), 0) AS Importe_Dic
+
+FROM NomNgeh T1
+-- LEFT JOIN intencional: NomNgeh es histórico; puede tener empleados
+-- ya eliminados del maestro; se conservan con NULLs en sus campos
+LEFT OUTER JOIN NomEmp T2  ON T1.EmpCve = T2.EmpCve
+LEFT OUTER JOIN NomCmc T3  ON T1.CmcCve = T3.CmcCve
+LEFT OUTER JOIN NomCno T4  ON T1.CnoCve = T4.CnoCve
+LEFT OUTER JOIN NomTno T5  ON T1.TnoCve = T5.TnoCve
+LEFT OUTER JOIN NomUbi T6  ON T2.UbiCve = T6.UbiCve
+LEFT OUTER JOIN NomDep T7  ON T2.DepCve = T7.DepCve
+LEFT OUTER JOIN NomCar T8  ON T2.CarCve = T8.CarCve
+LEFT OUTER JOIN NomCat T9  ON T2.CatCve = T9.CatCve
+
+-- LATERAL SG: importe con signo según tipo de concepto (un solo cálculo)
+-- CmcTip = 1  ingreso (positivo), CmcTip <> 1  deducción (negativo)
+CROSS JOIN LATERAL (
+    SELECT CASE WHEN T3.CmcTip = 1
+                    THEN T1.NgeImp
+                    ELSE T1.NgeImp * -1
+           END AS ImpConSigno
+    FROM SYSIBM.SYSDUMMY1
+) AS SG
+
+GROUP BY
+    T1.CnoCve,  T4.CnoDes,
+    T1.TnoCve,  T5.TnoDes,
+    T1.EmpCve,  T2.EmpApe,  T2.EmpNom,  T2.EmpSta,
+    T2.UbiCve,  T6.UbiDes,
+    T2.DepCve,  T7.DepDes,
+    T2.CarCve,  T8.CarDes,
+    T2.CatCve,  T9.CatDes,
+    T1.CmcCve,  T3.CmcDes,  T3.CmcTip,
+    T1.CipAac;
+

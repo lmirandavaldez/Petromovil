@@ -1,30 +1,37 @@
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
--- ============================================================
--- Función  : SEGLIB.SG_TIEMPO_ANOS
--- Módulo   : Seguridad (Comunes)
--- Propósito: Devuelve el número de años completos cumplidos
---            entre dos fechas.
---            Sustituye al programa SG7006 (componente años).
--- Parámetros:
+-- ==============================================================
+-- Modulo    : Seguridad
+-- Programa  : SQLSGF002
+-- Objeto    : SEGLIB.SG_TIEMPO_ANOS
+-- Tipo      : Funcion escalar SQL (Scalar Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Devuelve el numero de anos completos cumplidos entre dos
+--   fechas. Sustituye al programa SG7006 (componente anos).
+-- --------------------------------------------------------------
+-- Parametros de entrada:
 --   FechaDes DATE  Fecha de inicio (desde).
---   FechaHas DATE  Fecha de fin    (hasta).
--- Retorna:
---   INTEGER  Años completos (≥ 0).
---            Cualquier parámetro NULL → NULL
---              (RETURNS NULL ON NULL INPUT).
---            FechaHas < FechaDes → 0.
--- Tablas   : (ninguna — función escalar pura)
--- Autor    : L. Miranda
--- Copyright: Miranda Valdez, S. A., 1997
--- Versión  : 2  (cabecera completa + CALLED ON NULL INPUT)
--- Cambios  :
---   v1 - Versión original (cálculo básico).
---   v2 - Cabecera de documentación completa.
---        Agregado RETURNS NULL ON NULL INPUT.
---        Normalización de casing a mixed-case.
--- Uso:
---   Values SEGLIB.SG_TIEMPO_ANOS(DATE('1990-03-15'), CURRENT DATE);
--- ============================================================
+--   FechaHas DATE  Fecha de fin (hasta).
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   INTEGER  Anos completos (>= 0).
+--   NULL     si alguno de los parametros es NULL
+--            (RETURNS NULL ON NULL INPUT).
+--   0        si FechaHas < FechaDes.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   (ninguna - funcion de logica pura)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Calculo puro de anos entre fechas. No usa SegFec.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Para diferencia completa (anos+meses+dias) usar la
+--      funcion de tabla SEGLIB.SG_TIEMPO_EXACTO.
 
 Create Or Replace Function SEGLIB.SG_TIEMPO_ANOS (
     FechaDes Date,
@@ -39,12 +46,12 @@ Returns Null On Null Input
 Begin
     Declare vAnos Integer;
 
-    -- Validación: si las fechas están invertidas devolver 0
+    -- Validacion: si las fechas estan invertidas devolver 0
     If FechaDes > FechaHas Then
         Return 0;
     End If;
 
-    -- Años completos (ajuste si no ha cumplido el aniversario)
+    -- Anos completos (ajuste si no ha cumplido el aniversario)
     Set vAnos = Year(FechaHas) - Year(FechaDes);
     If (Month(FechaHas) < Month(FechaDes))
        Or (Month(FechaHas) = Month(FechaDes) And

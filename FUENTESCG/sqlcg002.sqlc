@@ -5,38 +5,81 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 1
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito : Pivot del mayor general por centro de costo,
---             cuenta contable, auxiliar y periodo (ano),
---             desplegando por cada mes el movimiento neto
---             (Debito - Credito) y el saldo acumulado (Balance).
---             Tipo_Cuenta distingue cuentas de mayor puras
---             (CtaTip=1 sin auxiliar) de las demas.
---             Descripcion muestra el nombre de la cuenta o
---             del auxiliar segun corresponda.
---             Solo incluye periodos cerrados (PerSit = 'C').
+-- Proposito:
+--   Pivot mensual del mayor general por centro de costo,
+--   cuenta contable, auxiliar y ano contable.
+--   Por cada combinacion despliega el movimiento neto
+--   (Debito - Credito) y el saldo acumulado (Balance)
+--   de cada uno de los 12 meses del ano.
+--   Tipo_Cuenta distingue cuentas de mayor puras
+--   (CtaTip=1 sin auxiliar) de las demas.
+--   Descripcion muestra el nombre de la cuenta o del
+--   auxiliar segun corresponda.
+--   Solo incluye periodos cerrados (PerSit = 'C').
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   PerAno          Ano contable del periodo        (CogBcc)
+--   CcoCve          Clave del centro de costo       (CogBcc)
+--   CcoDes          Descripcion del centro de costo (CogCco)
+--   CtaCve          Clave de la cuenta contable     (CogBcc)
+--   AuxLis          Lista (tipo) del auxiliar       (CogBcc)
+--   AuxCve          Clave del auxiliar              (CogBcc)
+--   Tipo_Cuenta     1=mayor pura, 2=con auxiliar    (calc)
+--   Descripcion     Nombre de cuenta o auxiliar     (calc)
+--   Movimiento_Ene  Movimiento neto enero           (calc)
+--   Balance_Ene     Saldo acumulado enero           (calc)
+--   Movimiento_Feb  Movimiento neto febrero         (calc)
+--   Balance_Feb     Saldo acumulado febrero         (calc)
+--   Movimiento_Mar  Movimiento neto marzo           (calc)
+--   Balance_Mar     Saldo acumulado marzo           (calc)
+--   Movimiento_Abr  Movimiento neto abril           (calc)
+--   Balance_Abr     Saldo acumulado abril           (calc)
+--   Movimiento_May  Movimiento neto mayo            (calc)
+--   Balance_May     Saldo acumulado mayo            (calc)
+--   Movimiento_Jun  Movimiento neto junio           (calc)
+--   Balance_Jun     Saldo acumulado junio           (calc)
+--   Movimiento_Jul  Movimiento neto julio           (calc)
+--   Balance_Jul     Saldo acumulado julio           (calc)
+--   Movimiento_Ago  Movimiento neto agosto          (calc)
+--   Balance_Ago     Saldo acumulado agosto          (calc)
+--   Movimiento_Sep  Movimiento neto septiembre      (calc)
+--   Balance_Sep     Saldo acumulado septiembre      (calc)
+--   Movimiento_Oct  Movimiento neto octubre         (calc)
+--   Balance_Oct     Saldo acumulado octubre         (calc)
+--   Movimiento_Nov  Movimiento neto noviembre       (calc)
+--   Balance_Nov     Saldo acumulado noviembre       (calc)
+--   Movimiento_Dic  Movimiento neto diciembre       (calc)
+--   Balance_Dic     Saldo acumulado diciembre       (calc)
 -- --------------------------------------------------------------
 -- Tablas referenciadas:
---             : CogBcc  Balance por cuenta y centro de costo
---             CogPer    periodos contables
---             CogCta    catalogo de cuentas
---             CogAuxd   catalogo de auxiliares
---             CogCco    catalogo de centros de costo
+--   CogBcc    T1  Balance por cuenta y centro de costo
+--   CogPer    T2  Periodos contables
+--   CogCta    T3  Catalogo de cuentas
+--   CogAuxd   T4  Catalogo de auxiliares
+--   CogCco    T5  Catalogo de centros de costo
 -- --------------------------------------------------------------
--- Cambios   :
---   v2 - Se agrega cabecera de documentacion completa.
---        Se agrega alias explicito As en FROM y JOINs.
---        Se reformatea SELECT con una columna por linea
---          y comentario descriptivo en cada campo.
---        Se reformatea el pivot mensual alineando el alias
---          As en la misma linea de la expresion.
---        Se reformatea GROUP BY con una expresion por linea.
---        Se agrega ORDER BY sugerido (comentado).
---        Se respeta el orden original de los campos,
---          la logica original y el limite de 80 posiciones.
--- ============================================================
+-- Logica de resolucion de fechas:
+--   Filtra por T2.PerSit = 'C' (periodos cerrados).
+--   PerAno y PerNum identifican el periodo contable.
+--   El pivot agrupa por PerAno y distribuye los valores
+--   en columnas segun PerNum (01..12).
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar columna TotalAnual calculada como suma de
+--      los 12 movimientos mensuales para facilitar reportes.
+--   2. Incluir periodos abiertos (PerSit = 'A') como opcion
+--      mediante parametro o vista adicional.
+--   3. Normalizar nombre del objeto a mayusculas consistentes.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           IfNull -> Coalesce, sin acentos
+-- ==============================================================
 
 Create Or Replace View VWCOG_MAYOR_GENERALCCO_MESES As
 
@@ -83,87 +126,87 @@ Select
     -- Movimiento = Debito - Credito del periodo
     -- Balance    = Saldo acumulado del periodo
     -- --------------------------------------------------------
-    IfNull(Sum(Case When T1.PerNum = 01
+    Coalesce(Sum(Case When T1.PerNum = 01
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Ene,
-    IfNull(Sum(Case When T1.PerNum = 01
+    Coalesce(Sum(Case When T1.PerNum = 01
                Then T1.BccBal
                End), 0)                    As Balance_Ene,
 
-    IfNull(Sum(Case When T1.PerNum = 02
+    Coalesce(Sum(Case When T1.PerNum = 02
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Feb,
-    IfNull(Sum(Case When T1.PerNum = 02
+    Coalesce(Sum(Case When T1.PerNum = 02
                Then T1.BccBal
                End), 0)                    As Balance_Feb,
 
-    IfNull(Sum(Case When T1.PerNum = 03
+    Coalesce(Sum(Case When T1.PerNum = 03
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Mar,
-    IfNull(Sum(Case When T1.PerNum = 03
+    Coalesce(Sum(Case When T1.PerNum = 03
                Then T1.BccBal
                End), 0)                    As Balance_Mar,
 
-    IfNull(Sum(Case When T1.PerNum = 04
+    Coalesce(Sum(Case When T1.PerNum = 04
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Abr,
-    IfNull(Sum(Case When T1.PerNum = 04
+    Coalesce(Sum(Case When T1.PerNum = 04
                Then T1.BccBal
                End), 0)                    As Balance_Abr,
 
-    IfNull(Sum(Case When T1.PerNum = 05
+    Coalesce(Sum(Case When T1.PerNum = 05
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_May,
-    IfNull(Sum(Case When T1.PerNum = 05
+    Coalesce(Sum(Case When T1.PerNum = 05
                Then T1.BccBal
                End), 0)                    As Balance_May,
 
-    IfNull(Sum(Case When T1.PerNum = 06
+    Coalesce(Sum(Case When T1.PerNum = 06
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Jun,
-    IfNull(Sum(Case When T1.PerNum = 06
+    Coalesce(Sum(Case When T1.PerNum = 06
                Then T1.BccBal
                End), 0)                    As Balance_Jun,
 
-    IfNull(Sum(Case When T1.PerNum = 07
+    Coalesce(Sum(Case When T1.PerNum = 07
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Jul,
-    IfNull(Sum(Case When T1.PerNum = 07
+    Coalesce(Sum(Case When T1.PerNum = 07
                Then T1.BccBal
                End), 0)                    As Balance_Jul,
 
-    IfNull(Sum(Case When T1.PerNum = 08
+    Coalesce(Sum(Case When T1.PerNum = 08
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Ago,
-    IfNull(Sum(Case When T1.PerNum = 08
+    Coalesce(Sum(Case When T1.PerNum = 08
                Then T1.BccBal
                End), 0)                    As Balance_Ago,
 
-    IfNull(Sum(Case When T1.PerNum = 09
+    Coalesce(Sum(Case When T1.PerNum = 09
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Sep,
-    IfNull(Sum(Case When T1.PerNum = 09
+    Coalesce(Sum(Case When T1.PerNum = 09
                Then T1.BccBal
                End), 0)                    As Balance_Sep,
 
-    IfNull(Sum(Case When T1.PerNum = 10
+    Coalesce(Sum(Case When T1.PerNum = 10
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Oct,
-    IfNull(Sum(Case When T1.PerNum = 10
+    Coalesce(Sum(Case When T1.PerNum = 10
                Then T1.BccBal
                End), 0)                    As Balance_Oct,
 
-    IfNull(Sum(Case When T1.PerNum = 11
+    Coalesce(Sum(Case When T1.PerNum = 11
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Nov,
-    IfNull(Sum(Case When T1.PerNum = 11
+    Coalesce(Sum(Case When T1.PerNum = 11
                Then T1.BccBal
                End), 0)                    As Balance_Nov,
 
-    IfNull(Sum(Case When T1.PerNum = 12
+    Coalesce(Sum(Case When T1.PerNum = 12
                Then (T1.BccDeb - T1.BccCre)
                End), 0)                    As Movimiento_Dic,
-    IfNull(Sum(Case When T1.PerNum = 12
+    Coalesce(Sum(Case When T1.PerNum = 12
                Then T1.BccBal
                End), 0)                    As Balance_Dic
 

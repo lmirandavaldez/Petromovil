@@ -1,4 +1,4 @@
--- ================================================================
+-- ==============================================================
 -- Modulo    : Seguridad y Comunes
 -- Programa  : SQLSGF007
 -- Objeto    : SG_DESCOMPONER_COMPROBANTE
@@ -6,7 +6,7 @@
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
 -- Version   : 1.1
--- ----------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Descompone un numero de comprobante fiscal (NCF) en sus
 --   componentes: tipo, secuencia y prefijo/serie de emision.
@@ -30,7 +30,7 @@
 --
 --   Si el NCF no coincide con ninguno de los formatos anteriores
 --   retorna NCFTIP=0, NCFSEC=0, NCFNRO_OUT=''.
--- ----------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Parametros de entrada:
 --   NCFNRO    VARCHAR(19)  Numero de comprobante fiscal
 --
@@ -38,13 +38,13 @@
 --   NCFTIP      INTEGER     Tipo de comprobante
 --   NCFSEC      BIGINT      Secuencia del comprobante
 --   NCFNRO_OUT  VARCHAR(20) Prefijo/serie del comprobante
--- ----------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Version  Fecha       Autor       Descripcion
 --   -------  ----------  ----------  ----------------------------
 --   1.0      2024-01-01  L. Miranda  Creacion inicial
 --   1.1      2025-07-01  L. Miranda  Documentacion y revision
--- ================================================================
+-- ==============================================================
 
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 

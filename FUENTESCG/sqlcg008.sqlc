@@ -5,41 +5,72 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 1
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito    : Detalle del diario general: una fila por linea
---             de asiento contable.
---             Construye el numero de documento formateado
---             como TdiCve-NNNNNNN (7 digitos con ceros a la
---             izquierda) y convierte ano+mes+dia en tipo Date.
---             Separa el valor en Debito o Credito segun el
---             campo DgeOri (1=Debito, 2=Credito).
---             No aplica agrupacion; devuelve el detalle puro.
+-- Proposito:
+--   Detalle del diario general: una fila por linea de
+--   asiento contable.
+--   Construye el numero de documento formateado como
+--   TdiCve-NNNNNNN (7 digitos con ceros a la izquierda)
+--   y obtiene la fecha ISO desde el calendario SegFec
+--   (join por DgeAno+DgeMes+DgeDia).
+--   Separa el valor en Debito o Credito segun DgeOri
+--   (1=Debito, 2=Credito).
+--   No aplica agrupacion; devuelve el detalle puro.
 -- --------------------------------------------------------------
--- Tablas    : CogHdgd   lineas del diario general (tabla base)
---             CogTdi    tipos de documento contable
---             CogPer    periodos contables
---             CogCta    catalogo de cuentas
---             CogAuxd   catalogo de auxiliares
---             CogCco    catalogo de centros de costo
---             CxpCfa    clasificacion de formas de pago (CxP)
---             SegFec    calendario / tabla de fechas
+-- Campos retornados (en orden original):
+--   PerAno            Ano contable del periodo       (CogHdgd)
+--   PerNum            Numero del periodo (1..12)     (CogHdgd)
+--   PerDes            Descripcion del periodo        (CogPer)
+--   TdiDes            Tipo de documento contable     (CogTdi)
+--   Numero_Documento  TdiCve-NNNNNNN formateado      (calc)
+--   Fecha_Documento   Fecha ISO del documento        (SegFec)
+--   DgeSec            Secuencia de la linea          (CogHdgd)
+--   CtaCve            Clave de la cuenta contable    (CogHdgd)
+--   AuxCve            Clave del auxiliar             (CogHdgd)
+--   Descripcion       Nombre de cuenta o auxiliar    (calc)
+--   CcoCve            Clave del centro de costo      (CogHdgd)
+--   CcoDes            Descripcion del centro de costo(CogCco)
+--   DgeDe1            Descripcion libre del asiento  (CogHdgd)
+--   Debito            Valor si DgeOri=1, sino 0      (calc)
+--   Credito           Valor si DgeOri=2, sino 0      (calc)
+--   CfaCve            Clave de forma de pago CxP     (CogHdgd)
+--   CfaDes            Descripcion de forma de pago   (CxpCfa)
+--   DgeTid            Tipo de identificacion fiscal  (CogHdgd)
+--   DgeIde            Numero de identificacion fiscal(CogHdgd)
+--   NcfNro            Numero de comprobante fiscal   (CogHdgd)
 -- --------------------------------------------------------------
--- Cambios   :
---   v2 - Se agrega cabecera de documentacion completa.
---        Se agrega alias explicito As en FROM y JOINs.
---        Se reformatea SELECT con una columna por linea
---          y comentario descriptivo en cada campo.
---        Se indenta la expresion de Numero_Documento y
---          Fecha_Documento para mayor legibilidad,
---          respetando la logica original de formateo.
---        Se reformatea el CASE de Descripcion, Debito y
---          Credito con sangria uniforme.
---        Se documenta cada JOIN con su proposito.
---        Se respeta el orden original de los campos,
---          la logica original y el limite de 80 posiciones.
--- ============================================================
+-- Tablas referenciadas:
+--   CogHdgd   T1  Lineas del diario general (tabla base)
+--   CogTdi    T2  Tipos de documento contable
+--   CogPer    T3  Periodos contables
+--   CogCta    T4  Catalogo de cuentas
+--   CogAuxd   T5  Catalogo de auxiliares
+--   CogCco    T6  Catalogo de centros de costo
+--   CxpCfa    T7  Clasificacion de formas de pago (CxP)
+--   SegFec    T8  Calendario / tabla de fechas
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Fecha_Documento: Join a SegFec T8 por
+--   DgeAno+DgeMes+DgeDia -> FecIso.
+--   No hay filtro de periodo; devuelve todas las lineas
+--   con fecha valida en el calendario.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar campo Numero_Documento_Num (DgeDoc numerico)
+--      para facilitar ordenamientos y rangos.
+--   2. Evaluar LEFT JOIN a SegFec para tolerar fechas
+--      que no existan en el calendario sin perder filas.
+--   3. Agregar campo AuxLis para identificar el tipo de
+--      auxiliar junto con AuxCve.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           IfNull -> Coalesce, sin acentos
+-- ==============================================================
 
 Create Or Replace View VWCOG_Diario_General As
 

@@ -5,47 +5,77 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 1
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito   : Detalle del diario general extendido: una fila
---             por linea de asiento contable.
---             Extiende VWCOG_Diario_General con:
---               - Descripcion del encabezado del documento
---                 (DgeDes de CogHdgh).
---               - Fecha del documento desde el calendario
---                 SegFec (FecIso).
---               - Valor_Transaccion con signo: positivo para
---                 debitos (DgeOri=1), negativo para creditos.
---               - Referencia_1 y Referencia_2 del asiento.
---             Construye el numero de documento formateado
---             como TdiCve-NNNNNNN (7 digitos con ceros a la
---             izquierda).
---             No aplica agrupacion; devuelve el detalle puro.
+-- Proposito:
+--   Detalle del diario general extendido: una fila por
+--   linea de asiento contable.
+--   Extiende VWCOG_Diario_General (sqlcg008) con:
+--     - Descripcion del encabezado del documento
+--       (DgeDes de CogHdgh).
+--     - Fecha del documento desde el calendario SegFec.
+--     - Valor_Transaccion con signo: positivo para debitos
+--       (DgeOri=1), negativo para creditos.
+--     - Referencia_1 y Referencia_2 del asiento.
+--   Construye el numero de documento formateado como
+--   TdiCve-NNNNNNN (7 digitos con ceros a la izquierda).
+--   No aplica agrupacion; devuelve el detalle puro.
 -- --------------------------------------------------------------
--- Tablas    : CogHdgd   lineas del diario general (tabla base)
---             CogTdi    tipos de documento contable
---             CogPer    periodos contables
---             CogCta    catalogo de cuentas
---             CogAuxd   catalogo de auxiliares
---             CogCco    catalogo de centros de costo
---             CxpCfa    clasificacion de formas de pago (CxP)
---             CogHdgh   encabezado del diario general
---             SegFec    calendario / tabla de fechas
+-- Campos retornados (en orden original):
+--   PerAno            Ano contable del periodo       (CogHdgd)
+--   PerNum            Numero del periodo (1..12)     (CogHdgd)
+--   PerDes            Descripcion del periodo        (CogPer)
+--   TdiDes            Tipo de documento contable     (CogTdi)
+--   Numero_Documento  TdiCve-NNNNNNN formateado      (calc)
+--   Fecha_Documento   Fecha ISO del documento        (SegFec)
+--   DgeDes            Descripcion del encabezado     (CogHdgh)
+--   CtaCve            Clave de la cuenta contable    (CogHdgd)
+--   AuxCve            Clave del auxiliar             (CogHdgd)
+--   Descripcion       Nombre de cuenta o auxiliar    (calc)
+--   CcoCve            Clave del centro de costo      (CogHdgd)
+--   CcoDes            Descripcion del CCO            (CogCco)
+--   DgeDe1            Descripcion libre del asiento  (CogHdgd)
+--   Valor_Transaccion Valor con signo (+deb / -cre)  (calc)
+--   CfaCve            Clave de forma de pago CxP     (CogHdgd)
+--   CfaDes            Descripcion de forma de pago   (CxpCfa)
+--   DgeTid            Tipo de identificacion fiscal  (CogHdgd)
+--   DgeIde            Numero de identificacion fiscal(CogHdgd)
+--   NcfNro            Numero de comprobante fiscal   (CogHdgd)
+--   Referencia_1      Referencia 1 del asiento       (CogHdgd)
+--   Referencia_2      Referencia 2 del asiento       (CogHdgd)
 -- --------------------------------------------------------------
--- Cambios   :
---   v2 - Se agrega cabecera de documentacion completa.
---        Se agrega alias explicito As en FROM y JOINs.
---        Se reformatea SELECT con una columna por linea
---          y comentario descriptivo en cada campo.
---        Se indenta la expresion de Numero_Documento para
---          mayor legibilidad.
---        Se reformatea el CASE de Descripcion y
---          Valor_Transaccion con sangria uniforme.
---        Se documenta cada JOIN con su proposito.
---        Se respeta el orden original de los campos,
---          la logica original y el limite de 80 posiciones.
--- ============================================================
+-- Tablas referenciadas:
+--   CogHdgd   T1  Lineas del diario general (tabla base)
+--   CogTdi    T2  Tipos de documento contable
+--   CogPer    T3  Periodos contables
+--   CogCta    T4  Catalogo de cuentas
+--   CogAuxd   T5  Catalogo de auxiliares
+--   CogCco    T6  Catalogo de centros de costo
+--   CxpCfa    T7  Clasificacion de formas de pago (CxP)
+--   CogHdgh   T8  Encabezado del diario general
+--   SegFec    T9  Calendario / tabla de fechas
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Fecha_Documento: Join a SegFec T9 por
+--   DgeAno+DgeMes+DgeDia -> FecIso.
+--   No hay filtro de periodo; devuelve todas las lineas
+--   con fecha valida en el calendario.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Cambiar Join CogHdgh T8 a Left Outer Join para
+--      no perder lineas de asientos sin encabezado.
+--   2. Agregar campo Fecha_Aplicacion desde T8 usando
+--      SegFec (disponible en sqlcg010).
+--   3. Agregar campo AplUsr / UsrNom para trazabilidad
+--      del usuario que aplico el documento.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           IfNull -> Coalesce, sin acentos
+-- ==============================================================
 
 Create Or Replace View VWCOG_Diario_General_2 As
 

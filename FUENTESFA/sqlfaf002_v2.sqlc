@@ -1,0 +1,135 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Función  : SEGLIB.FA_PATRON_COMPRA_CLIENTE
+-- Propósito: Calcula el patrón de compra de un cliente hasta una
+--            fecha tope. Devuelve métricas estadísticas sobre los
+--            intervalos entre compras y una bandera de cliente nuevo.
+-- Versión  : 2.0
+-- Parámetros:
+--   P_CODIGO_CLIENTE  INTEGER  Clave del cliente a analizar.
+--   P_FECHA           DATE     Fecha tope (inclusive). Solo se
+--                              consideran movimientos <= P_FECHA.
+--   P_TIPO            CHAR(1)  Filtro de tipo de distribuidor:
+--                                'N' = solo distribuidores tipo 'N'
+--                                'T' = todos los distribuidores
+-- Retorna tabla con columnas:
+--   CODIGO_CLIENTE  INTEGER        Clave del cliente.
+--   PROMEDIO_DIAS   DECIMAL(10,4)  Promedio de días entre compras.
+--                                  0 si el cliente tiene 1 o 0 compras.
+--   DESVIACION      DECIMAL(10,4)  Desviación estándar de los intervalos.
+--                                  0 si el cliente tiene 1 o 0 compras.
+--   FACTOR          DECIMAL(10,4)  2 + (DESVIACION / PROMEDIO_DIAS).
+--                                  2.00 si PROMEDIO_DIAS = 0.
+--   UMBRAL          DECIMAL(10,4)  PROMEDIO_DIAS * FACTOR.
+--                                  0 si PROMEDIO_DIAS = 0.
+--   ES_NUEVO        INTEGER        1 si la primera compra del cliente
+--                                  ocurrió en el mismo mes/año que
+--                                  P_FECHA; 0 en caso contrario.
+--                                  0 si no hay movimientos.
+-- Notas:
+--   - Si el cliente no tiene movimientos se retorna una fila con
+--     todos los valores en 0 para CODIGO_CLIENTE = P_CODIGO_CLIENTE.
+--   - Movimientos excluidos: DtoSta <> 'A' y DtoTip IN (2,8).
+-- Uso:
+--   SELECT * FROM TABLE(SEGLIB.FA_PATRON_COMPRA_CLIENTE(
+--       1001,
+--       DATE('2026-07-23'),
+--       'N'
+--   )) AS x;
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.FA_PATRON_COMPRA_CLIENTE (
+    P_CODIGO_CLIENTE INTEGER,   -- código cliente
+    P_FECHA          DATE,      -- fecha tope (inclusive)
+    P_TIPO           CHAR(1)    -- 'N' = solo dist. tipo N
+                                -- / 'T' = todos
+)
+RETURNS TABLE (
+    CODIGO_CLIENTE  INTEGER,
+    PROMEDIO_DIAS   DECIMAL(10,4),
+    DESVIACION      DECIMAL(10,4),
+    FACTOR          DECIMAL(10,4),
+    UMBRAL          DECIMAL(10,4),
+    ES_NUEVO        INTEGER
+)
+LANGUAGE SQL
+NOT DETERMINISTIC        -- el resultado depende del estado
+                         -- de las tablas
+READS SQL DATA
+RETURNS NULL ON NULL INPUT -- si cualquier parámetro 
+                           -- es NULL retorna vacío
+RETURN
+    -- Movimientos válidos del cliente hasta P_FECHA
+    WITH Movs AS (
+        SELECT
+            T2.CliCve AS CODIGO_CLIENTE,
+            T9.FecIso AS FECHA
+        FROM FacDtoh T2
+        JOIN SegDis T3
+          ON T2.DisCve = T3.DisCve
+        JOIN SegFec T9
+          ON T2.DtoAno = T9.FecAno
+         AND T2.DtoMes = T9.FecMes
+         AND T2.DtoDia = T9.FecDia
+        WHERE T2.CliCve  = P_CODIGO_CLIENTE
+          AND T9.FecIso  <= P_FECHA
+          AND T2.DtoSta  = 'A'
+          AND T2.DtoTip  NOT IN (2, 8)
+          -- 'N' filtra solo distribuidores tipo N; 'T' incluye todos
+          AND (P_TIPO = 'T' OR T3.DisTip = 'N')
+    ),
+    -- Intervalo en días entre compras consecutivas (LAG)
+    Intervalos AS (
+        SELECT
+            CODIGO_CLIENTE,
+            DAYS(FECHA) - DAYS(LAG(FECHA) OVER (
+                PARTITION BY CODIGO_CLIENTE
+                ORDER BY FECHA
+            )) AS DIAS
+        FROM Movs
+    ),
+    -- Estadísticas: promedio y desviación de los intervalos
+    Stats AS (
+        SELECT
+            P_CODIGO_CLIENTE          AS CODIGO_CLIENTE,
+            AVG(CAST(DIAS AS DECIMAL(10,4)))    AS PROMEDIO,
+            STDDEV(CAST(DIAS AS DECIMAL(10,4))) AS DESVIACION
+        FROM Intervalos
+        WHERE DIAS IS NOT NULL
+    ),
+    -- Fecha de primera compra del cliente
+    FirstBuy AS (
+        SELECT
+            P_CODIGO_CLIENTE AS CODIGO_CLIENTE,
+            MIN(FECHA)       AS FIRST_PURCHASE
+        FROM Movs
+    )
+    -- Resultado final: LEFT JOIN para preservar clientes sin intervalos
+    SELECT
+        P_CODIGO_CLIENTE                            AS CODIGO_CLIENTE,
+        COALESCE(S.PROMEDIO,   0)                   AS PROMEDIO_DIAS,
+        COALESCE(S.DESVIACION, 0)                   AS DESVIACION,
+        CASE
+            WHEN S.PROMEDIO IS NULL OR S.PROMEDIO = 0
+                THEN CAST(2.00 AS DECIMAL(10,4))
+            ELSE 2 + (S.DESVIACION / S.PROMEDIO)
+        END                                         AS FACTOR,
+        CASE
+            WHEN S.PROMEDIO IS NULL OR S.PROMEDIO = 0
+                THEN CAST(0 AS DECIMAL(10,4))
+            ELSE S.PROMEDIO * (2 + (S.DESVIACION / S.PROMEDIO))
+        END                                         AS UMBRAL,
+        -- ES_NUEVO: 1 si la primera compra fue en el mismo mes/año
+        -- que P_FECHA; 0 si no hay compras o es en otro período
+        CASE
+            WHEN F.FIRST_PURCHASE IS NOT NULL
+             AND YEAR(F.FIRST_PURCHASE)  = YEAR(P_FECHA)
+             AND MONTH(F.FIRST_PURCHASE) = MONTH(P_FECHA)
+                THEN 1
+            ELSE 0
+        END                                         AS ES_NUEVO
+    FROM       Stats    S
+    LEFT JOIN  FirstBuy F  ON S.CODIGO_CLIENTE = F.CODIGO_CLIENTE;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_PATRON_COMPRA_CLIENTE TO PUBLIC;

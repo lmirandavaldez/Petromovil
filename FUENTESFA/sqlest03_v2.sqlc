@@ -1,0 +1,105 @@
+-- ============================================================
+-- Vista   : VWEST_Estadisticas_Ventas_Vendedor
+-- Módulo  : Estadísticas de Ventas
+-- Objeto  : Resume las estadísticas de ventas desglosadas por
+--           vendedor, año y mes.
+--           Relaciona el detalle de facturación (FacDtod) con
+--           el encabezado (FacDtoh) y la tabla de asignación
+--           cliente-vendedor (CxcRvc) para obtener el código
+--           de vendedor (VenCve).
+--           Cuando el cliente no tiene vendedor en CxcRvc,
+--           se usa el vendedor registrado en FacDtoh.
+--           Incluye importes brutos, descuentos, impuestos,
+--           neto a cobrar y costos.
+-- Tablas  : FacDtod   detalle de documentos de facturación
+--           FacDtoh   encabezado de documentos de facturación
+--           CxcRvc    asignación cliente-vendedor (CxC)
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Versión : 3  (mejorada)
+-- Cambios :
+--   v2 - Se reemplaza JOIN por LEFT JOIN para preservar líneas
+--          de detalle cuyos clientes no tengan vendedor asignado
+--          en CxcRvc (con LEFT JOIN VenCve = NULL para esos
+--          casos, evitando exclusión silenciosa de ventas).
+--        Se agrega FETCH FIRST 1 ROW en la subconsulta de
+--          vendedor para prevenir duplicación de filas cuando
+--          un cliente tiene más de un registro en CxcRvc.
+--        Se agrega alias explícito As en FROM y JOIN.
+--        Se documenta el JOIN y todas las columnas con su
+--          significado de negocio.
+--        Se descompone ESTINV con comentario de fórmula.
+--        Se expande GROUP BY a una columna por línea.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Mejora de formato e indentación.
+--        Cabecera de documentación completa.
+--   v3 - Se agrega JOIN con FacDtoh para obtener el vendedor
+--          cuando el cliente no tiene asignación en CxcRvc.
+--        Se usa COALESCE(T2.VenCve, T3.VenCve) para resolver
+--          el vendedor: primero CxcRvc, luego FacDtoh.
+--        Se usa CTE (WITH) para resolver el Coalesce antes del
+--          GROUP BY, evitando SQL0122 (expresión en GROUP BY
+--          no soportada en DB2 for i).
+--        Subconsulta de CxcRvc agrupada con GROUP BY + MIN
+--          para garantizar relación 1:1 sin SQL0206.
+-- ============================================================
+
+Create Or Replace View VWEST_Estadisticas_Ventas_Vendedor As
+
+-- CTE Base: resuelve el vendedor fila a fila antes de agrupar.
+-- Coalesce prioriza CxcRvc; si NULL usa el vendedor de FacDtoh.
+With Base As (
+    Select
+        Coalesce(T2.VenCve, T3.VenCve) As VenCve,
+        T1.DtoAno                       As EstAno,
+        T1.DtoMes                       As EstMes,
+        T1.DtoImp                       As DtoImp,
+        T1.DtoMpd                       As DtoMpd,
+        T1.DtoIm1                       As DtoIm1,
+        T1.DtoIm2                       As DtoIm2,
+        T1.DtoMcp                       As DtoMcp,
+        T1.DtoMcu                       As DtoMcu
+
+    From FacDtod As T1
+
+    -- JOIN con encabezado: obtiene el vendedor del documento
+    -- como fuente alternativa cuando CxcRvc no tiene registro.
+    Join FacDtoh As T3
+        On  T1.DisCve = T3.DisCve
+        And T1.DtoTip = T3.DtoTip
+        And T1.DtoNro = T3.DtoNro
+        And T1.CliCve = T3.CliCve
+
+    -- LEFT JOIN con CxcRvc: vendedor asignado al cliente.
+    -- Subconsulta agrupada (GROUP BY + MIN) garantiza 1:1.
+    Left Join (
+        Select   R.CliCve, Min(R.VenCve) As VenCve
+        From     CxcRvc R
+        Group By R.CliCve
+    ) As T2
+        On T1.CliCve = T2.CliCve
+)
+
+-- Consulta externa: agrupa por columnas simples del CTE.
+-- DB2 for i requiere columnas simples en GROUP BY, sin expresiones.
+Select
+    Base.VenCve                        As VenCve,   -- Código del vendedor
+    Base.EstAno                        As EstAno,   -- Año del período
+    Base.EstMes                        As EstMes,   -- Mes del período (1..12)
+    Sum(Base.DtoImp)                   As ESTIBV,   -- Importe Bruto de Ventas
+    Sum(Base.DtoMpd)                   As ESTIDV,   -- Importe de Descuentos
+    Sum(Base.DtoIm1 + Base.DtoIm2)     As ESTIIV,   -- Importe de Impuestos
+    Sum((Base.DtoImp - Base.DtoMpd)
+        + Base.DtoIm1 + Base.DtoIm2)   As ESTINV,   -- Importe Neto de Ventas
+    Sum(Base.DtoMcp)                   As ESTCPR,   -- Costo Promedio
+    Sum(Base.DtoMcu)                   As ESTCUL    -- Costo Último
+
+From Base
+
+Group By
+    Base.VenCve,
+    Base.EstAno,
+    Base.EstMes
+
+-- Orden sugerido para consultas directas sobre la vista:
+-- Order By Base.VenCve, Base.EstAno, Base.EstMes

@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Caja
 -- Programa  : SQLCA003
 -- Objeto    : VWCAJ_Ingresos_No_Aplicado
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de ingresos de caja no aplicados a documentos de
 --   cuentas por cobrar. Relaciona el detalle de referencias
@@ -30,7 +30,7 @@
 --       relacionados con ingresos aplicables.
 --     RecOri = 2  : origen del recibo = aplicacion CxC.
 --     SitCve = '1': recibo en estado No Aplicado.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   CliCve             Clave del cliente          (CajRech/T2)
 --   CdoCve             Clave del cod. documento   (CajRefd/T1)
@@ -48,7 +48,7 @@
 --   McaCve             Clave de maquina de caja   (CajRefd/T1)
 --   RecNum             Numero de recibo           (CajRefd/T1)
 --   Fecha_Transaccion  Fecha ISO del ingreso      (SegFec/T11)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CajRefd  T1   Detalle de referencias de recibos (base)
 --   CajRech  T2   Encabezado de recibos de caja
@@ -58,7 +58,7 @@
 --   CxcCdo   T6   Codigos de documento CxC (filtro)
 --   SegFec   T10  Tabla de fechas (Fecha_Documento)
 --   SegFec   T11  Tabla de fechas (Fecha_Transaccion)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de resolucion de fechas:
 --   Dos LEFT OUTER JOIN independientes a SegFec:
 --     T10: por (DocAno, DocMes, DocDia) de CxcDoch T3
@@ -67,7 +67,7 @@
 --          -> Fecha_Transaccion
 --   COALESCE devuelve DATE('2039-12-31') si el JOIN es NULL.
 --   SegFec cubre el rango 1940-01-01 a 2039-12-31.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Filtros aplicados:
 --   T6.CdoRel IN ('01','09','10','11')
 --             Solo documentos de tipos relacionados
@@ -75,7 +75,7 @@
 --             Solo recibos de origen aplicacion CxC
 --   T2.SitCve = '1'
 --             Solo recibos en estado No Aplicado
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. CxcRvc T5 se une solo por CliCve; si un cliente puede
 --      tener multiples vendedores activos, el LEFT JOIN podria
@@ -90,7 +90,7 @@
 --      DisCve es parte de la clave primaria del documento para
 --      evitar duplicados si un documento existe en varios
 --      distritos.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
@@ -99,7 +99,7 @@
 --                           migradas de DATE(CONCAT...) a
 --                           LEFT OUTER JOIN SegFec (T10,T11)
 --                           con COALESCE DATE('2039-12-31').
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCAJ_Ingresos_No_Aplicado AS
 SELECT

@@ -8,41 +8,42 @@
 -- Version   : 1
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Resume, por cliente y tipo de documento, la fecha del último
+-- Proposito: Resume, por cliente y tipo de documento, la fecha del ultimo
 --            documento emitido y la cantidad total de documentos registrados
---            en CxcUlt. Filtra únicamente los tipos de documento vigentes
---            para el subsistema 'CC' (Cuentas por Cobrar) según el catálogo
+--            en CxcUlt. Filtra unicamente los tipos de documento vigentes
+--            para el subsistema 'CC' (Cuentas por Cobrar) segun el catalogo
 --            de listas de documentos (SegLdm).
--- -----------------------------------------------------------------------------
--- Tablas base:
---   CxcUlt  - Últimos documentos por cliente (tabla principal, con contadores
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxcUlt  - Ultimos documentos por cliente (tabla principal, con contadores
 --             y campos de fecha descompuestos: UltAno, UltMes, UltDia)
---   CxcCdo  - Catálogo de tipos de documento de CxC
+--   CxcCdo  - Catalogo de tipos de documento de CxC
 --   SegLdm  - Lista maestra de documentos del sistema (filtrada por SisCve='CC')
 --   SegFec  - Tabla de fechas del sistema; se usa para obtener FecYmd
---             (fecha ISO) a partir de los campos año/mes/día de CxcUlt
--- -----------------------------------------------------------------------------
--- Notas técnicas:
---   - El patrón de JOIN con SegFec convierte los campos separados UltAno /
---     UltMes / UltDia en un único valor de fecha (FecYmd) sin necesidad de
---     construir una cadena; alternativa al patrón CONCAT/SUBSTRING
+--             (fecha ISO) a partir de los campos ano/mes/dia de CxcUlt
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   - El patron de JOIN con SegFec convierte los campos separados UltAno /
+--     UltMes / UltDia en un unico valor de fecha (FecYmd) sin necesidad de
+--     construir una cadena; alternativa al patron CONCAT/SUBSTRING
 --     de otras vistas.
---   - El filtro SisCve = 'CC' se coloca en la condición ON del JOIN con SegLdm.
+--   - El filtro SisCve = 'CC' se coloca en la condicion ON del JOIN con SegLdm.
 --     Como el JOIN es INNER, el resultado es equivalente a ponerlo en WHERE;
 --     se conserva en ON para no excluir filas de la tabla base (CxcUlt) si en
---     alguna revisión futura el JOIN cambiara a LEFT OUTER.
---   - LdmTip : Tipo de documento según la lista maestra.
+--     alguna revision futura el JOIN cambiara a LEFT OUTER.
+--   - LdmTip : Tipo de documento segun la lista maestra.
 --   - LdmTor : Orden / secuencia del tipo de documento.
 --   - UltCon : Contador de documentos emitidos para esa clave de documento.
---   - FecYmd : Fecha en formato ISO (YYYY-MM-DD o YYYYMMDD según el motor).
+--   - FecYmd : Fecha en formato ISO (YYYY-MM-DD o YYYYMMDD segun el motor).
 --   - T9 en el original sugiere tablas intermedias 
 --      eliminadas en versiones previas.
--- -----------------------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
---   v1  Versión original
---   v2  Alias descriptivos, JOINs explícitos (INNER JOIN), indentación
---       estándar, documentación completa y convención UPPER CASE
--- =============================================================================
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXC_Ultimos_Documentos AS
 
@@ -53,7 +54,7 @@ SELECT
     ldm.LdmTor  AS LdmTor,              -- Orden / secuencia del tipo de documento
 
     -- Agregados
-    MAX(fec.FecYmd) AS Fecha_Ultimo_Doc,    -- Fecha del último documento emitido
+    MAX(fec.FecYmd) AS Fecha_Ultimo_Doc,    -- Fecha del ultimo documento emitido
     SUM(ult.UltCon) AS Cantidad_Emitidos    -- Total de documentos emitidos
 
 FROM CxcUlt ult

@@ -6,57 +6,62 @@
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Versión   : 2.0
+-- Version   : 2`n-- Proyecto  : Petromovil
 -- --------------------------------------------------------------
--- Propósito: Maestro completo de empleados cancelados/egresados
+-- Proposito: Maestro completo de empleados cancelados/egresados
 --            (EmpSta = 'C') con datos personales, laborales,
---            de contacto y fechas clave, incluyendo años de edad
---            y años trabajados calculados correctamente con
+--            de contacto y fechas clave, incluyendo anos de edad
+--            y anos trabajados calculados correctamente con
 --            SEGLIB.SG_TIEMPO_ANOS.
 -- Correcciones v1  v2:
---   1. Anos_de_Edad corregido: SEGLIB.SG_TIEMPO_ANOS vía
+--   1. Anos_de_Edad corregido: SEGLIB.SG_TIEMPO_ANOS via
 --      CROSS JOIN LATERAL (sustituye YEAR(CURRENT_DATE - Date(...))
---      que producía resultados incorrectos por DURATION DB2).
+--      que producia resultados incorrectos por DURATION DB2).
 --   2. Anos_Trabajo_Empresa corregido: SEGLIB.SG_TIEMPO_ANOS
 --      (FechaIngreso  FechaSalida)  sustituye YEAR(Salida-Ingreso)
---      mismo problema de aritmética DURATION.
+--      mismo problema de aritmetica DURATION.
 --   3. Cedula_Empleado centralizada en LATERAL CE con
 --      LATERAL(VALUES(...))  elimina CASE repetido 3 veces
 --      y corrige T1.EmpCed sin calificador de tabla.
---   4. Fecha_Nacimiento centralizada en LATERAL FN (1 cálculo).
---   5. Fecha_Ingreso centralizada en LATERAL FI (1 cálculo).
---   6. Fecha_Salida_Empresa centralizada en LATERAL FS (1 cálculo).
+--   4. Fecha_Nacimiento centralizada en LATERAL FN (1 calculo).
+--   5. Fecha_Ingreso centralizada en LATERAL FI (1 calculo).
+--   6. Fecha_Salida_Empresa centralizada en LATERAL FS (1 calculo).
 --   7. Fecha_Fijacion, Fecha_Inicio/Fin_Vacaciones y
---      Fecha_Salida_Empresa protegidas con CASE de validación
+--      Fecha_Salida_Empresa protegidas con CASE de validacion
 --      (NULL/0/rango) para evitar error en DATE().
---   8. Capitalización SQL normalizada a mayúsculas.
---   9. Cabecera de documentación añadida.
+--   8. Capitalizacion SQL normalizada a mayusculas.
+--   9. Cabecera de documentacion anadida.
 -- Notas:
 --   - Filtra EmpSta = 'C' (cancelados/egresados).
 --   - Gemela de VWNOM_MAESTRO_EMPLEADOS (sqlnm001) con el
 --     campo adicional Fecha_Salida_Empresa y Anos_Trabajo_Empresa,
 --     y sin Meses_En_la_Empresa ni Dias_En_la_Empresa.
--- Tablas base:
+-- Tablas referenciadas:
 --   NomEmp (T1)  Maestro de empleados
 --   NomDep (T2)  Departamentos
 --   NomCar (T3)  Cargos
---   NomCat (T4)  Categorías
---   NomCmc (T5)  Centros de costo de nómina
+--   NomCat (T4)  Categorias
+--   NomCmc (T5)  Centros de costo de nomina
 --   NomCno (T6)  Conceptos
 --   NomNac (T7)  Nacionalidades
 --   NomUbi (T8)  Ubicaciones
 --   NomPro (T9)  Provincias
 --   CogCco (T10) Centros de costo contables
--- ============================================================
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Documentacion: secciones estandar,
+--                           sin acentos, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWNOM_MAESTRO_EMPLEADOS_CANCELADOS AS
 SELECT
-    -- Identificación del empleado
+    -- Identificacion del empleado
     T1.EmpCve,
     T1.EmpNom,
     T1.EmpApe,
 
-    -- Cédula formateada ###-#######-# centralizada en LATERAL CE
+    -- Cedula formateada ###-#######-# centralizada en LATERAL CE
     CE.Cedula_Empleado,
 
     -- Clasificaciones
@@ -98,13 +103,13 @@ SELECT
     -- Fecha de nacimiento centralizada en LATERAL FN
     FN.Fecha_Nacimiento,
 
-    -- Edad en años usando SG_TIEMPO_ANOS (correcto para DB2 for i)
+    -- Edad en anos usando SG_TIEMPO_ANOS (correcto para DB2 for i)
     EA.ANOS                                     AS Anos_de_Edad,
 
     -- Fecha de ingreso centralizada en LATERAL FI
     FI.Fecha_Ingreso,
 
-    -- Fechas opcionales con centinela DATE('1900-01-01') si inválidas
+    -- Fechas opcionales con centinela DATE('1900-01-01') si invalidas
     CASE
         WHEN T1.EmpAfi IS NULL OR T1.EmpAfi = 0
           OR T1.EmpMfi IS NULL OR T1.EmpMfi = 0
@@ -150,9 +155,9 @@ SELECT
     -- Fecha de salida centralizada en LATERAL FS
     FS.Fecha_Salida_Empresa,
 
-    -- Años trabajados: desde Fecha_Ingreso hasta Fecha_Salida
+    -- Anos trabajados: desde Fecha_Ingreso hasta Fecha_Salida
     -- SG_TIEMPO_ANOS es correcto; YEAR(Salida-Ingreso) usa DURATION DB2
-    -- y produce resultado incorrecto si el aniversario no ocurrió
+    -- y produce resultado incorrecto si el aniversario no ocurrio
     AT.ANOS                                     AS Anos_Trabajo_Empresa
 
 FROM NomEmp T1
@@ -166,7 +171,7 @@ LEFT OUTER JOIN NomUbi T8  ON T1.UbiCve = T8.UbiCve
 LEFT OUTER JOIN NomPro T9  ON T1.ProCve = T9.ProCve
 LEFT OUTER JOIN CogCco T10 ON T1.CcoCve = T10.CcoCve
 
--- LATERAL CE: cédula formateada ###-#######-# (un solo CASE aplanado)
+-- LATERAL CE: cedula formateada ###-#######-# (un solo CASE aplanado)
 CROSS JOIN LATERAL (
     SELECT
         SUBSTR(CED_VAL, 1,  3) || '-' ||
@@ -195,7 +200,7 @@ CROSS JOIN LATERAL (
     FROM SYSIBM.SYSDUMMY1
 ) AS FN
 
--- LATERAL EA: años de edad usando SG_TIEMPO_ANOS (correcto)
+-- LATERAL EA: anos de edad usando SG_TIEMPO_ANOS (correcto)
 CROSS JOIN LATERAL (
     SELECT ANOS
     FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(FN.Fecha_Nacimiento, CURRENT_DATE))
@@ -215,7 +220,7 @@ CROSS JOIN LATERAL (
 ) AS FI
 
 -- LATERAL FS: fecha de salida construida y validada una sola vez
--- Centinela DATE('1900-01-01') si campos inválidos
+-- Centinela DATE('1900-01-01') si campos invalidos
 CROSS JOIN LATERAL (
     SELECT CASE
                WHEN T1.EmpAsa IS NULL OR T1.EmpAsa = 0
@@ -237,7 +242,7 @@ CROSS JOIN LATERAL (
     FROM SYSIBM.SYSDUMMY1
 ) AS FS
 
--- LATERAL AT: años trabajados desde ingreso hasta salida (correcto)
+-- LATERAL AT: anos trabajados desde ingreso hasta salida (correcto)
 -- Si Fecha_Salida es el centinela 1900-01-01, SG_TIEMPO_ANOS retorna 0
 CROSS JOIN LATERAL (
     SELECT ANOS

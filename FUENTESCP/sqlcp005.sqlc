@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Cuentas por Pagar
 -- Programa  : SQLCP005
 -- Objeto    : VWCXP_Pagos_Realizado_Documentos
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de pagos realizados a proveedores con el detalle de
 --   los documentos aplicados en cada transaccion. Consolida
@@ -35,7 +35,7 @@
 --
 --   Filtro: solo pagos cuyo tipo de movimiento (T2.MovTip)
 --   este en (1, 2, 3).
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   Codigo_del_Banco              Clave del banco     (CxpTrah/T1)
 --   Nombre_del_Banco              Nombre del banco    (CogBan/T4)
@@ -51,7 +51,7 @@
 --   Fecha_De_La_Factura           Fecha ISO del doc.  (SegFec/T21)
 --   Numero_Del_Comprobantes_Fisca Num. NCF            (CxpDpeh/T8)
 --   Monto_de_la_Transaccion       Valor aplicado      (CxpDped/T3)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CxpTrah  T1   Encabezado transacciones de pago CxP (base)
 --   CxpMov   T2   Tipos de movimiento (filtro MovTip)
@@ -63,7 +63,7 @@
 --   CxpDpeh  T8   Encabezado de documentos CxP
 --   SegFec   T20  Tabla de fechas (Fecha_del_Cheque)
 --   SegFec   T21  Tabla de fechas (Fecha_De_La_Factura)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de resolucion de fechas:
 --   T20 : LEFT OUTER JOIN a SegFec por tres campos separados
 --         (FseAno, FseMes, FseDia de CxpTrah T1) -> FecIso.
@@ -71,7 +71,7 @@
 --         (DpeAno, DpeMes, DpeDia de CxpDpeh T8) -> FecIso.
 --   COALESCE devuelve DATE('2039-12-31') si el JOIN es NULL.
 --   SegFec cubre el rango 1940-01-01 a 2039-12-31.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de JOIN CxpDped T3:
 --   El detalle de pago se relaciona con el encabezado de la
 --   transaccion por seis campos:
@@ -79,16 +79,16 @@
 --     FseAno=DpeAtr, FseMes=DpeMtr, FseDia=DpeDtr
 --   Esto garantiza que solo se incluyen los documentos
 --   aplicados en esa transaccion especifica de pago.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de decodificacion:
 --   SecTtr  1 = Cheque
 --           2 = Transferencia
 --           otro = espacio en blanco
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Filtros aplicados:
 --   T2.MovTip IN (1, 2, 3)
 --             Solo pagos de tipos de movimiento 1, 2 y 3.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. CxpMov se une dos veces (T2 y T7): T2 filtra por
 --      MovTip usando T1.DpeMot; T7 aporta MovSig usando
@@ -109,7 +109,7 @@
 --   5. El nombre del objeto tiene 'realizado' en minuscula;
 --      normalizar a VWCXP_Pagos_Realizados_Documentos (plural
 --      y mayuscula inicial) para consistencia con otras vistas.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
@@ -117,7 +117,7 @@
 --                           JOINs a SegFec (T20, T21)
 --                           convertidos a LEFT OUTER JOIN
 --                           con COALESCE DATE('2039-12-31').
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXP_Pagos_Realizado_Documentos AS
 SELECT

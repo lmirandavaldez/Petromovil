@@ -1,12 +1,12 @@
--- =============================================================
+-- ==============================================================
 -- Modulo    : Cuentas por Pagar
 -- Programa  : SQLCP002
 -- Objeto    : VWCXP_Documentos_Registrados
 -- Tipo      : Vista SQL (View)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 2
--- -------------------------------------------------------------
+-- Version   : 2`n-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
 -- Descripcion:
 --   Vista de documentos registrados en cuentas por pagar.
 --   Consolida el encabezado del documento (CxpDpeh) con el
@@ -24,7 +24,7 @@
 --
 --   Si alguna fecha no existe en SegFec, COALESCE devuelve
 --   el tope del sistema: DATE('2039-12-31').
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Campos retornados (en orden original):
 --   ProCve             Clave del proveedor        (CxpDpeh/T1)
 --   ProNom             Nombre del proveedor       (CxpPro/T2)
@@ -44,7 +44,7 @@
 --   PerAno             Ano del periodo            (CxpDpeh/T1)
 --   PerNum             Numero del periodo         (CxpDpeh/T1)
 --   DpeFtr             Fecha transacc. (FecYMd)   (CxpDpeh/T1)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Tablas referenciadas:
 --   CxpDpeh  T1   Encabezado de documentos CxP (tabla base)
 --   CxpPro   T2   Proveedores
@@ -52,7 +52,7 @@
 --   SegMon   T4   Monedas
 --   SegFec   T9   Tabla de fechas (Fecha_Documento)
 --   SegFec   T10  Tabla de fechas (Fecha_Transaccion)
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Logica de resolucion de fechas:
 --   T9  : LEFT OUTER JOIN a SegFec por tres campos separados
 --         (DpeAno, DpeMes, DpeDia) -> devuelve FecIso.
@@ -62,7 +62,7 @@
 --   SegFec cubre el rango 1940-01-01 a 2039-12-31.
 --   Nota: DpeFtr se expone tambien como campo raw para
 --   preservar el valor original YYYYMMDD del registro.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Sugerencias de mejora:
 --   1. Los JOINs a CxpPro, CxpMov y SegMon son INNER JOIN;
 --      si puede existir un documento sin proveedor, movimiento
@@ -79,7 +79,7 @@
 --      formateo; si el sistema requiere validacion de formato
 --      NCF, considerar agregar un campo calculado con el
 --      formato estandar.
--- -------------------------------------------------------------
+-- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  ---------------------------------
@@ -87,7 +87,7 @@
 --                           JOINs a SegFec (T9, T10)
 --                           convertidos a LEFT OUTER JOIN
 --                           con COALESCE DATE('2039-12-31').
--- =============================================================
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWCXP_Documentos_Registrados AS
 SELECT

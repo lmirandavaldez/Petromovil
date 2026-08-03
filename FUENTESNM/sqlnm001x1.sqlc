@@ -1,44 +1,55 @@
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
--- ============================================================
--- Vista    : VWNOM_MAESTRO_EMPLEADOS_V1
--- Propósito: Maestro completo de empleados activos con datos
---            personales, laborales, de contacto y fechas clave,
---            incluyendo antigüedad desglosada en años, meses y
---            días calculada mediante las funciones de tabla
---            SEGLIB.SG_TIEMPO_*.
--- Versión  : 2.0
--- Correcciones v1 → v2:
---   1. SQL0390 corregido: SG_TIEMPO_ANOS, SG_TIEMPO_MESES y
---      SG_TIEMPO_DIAS se invocan con CROSS JOIN LATERAL /
---      TABLE(...) en lugar de como funciones escalares.
---   2. Anos_de_Edad corregido: se usa SEGLIB.SG_TIEMPO_ANOS
---      en lugar de YEAR(Current Date - Date(...)), que producía
---      resultados incorrectos por aritmética de duraciones DB2.
---   3. Fecha_Nacimiento centralizada en LATERAL FN (1 cálculo).
---   4. Fecha_Ingreso centralizada en LATERAL FI (1 cálculo).
---   5. Cedula_Empleado centralizada en LATERAL CE (1 cálculo).
---   6. Código comentado eliminado (bloques de fechas vacaciones).
--- Tablas base:
+-- ==============================================================
+-- Modulo    : Nomina de Empleados
+-- Programa  : SQLNM001X1
+-- Objeto    : VWNOM_MAESTRO_EMPLEADOS_V1
+-- Tipo      : Vista SQL (View)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 3
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Maestro completo de empleados activos con datos personales,
+--   laborales, de contacto y fechas clave. Incluye antiguedad
+--   desglosada en anos, meses y dias calculada mediante las
+--   funciones de tabla SEGLIB.SG_TIEMPO_*.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   (Ver SELECT en el SQL)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
 --   NomEmp (T1)  Maestro de empleados
 --   NomDep (T2)  Departamentos
 --   NomCar (T3)  Cargos
---   NomCat (T4)  Categorías
---   NomCmc (T5)  Centros de costo de nómina
+--   NomCat (T4)  Categorias
+--   NomCmc (T5)  Centros de costo de nomina
 --   NomCno (T6)  Conceptos
 --   NomNac (T7)  Nacionalidades
 --   NomUbi (T8)  Ubicaciones
 --   NomPro (T9)  Provincias
---   CogCco (T10) Centros de costo contables
--- ============================================================
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Fechas calculadas via LATERAL usando DATE(ano-mes-dia)
+--   con validacion de NULL y rango. Centinela 1900-01-01.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Ver versiones posteriores (sqlnm001) para mejoras.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-03  L. Miranda  Encabezado estandar, formato 80 cols
+-- ==============================================================
 
 CREATE OR REPLACE VIEW VWNOM_MAESTRO_EMPLEADOS_V1 AS
 SELECT
-    -- Identificación del empleado
+    -- Identificacion del empleado
     T1.EmpCve,
     T1.EmpNom,
     T1.EmpApe,
 
-    -- Cédula formateada (###-#######-#) centralizada en LATERAL CE
+    -- Cedula formateada (###-#######-#) centralizada en LATERAL CE
     CE.Cedula_Empleado,
 
     -- Clasificaciones
@@ -80,21 +91,21 @@ SELECT
     -- Fecha de nacimiento centralizada en LATERAL FN
     FN.Fecha_Nacimiento,
 
-    -- Edad en años usando SG_TIEMPO_ANOS (correcto para DB2 for i)
+    -- Edad en anos usando SG_TIEMPO_ANOS (correcto para DB2 for i)
     -- YEAR(CURRENT_DATE - FechaNac) produce resultados incorrectos
-    -- porque extrae solo la parte de años de una DURATION, sin
-    -- considerar si el cumpleaños del año actual ya ocurrió.
+    -- porque extrae solo la parte de anos de una DURATION, sin
+    -- considerar si el cumpleanos del ano actual ya ocurrio.
     EA.ANOS                                     AS Anos_de_Edad,
 
     -- Fecha de ingreso centralizada en LATERAL FI
     FI.Fecha_Ingreso,
 
-    -- Antigüedad desglosada — funciones de tabla via CROSS JOIN LATERAL
+    -- Antiguedad desglosada — funciones de tabla via CROSS JOIN LATERAL
     A.ANOS                                      AS Anos_En_la_Empresa,
     M.MESES                                     AS Meses_En_la_Empresa,
     D.DIAS                                      AS Dias_En_la_Empresa,
 
-    -- Fechas opcionales con centinela DATE('1900-01-01') si inválidas
+    -- Fechas opcionales con centinela DATE('1900-01-01') si invalidas
     CASE
         WHEN T1.EmpAfi IS NULL OR T1.EmpAfi = 0
           OR T1.EmpMfi IS NULL OR T1.EmpMfi = 0
@@ -148,10 +159,10 @@ LEFT OUTER JOIN NomUbi T8  ON T1.UbiCve = T8.UbiCve
 LEFT OUTER JOIN NomPro T9  ON T1.ProCve = T9.ProCve
 LEFT OUTER JOIN CogCco T10 ON T1.CcoCve = T10.CcoCve
 
--- LATERAL CE: cédula formateada ###-#######-#
+-- LATERAL CE: cedula formateada ###-#######-#
 -- (un solo CASE aplanado)
--- La subconsulta interna se eliminó porque 
--- rompía la correlación con T1.
+-- La subconsulta interna se elimino porque 
+-- rompia la correlacion con T1.
 CROSS JOIN LATERAL (
     SELECT
         SUBSTR(CED_VAL, 1,  3) || '-' ||
@@ -180,7 +191,7 @@ CROSS JOIN LATERAL (
     FROM SYSIBM.SYSDUMMY1
 ) AS FN
 
--- LATERAL EA: años de edad usando SG_TIEMPO_ANOS (correcto)
+-- LATERAL EA: anos de edad usando SG_TIEMPO_ANOS (correcto)
 CROSS JOIN LATERAL (
     SELECT ANOS
     FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(FN.Fecha_Nacimiento, CURRENT_DATE))
@@ -199,19 +210,19 @@ CROSS JOIN LATERAL (
     FROM SYSIBM.SYSDUMMY1
 ) AS FI
 
--- LATERAL A: años completos de antigüedad
+-- LATERAL A: anos completos de antiguedad
 CROSS JOIN LATERAL (
     SELECT ANOS
     FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(FI.Fecha_Ingreso, CURRENT_DATE))
 ) AS A
 
--- LATERAL M: meses fraccionarios de antigüedad
+-- LATERAL M: meses fraccionarios de antiguedad
 CROSS JOIN LATERAL (
     SELECT MESES
     FROM TABLE(SEGLIB.SG_TIEMPO_MESES(FI.Fecha_Ingreso, CURRENT_DATE))
 ) AS M
 
--- LATERAL D: días fraccionarios de antigüedad (IncluirDia = 1)
+-- LATERAL D: dias fraccionarios de antiguedad (IncluirDia = 1)
 CROSS JOIN LATERAL (
     SELECT DIAS
     FROM TABLE(SEGLIB.SG_TIEMPO_DIAS(FI.Fecha_Ingreso, CURRENT_DATE, 1))
