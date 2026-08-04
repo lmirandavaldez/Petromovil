@@ -1,4 +1,3 @@
---CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 -- ==============================================================
 -- Modulo    : Seguridad
 -- Programa  : SQLSGF002
@@ -32,34 +31,48 @@
 -- Sugerencias de mejora:
 --   1. Para diferencia completa (anos+meses+dias) usar la
 --      funcion de tabla SEGLIB.SG_TIEMPO_EXACTO.
+-- Uso:
+--   SELECT * FROM TABLE(SEGLIB.SG_TIEMPO_ANOS(
+--       DATE('1964-07-23'),
+--       DATE('2026-07-23')
+--   )) AS x;
+-- ============================================================
 
-Create Or Replace Function SEGLIB.SG_TIEMPO_ANOS (
-    FechaDes Date,
-    FechaHas Date
+CREATE OR REPLACE FUNCTION SEGLIB.SG_TIEMPO_ANOS (
+  FechaDes DATE,
+  FechaHas DATE
 )
-Returns Integer
-Language Sql
-Specific SG_TIEMPO_ANOS
-Deterministic
-No External Action
-Returns Null On Null Input
-Begin
-    Declare vAnos Integer;
+RETURNS TABLE (
+  ANOS INTEGER
+)
+LANGUAGE SQL
+DETERMINISTIC
+NO EXTERNAL ACTION
+RETURNS NULL ON NULL INPUT -- Si cualquier parámetro
+                           -- es NULL, retorna tabla vacía
+BEGIN
+  DECLARE vAnos INTEGER DEFAULT 0;
 
-    -- Validacion: si las fechas estan invertidas devolver 0
-    If FechaDes > FechaHas Then
-        Return 0;
-    End If;
+  -- Protección: si la fecha final es anterior a la inicial
+  -- se devuelve 0 en lugar de un valor negativo silencioso.
+  IF FechaHas < FechaDes THEN
+    PIPE (0);
+    RETURN;
+  END IF;
 
-    -- Anos completos (ajuste si no ha cumplido el aniversario)
-    Set vAnos = Year(FechaHas) - Year(FechaDes);
-    If (Month(FechaHas) < Month(FechaDes))
-       Or (Month(FechaHas) = Month(FechaDes) And
-           Day(FechaHas)   < Day(FechaDes)) Then
-        Set vAnos = vAnos - 1;
-    End If;
+  -- Diferencia base en años de calendario
+  SET vAnos = YEAR(FechaHas) - YEAR(FechaDes);
 
-    Return vAnos;
-End;
+  -- Ajuste: si todavía no ha pasado el aniversario en el año actual
+  IF (MONTH(FechaHas) < MONTH(FechaDes))
+     OR (MONTH(FechaHas) = MONTH(FechaDes) AND
+         DAY(FechaHas) < DAY(FechaDes)) THEN
+    SET vAnos = vAnos - 1;
+  END IF;
 
-Grant Execute On Function SEGLIB.SG_TIEMPO_ANOS To Public;
+  PIPE (vAnos);
+  RETURN;
+END;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_TIEMPO_ANOS TO PUBLIC;

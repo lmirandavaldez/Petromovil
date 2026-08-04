@@ -1,7 +1,7 @@
 -- ==============================================================
 -- Modulo    : Seguridad
 -- Programa  : SQLSGF006
--- Objeto    : SEGLIB.SG_CALC_IMP_ARTICULO
+-- Objeto    : SEGLIB.SG_CALCULO_IMPUESTO_SIMPLE
 -- Tipo      : Funcion de tabla SQL (Table Function)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
@@ -28,14 +28,14 @@
 --   ----------  ----------  -----------------------------------
 --   2026-08-03  L. Miranda  Encabezado estandar, formato 80 cols
 -- ==============================================================
-CREATE OR REPLACE FUNCTION SEGLIB.SG_CALC_IMP_ARTICULO (
-    -- Codigo del articulo en InvArt
+CREATE OR REPLACE FUNCTION SEGLIB.SG_CALCULO_IMPUESTO_SIMPLE (
+    -- Código del artículo en InvArt
     pCodArt  CHAR(20),
-    -- Precio base del articulo (antes o despues de impuesto, segun ParPim)
+    -- Precio base del artículo (antes o después de impuesto, según ParPim)
     pPrecio  DECIMAL(12,3)
 )
 RETURNS TABLE (
-    PREDI1   DECIMAL(12,3),   -- Precio antes de impuesto (tasa 1); 
+    PREDI1   DECIMAL(12,3),   -- Precio antes de impuesto (tasa 1);
                               -- 0 si precio ya es sin impuesto
     IMP1     DECIMAL(16,6),   -- Monto del impuesto calculado (tasa 1)
     PREDI2   DECIMAL(12,3),   -- Precio antes de impuesto (tasa 2)
@@ -43,32 +43,38 @@ RETURNS TABLE (
 )
 SPECIFIC          SEGLIB.SG_CALC_IMP_ARTICULO
 LANGUAGE          SQL
-DETERMINISTIC                    -- Para el mismo articulo y precio
+DETERMINISTIC                    -- Para el mismo artículo y precio
                                  -- el resultado es igual
 NO EXTERNAL ACTION               -- Sin efectos secundarios externos
-CALLED ON NULL INPUT             -- La funcion se invoca aunque lleguen NULLs
+CALLED ON NULL INPUT             -- La función se invoca aunque lleguen NULLs
 BEGIN
 
     -- --------------------------------------------------------
     -- Variables de trabajo
     -- --------------------------------------------------------
-    DECLARE vArtImp  CHAR(1)        DEFAULT ' ';  -- Indicador de gravabilidad 
+    DECLARE vArtImp  CHAR(1)        DEFAULT ' ';  -- Indicador de gravabilidad
                                                   -- ('S'=gravable)
-    DECLARE vParIm1  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 1 en porcentaje (ej. 18.000000)
+    DECLARE vParIm1  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 1 en porcentaje
+                                                  -- (ej. 18.000000)
     DECLARE vParIm2  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 2 en porcentaje
-    DECLARE vParPim  CHAR(1)        DEFAULT 'N';  -- 'S'=precio incluye impuesto;
-                                                  -- 'N'=no lo incluye
-    DECLARE vPorIm1  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 1 expresada como 
-                                                  -- proporcion (÷100)
-    DECLARE vPorIm2  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 2 expresada como proporcion
-    DECLARE vPredi1  DECIMAL(12,3)  DEFAULT 0;    -- Precio antes de impuesto tasa 1
+    DECLARE vParPim  CHAR(1)        DEFAULT 'N';  -- 'S'=precio incluye
+                                                  -- impuesto; 'N'=no lo incluye
+    DECLARE vPorIm1  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 1 expresada
+                                                  -- como proporción (÷100)
+    DECLARE vPorIm2  DECIMAL(9,6)   DEFAULT 0;    -- Tasa 2 expresada
+                                                  -- como proporción
+    DECLARE vPredi1  DECIMAL(12,3)  DEFAULT 0;    -- Precio antes de
+                                                  -- impuesto tasa 1
     DECLARE vImp1    DECIMAL(16,6)  DEFAULT 0;    -- Monto impuesto tasa 1
-    DECLARE vPredi2  DECIMAL(12,3)  DEFAULT 0;    -- Precio antes de impuesto tasa 2
+    DECLARE vPredi2  DECIMAL(12,3)  DEFAULT 0;    -- Precio antes de
+                                                  -- impuesto tasa 2
     DECLARE vImp2    DECIMAL(16,6)  DEFAULT 0;    -- Monto impuesto tasa 2
-    DECLARE vFecha   DATE;                        -- Fecha de proceso (CURRENT_DATE)
-    DECLARE vEsGrav  CHAR(1)        DEFAULT 'N';  -- Flag normalizado de gravabilidad
-    DECLARE vPimInc  CHAR(1)        DEFAULT 'N';  -- Flag normalizado de precio con
-                                                  -- impuesto
+    DECLARE vFecha   DATE;                        -- Fecha de proceso
+                                                  -- (CURRENT_DATE)
+    DECLARE vEsGrav  CHAR(1)        DEFAULT 'N';  -- Flag normalizado
+                                                  -- de gravabilidad
+    DECLARE vPimInc  CHAR(1)        DEFAULT 'N';  -- Flag normalizado de
+                                                  -- precio con impuesto
 
     -- --------------------------------------------------------
     -- Fecha de proceso
@@ -76,11 +82,11 @@ BEGIN
     SET vFecha = CURRENT_DATE;
 
     -- --------------------------------------------------------
-    -- Leer indicador de gravabilidad del articulo desde InvArt
+    -- Leer indicador de gravabilidad del artículo desde InvArt
     -- --------------------------------------------------------
     BEGIN
         DECLARE CONTINUE HANDLER FOR NOT FOUND
-            BEGIN END;                             -- Si no existe el articulo, 
+            BEGIN END;                             -- Si no existe el artículo,
                                                     -- vArtImp queda ' '
 
         SELECT ArtImp
@@ -91,13 +97,13 @@ BEGIN
     END;
 
     -- --------------------------------------------------------
-    -- Leer parametros de tasas de impuesto desde InvPar
-    -- Se toma el unico/primer registro de la tabla de parametros
+    -- Leer parámetros de tasas de impuesto desde InvPar
+    -- Se toma el único/primer registro de la tabla de parámetros
     -- --------------------------------------------------------
     BEGIN
         DECLARE CONTINUE HANDLER FOR NOT FOUND
             BEGIN
-                -- Si no hay parametros se asume sin impuesto
+                -- Si no hay parámetros se asume sin impuesto
                 SET vParIm1 = 0;
                 SET vParIm2 = 0;
                 SET vParPim = 'N';
@@ -112,8 +118,8 @@ BEGIN
     END;
 
     -- --------------------------------------------------------
-    -- Regla historica: antes del 01/01/2013 se usaba la tasa 2
-    -- como tasa vigente (tasa 1 no existia)
+    -- Regla histórica: antes del 01/01/2013 se usaba la tasa 2
+    -- como tasa vigente (tasa 1 no existía)
     -- --------------------------------------------------------
     IF vFecha < DATE('2013-01-01') THEN
         SET vParIm1 = vParIm2;
@@ -126,7 +132,7 @@ BEGIN
     SET vPimInc = UPPER(TRIM(COALESCE(vParPim, 'N')));
 
     -- --------------------------------------------------------
-    -- Calcular impuesto solo si el articulo es gravable
+    -- Calcular impuesto solo si el artículo es gravable
     -- --------------------------------------------------------
     IF vEsGrav = 'S' THEN
 
@@ -167,7 +173,7 @@ BEGIN
         END IF;
 
     ELSE
-        -- Articulo no gravable: todos los resultados en cero
+        -- Artículo no gravable: todos los resultados en cero
         SET vPredi1 = 0;
         SET vImp1   = 0;
         SET vPredi2 = 0;
@@ -187,5 +193,5 @@ BEGIN
 
 END;
 
--- Conceder permisos de ejecucion a todos los usuarios
-GRANT EXECUTE ON SPECIFIC FUNCTION SEGLIB.SG_CALC_IMP_ARTICULO TO PUBLIC;
+-- Conceder permisos de ejecución a todos los usuarios
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_CALCULO_IMPUESTO_SIMPLE TO PUBLIC;

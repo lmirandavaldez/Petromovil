@@ -39,73 +39,80 @@
 --      eficiente al no calcular meses y dias.
 --   2. PIPE es sintaxis DB2 for i para retornar filas en una
 --      funcion de tabla; no es estandar ANSI SQL.
+-- Uso:
+--   SELECT * FROM TABLE(SG_TIEMPO_EXACTO(
+--       DATE('1964-07-23'),
+--       DATE('2026-07-23'),
+--       0
+--   )) AS x;
+-- ============================================================
 
-Create Or Replace Function SEGLIB.SG_TIEMPO_EXACTO (
-    FechaDes   Date,
-    FechaHas   Date,
-    IncluirDia SmallInt Default 1
-    -- 1 = incluir dia final (convencion SG7006), 0 = excluir
+CREATE OR REPLACE FUNCTION SEGLIB.SG_TIEMPO_EXACTO (
+    FechaDes   DATE,
+    FechaHas   DATE,
+    IncluirDia SMALLINT DEFAULT 1
+    -- 1 = incluir día final (convención SG7006), 0 = excluir
 )
-Returns Table (
-    Anos  Integer,
-    Meses Integer,
-    Dias  Integer
+RETURNS TABLE (
+    Anos  INTEGER,
+    Meses INTEGER,
+    Dias  INTEGER
 )
-Language Sql
-Specific SG_TIEMPO_EXACTO
-Deterministic
-No External Action
-Returns Null On Null Input
-Begin
-    Declare vAnos      Integer;
-    Declare vMeses     Integer;
-    Declare vDias      Integer;
-    Declare FechaBase  Date;
-    Declare FechaBase2 Date;
+LANGUAGE SQL
+SPECIFIC SG_TIEMPO_EXACTO
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN
+    DECLARE vAnos      INTEGER;
+    DECLARE vMeses     INTEGER;
+    DECLARE vDias      INTEGER;
+    DECLARE FechaBase  DATE;
+    DECLARE FechaBase2 DATE;
 
-    -- Validacion: si las fechas estan invertidas devolver ceros
-    If FechaDes > FechaHas Then
-        Pipe (0, 0, 0);
-        Return;
-    End If;
+    -- Validación: si las fechas están invertidas devolver ceros
+    IF FechaDes > FechaHas THEN
+        PIPE (0, 0, 0);
+        RETURN;
+    END IF;
 
-    -- Anos completos (ajuste si no ha cumplido el aniversario)
-    Set vAnos = Year(FechaHas) - Year(FechaDes);
-    If (Month(FechaHas) < Month(FechaDes))
-       Or (Month(FechaHas) = Month(FechaDes) And
-           Day(FechaHas)   < Day(FechaDes)) Then
-        Set vAnos = vAnos - 1;
-    End If;
+    -- Años completos (ajuste si no ha cumplido el aniversario)
+    SET vAnos = YEAR(FechaHas) - YEAR(FechaDes);
+    IF (MONTH(FechaHas) < MONTH(FechaDes))
+       OR (MONTH(FechaHas) = MONTH(FechaDes) AND
+           DAY(FechaHas)   < DAY(FechaDes)) THEN
+        SET vAnos = vAnos - 1;
+    END IF;
 
-    -- Fecha base tras restar los anos completos
-    -- (ADD_MONTHS evita fechas invalidas, ej. 29-feb)
-    Set FechaBase = Add_Months(FechaDes, vAnos * 12);
+    -- Fecha base tras restar los años completos
+    -- (ADD_MONTHS evita fechas inválidas, ej. 29-feb)
+    SET FechaBase = ADD_MONTHS(FechaDes, vAnos * 12);
 
     -- Meses restantes entre FechaBase y FechaHas
-    Set vMeses = (Year(FechaHas)  * 12 + Month(FechaHas))
-               - (Year(FechaBase) * 12 + Month(FechaBase));
+    SET vMeses = (YEAR(FechaHas)  * 12 + MONTH(FechaHas))
+               - (YEAR(FechaBase) * 12 + MONTH(FechaBase));
 
-    If Day(FechaHas) < Day(FechaBase) Then
-        Set vMeses = vMeses - 1;
-    End If;
+    IF DAY(FechaHas) < DAY(FechaBase) THEN
+        SET vMeses = vMeses - 1;
+    END IF;
 
-    -- Fecha base tras restar tambien los meses
-    Set FechaBase2 = Add_Months(FechaBase, vMeses);
+    -- Fecha base tras restar también los meses
+    -- (ADD_MONTHS garantiza fecha válida)
+    SET FechaBase2 = ADD_MONTHS(FechaBase, vMeses);
 
-    -- Dias restantes
-    Set vDias = FechaHas - FechaBase2;
+    -- Días restantes
+    SET vDias = FechaHas - FechaBase2;
 
-    If IncluirDia = 1 Then
-        Set vDias = vDias + 1;   -- convencion inclusiva (como SG7006)
-    End If;
+    IF IncluirDia = 1 THEN
+        SET vDias = vDias + 1;   -- convención inclusiva (como SG7006)
+    END IF;
 
     -- Seguridad: no devolver negativos
-    If vDias < 0 Then
-        Set vDias = 0;
-    End If;
+    IF vDias < 0 THEN
+        SET vDias = 0;
+    END IF;
 
-    Pipe (vAnos, vMeses, vDias);
-    Return;
-End;
+    PIPE (vAnos, vMeses, vDias);
+    RETURN;
+END;
 
-Grant Execute On Function SEGLIB.SG_TIEMPO_EXACTO To Public;
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_TIEMPO_EXACTO TO PUBLIC;

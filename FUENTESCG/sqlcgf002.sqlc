@@ -1,78 +1,125 @@
---CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 -- ==============================================================
 -- Modulo    : Contabilidad General
--- Programa  : SQLCGF002
--- Objeto    : SEGLIB.SG_TIEMPO_ANOS
--- Tipo      : Funcion de tabla SQL (Table Function)
+-- Programa  : CG_PERIODO_POSTERIOR
+-- Objeto    : SEGLIB.CG_PERIODO_POSTERIOR
+-- Tipo      : Funcion SQL (Table Function)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 4
+-- Version   : 2
 -- Proyecto  : Petromovil
 -- --------------------------------------------------------------
 -- Proposito:
---   Calcula la diferencia en anos cumplidos entre dos fechas.
---   Es la version Table Function de SG_TIEMPO_ANOS equivalente
---   al programa SG7006.
+--   Retorna el periodo contable inmediatamente posterior al
+--   periodo indicado por los parametros p_perano y p_pernum.
 -- --------------------------------------------------------------
 -- Parametros de entrada:
---   FechaDes  DATE  Fecha de inicio (desde).
---   FechaHas  DATE  Fecha de fin (hasta).
+--   p_perano  INTEGER  Anio del periodo de referencia
+--   p_pernum  INTEGER  Numero del periodo de referencia
 -- --------------------------------------------------------------
 -- Campos retornados (en orden original):
---   ANOS  INTEGER  Anos cumplidos (>= 0).
---         NULL     si alguno de los parametros es NULL.
---         0        si FechaHas < FechaDes.
+--   PERANO    INTEGER      Anio del periodo
+--   PERNUM    INTEGER      Numero del periodo
+--   PERDES    VARCHAR(15)  Descripcion del periodo
+--   PERSIT    CHAR(1)      Situacion del periodo
+--   PERFIP    DATE         Fecha inicial del periodo
+--   PERFFP    DATE         Fecha final del periodo
 -- --------------------------------------------------------------
 -- Tablas referenciadas:
---   (ninguna - funcion de logica pura)
+--   COGPER   Periodos contables
+--   SEGFEC   Tabla maestra de fechas (LEFT JOIN para validacion)
 -- --------------------------------------------------------------
 -- Logica de resolucion de fechas:
---   Calculo puro de anos entre fechas. No usa SegFec.
---   RETURNS NULL ON NULL INPUT.
+--   Se construye la fecha inicial (PERFIP) y final (PERFFP)
+--   concatenando los campos de anio, mes y dia de COGPER.
+--   Se realiza LEFT JOIN a SEGFEC para validar que la fecha
+--   exista. Si no existe en SEGFEC se retorna '2039-12-31'
+--   como valor por defecto.
 -- --------------------------------------------------------------
 -- Sugerencias de mejora:
---   1. Para anos+meses+dias usar SEGLIB.SG_TIEMPO_EXACTO.
+--   1. Almacenar fechas directamente como DATE en COGPER para
+--      evitar la construccion dinamica con TIMESTAMP_FORMAT.
+--   2. Agregar indice en COGPER (PERANO, PERNUM) para mejorar
+--      el rendimiento del filtrado y ordenamiento.
+--   3. Validar que p_perano y p_pernum sean valores positivos
+--      antes de ejecutar la consulta.
 -- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, formato 80 cols
+--   2025-07-10  L. Miranda  Documentacion y mejoras de formato
+--                           LEFT JOIN a SEGFEC para fechas
+--                           Coalesce en lugar de Ifnull
 -- ==============================================================
 
-CREATE OR REPLACE FUNCTION SEGLIB.SG_TIEMPO_ANOS (
-  FechaDes DATE,
-  FechaHas DATE
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.CG_PERIODO_POSTERIOR (
+  p_perano INTEGER,
+  p_pernum INTEGER
 )
 RETURNS TABLE (
-  ANOS INTEGER
+  PERANO  INTEGER,
+  PERNUM  INTEGER,
+  PERDES  VARCHAR(15),
+  PERSIT  CHAR(1),
+  PERFIP  DATE,
+  PERFFP  DATE
 )
 LANGUAGE SQL
-DETERMINISTIC
-NO EXTERNAL ACTION
-RETURNS NULL ON NULL INPUT   -- Si cualquier parametro es NULL, retorna tabla vacia
-BEGIN
-  DECLARE vAnos INTEGER DEFAULT 0;
+READS SQL DATA
+RETURN
+SELECT
+  p.PERANO,
+  p.PERNUM,
+  p.PERDES,
+  p.PERSIT,
 
-  -- Proteccion: si la fecha final es anterior a la inicial
-  -- se devuelve 0 en lugar de un valor negativo silencioso.
-  IF FechaHas < FechaDes THEN
-    PIPE (0);
-    RETURN;
-  END IF;
+  -- Fecha inicial del periodo contable
+  COALESCE(
+    fi.FECISO,
+    DATE('2039-12-31')
+  ) AS PERFIP,
 
-  -- Diferencia base en anos de calendario
-  SET vAnos = YEAR(FechaHas) - YEAR(FechaDes);
+  -- Fecha final del periodo contable
+  COALESCE(
+    ff.FECISO,
+    DATE('2039-12-31')
+  ) AS PERFFP
 
-  -- Ajuste: si todavia no ha pasado el aniversario en el ano actual
-  IF (MONTH(FechaHas) < MONTH(FechaDes))
-     OR (MONTH(FechaHas) = MONTH(FechaDes) AND
-         DAY(FechaHas) < DAY(FechaDes)) THEN
-    SET vAnos = vAnos - 1;
-  END IF;
+FROM (
+    SELECT *
+      FROM COGPER
+     WHERE (INTEGER(PERANO) > p_perano)
+        OR (INTEGER(PERANO) = p_perano
+       AND  INTEGER(PERNUM) > p_pernum)
+     ORDER BY INTEGER(PERANO) ASC,
+              INTEGER(PERNUM) ASC
+     FETCH FIRST 1 ROW ONLY
+) AS p
 
-  PIPE (vAnos);
-  RETURN;
-END;
+-- Resolucion fecha inicial via SEGFEC
+LEFT JOIN SEGFEC fi
+  ON  fi.FECISO = DATE(
+        TIMESTAMP_FORMAT(
+          VARCHAR(p.PerAin) CONCAT '-'  CONCAT
+          VARCHAR_FORMAT(p.PerMin, '00') CONCAT '-' CONCAT
+          VARCHAR_FORMAT(p.PerDin, '00'),
+          'YYYY-MM-DD'
+        )
+      )
+
+-- Resolucion fecha final via SEGFEC
+LEFT JOIN SEGFEC ff
+  ON  ff.FECISO = LAST_DAY(
+        DATE(
+          TIMESTAMP_FORMAT(
+            VARCHAR(p.PerAfi) CONCAT '-'  CONCAT
+            VARCHAR_FORMAT(p.PerMfi, '00') CONCAT '-' CONCAT
+            VARCHAR_FORMAT(p.PerDfi, '00'),
+            'YYYY-MM-DD'
+          )
+        )
+      );
 
 
-GRANT EXECUTE ON FUNCTION SEGLIB.SG_TIEMPO_ANOS TO PUBLIC;
+GRANT EXECUTE ON FUNCTION SEGLIB.CG_PERIODO_POSTERIOR TO PUBLIC;

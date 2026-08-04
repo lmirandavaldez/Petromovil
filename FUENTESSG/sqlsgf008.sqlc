@@ -1,0 +1,186 @@
+-- ==============================================================
+-- Modulo    : Seguridad y Comunes
+-- Programa  : SQLSGF008
+-- Objeto    : SG_CALCULO_IMPUESTO_COMPUESTO
+-- Tipo      : Funcion de tabla SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1.1
+-- Proyecto  : PETROMOVIL
+-- --------------------------------------------------------------
+-- Proposito:
+--   Calcula el desglose de impuestos compuestos para un
+--   articulo dado su precio. Retorna el precio base sin ITBIS,
+--   el monto de ITBIS, el precio acumulado con Selectivo y
+--   Advaloren, y los montos individuales de cada impuesto.
+--
+--   El ITBIS se aplica sobre el precio ya incrementado con
+--   Selectivo (ArtMsi) y Advaloren (ArtMti), segun el
+--   parametro global de inclusion (ParPim):
+--     ParPim = 'N' -> ITBIS no incluido en el precio
+--     ParPim <> 'N' -> ITBIS ya incluido, se extrae del precio
+--
+--   Si el articulo no es gravado (ArtImp <> 'S'), todos los
+--   impuestos se devuelven en cero y el precio base es
+--   el precio original.
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+--   CodArt  VARCHAR(20)   Clave del articulo
+--   Precio  DECIMAL(16,6) Precio del articulo
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   Predi1  DECIMAL(16,6) Precio sin ITBIS
+--   Imp1    DECIMAL(16,6) Monto de ITBIS
+--   Predi2  DECIMAL(16,6) Precio base + Selectivo + Advaloren
+--   Imp2    DECIMAL(16,6) Monto de Selectivo
+--   Predi3  DECIMAL(16,6) Precio base + Selectivo + Advaloren
+--   Imp3    DECIMAL(16,6) Monto de Advaloren
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   InvArt   - Maestro de articulos (ArtCve, ArtImp,
+--              ArtMsi, ArtMti)
+--   InvPar   - Parametros globales de inventario (ParCve,
+--              ParIm1, ParIm2, ParIm3, ParPim)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica. Esta funcion no maneja campos de fecha.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Predi2 y Predi3 retornan el mismo valor (PreImp).
+--      Considerar diferenciarlas: Predi2 podria ser
+--      Precio + ArtMsi y Predi3 Precio + ArtMsi + ArtMti.
+--   2. Si InvArt o InvPar no encuentran fila, las variables
+--      quedan en NULL. Se aplica COALESCE para garantizar
+--      valores por defecto seguros.
+--   3. PorIm2 y PorIm3 se dividen entre 100 pero no se usan
+--      en el calculo posterior. Incluidos por consistencia
+--      con los parametros globales; evaluar si se utilizaran
+--      en versiones futuras.
+--   4. El parametro ParPim controla si el ITBIS esta incluido
+--      en el precio. Cualquier valor distinto de 'N' activa
+--      la extraccion del ITBIS desde el precio.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2025-07-14  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02)
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_CALCULO_IMPUESTO_COMPUESTO
+(
+    CodArt VARCHAR(20),
+    Precio DECIMAL(16,6)
+)
+RETURNS TABLE
+(
+    Predi1 DECIMAL(16,6),
+    Imp1   DECIMAL(16,6),
+    Predi2 DECIMAL(16,6),
+    Imp2   DECIMAL(16,6),
+    Predi3 DECIMAL(16,6),
+    Imp3   DECIMAL(16,6)
+)
+LANGUAGE SQL
+DETERMINISTIC
+RETURNS NULL ON NULL INPUT
+BEGIN
+
+    -- Variables del articulo
+    DECLARE ArtImp CHAR(1)        DEFAULT ' ';
+    DECLARE ArtMsi DECIMAL(16,6)  DEFAULT 0;
+    DECLARE ArtMti DECIMAL(16,6)  DEFAULT 0;
+
+    -- Variables de parametros globales
+    DECLARE PorIm1 DECIMAL(9,4)   DEFAULT 0;
+    DECLARE PorIm2 DECIMAL(9,4)   DEFAULT 0;
+    DECLARE PorIm3 DECIMAL(9,4)   DEFAULT 0;
+    DECLARE ParPim CHAR(1)        DEFAULT ' ';
+
+    -- Variables de calculo
+    DECLARE PreImp DECIMAL(16,6)  DEFAULT 0;
+    DECLARE PreDi1 DECIMAL(16,6)  DEFAULT 0;
+
+    -- Variables de retorno
+    DECLARE VPredi1 DECIMAL(16,6) DEFAULT 0;
+    DECLARE VImp1   DECIMAL(16,6) DEFAULT 0;
+    DECLARE VImp2   DECIMAL(16,6) DEFAULT 0;
+    DECLARE VImp3   DECIMAL(16,6) DEFAULT 0;
+
+    /* -------------------------------------------------- */
+    /* Obtener parametros del articulo                    */
+    /* -------------------------------------------------- */
+    SELECT COALESCE(ArtImp, ' '),
+           COALESCE(ArtMsi, 0),
+           COALESCE(ArtMti, 0)
+      INTO ArtImp, ArtMsi, ArtMti
+      FROM InvArt
+     WHERE ArtCve = CodArt
+     FETCH FIRST 1 ROW ONLY;
+
+    /* -------------------------------------------------- */
+    /* Obtener parametros globales de impuesto            */
+    /* -------------------------------------------------- */
+    SELECT COALESCE(ParIm1, 0),
+           COALESCE(ParIm2, 0),
+           COALESCE(ParIm3, 0),
+           COALESCE(ParPim, ' ')
+      INTO PorIm1, PorIm2, PorIm3, ParPim
+      FROM InvPar
+     WHERE ParCve = '@'
+     FETCH FIRST 1 ROW ONLY;
+
+    /* Convertir porcentajes a factor decimal */
+    SET PorIm1 = PorIm1 / 100;
+    SET PorIm2 = PorIm2 / 100;
+    SET PorIm3 = PorIm3 / 100;
+
+    /* -------------------------------------------------- */
+    /* Precio base acumulado con Selectivo y Advaloren    */
+    /* -------------------------------------------------- */
+    SET PreImp = Precio + ArtMsi + ArtMti;
+    SET VImp2  = ArtMsi;
+    SET VImp3  = ArtMti;
+
+    /* -------------------------------------------------- */
+    /* Calculo de ITBIS segun tipo de gravamen            */
+    /* -------------------------------------------------- */
+    IF ArtImp = 'S' THEN
+
+        IF ParPim = 'N' THEN
+            /* ITBIS no incluido en el precio */
+            SET VImp1   = PreImp * PorIm1;
+            SET VPredi1 = PreImp;
+        ELSE
+            /* ITBIS ya incluido, extraer del precio */
+            SET PreDi1  = PreImp / (1 + PorIm1);
+            SET VImp1   = PreImp - PreDi1;
+            SET VPredi1 = PreDi1;
+        END IF;
+
+    ELSE
+        /* Articulo no gravado: todos los impuestos en cero */
+        SET VImp1   = 0;
+        SET VImp2   = 0;
+        SET VImp3   = 0;
+        SET VPredi1 = Precio;
+    END IF;
+
+    /* -------------------------------------------------- */
+    /* Retorno final en formato tabla                     */
+    /* -------------------------------------------------- */
+    RETURN
+        SELECT
+            VPredi1  AS Predi1,
+            VImp1    AS Imp1,
+            PreImp   AS Predi2,
+            VImp2    AS Imp2,
+            PreImp   AS Predi3,
+            VImp3    AS Imp3
+        FROM SYSIBM.SYSDUMMY1;
+
+END;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_CALCULO_IMPUESTO_COMPUESTO
+    TO PUBLIC;

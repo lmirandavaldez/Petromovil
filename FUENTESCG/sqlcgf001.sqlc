@@ -1,9 +1,9 @@
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 -- ==============================================================
--- Modulo    : Contabilidad General
--- Programa  : SQLCGF001
+-- Modulo    : COG - Contabilidad General
+-- Programa  : sqlcgf001
 -- Objeto    : SEGLIB.CG_PERIODO_ANTERIOR
--- Tipo      : Funcion de tabla SQL (Table Function)
+-- Tipo      : Funcion SQL (Table Function)
 -- Autor     : L. Miranda
 -- Copyright : Miranda Valdez, S. A., 1997
 -- Version   : 2
@@ -11,14 +11,15 @@
 -- --------------------------------------------------------------
 -- Proposito:
 --   Retorna los datos del periodo contable inmediatamente
---   anterior al periodo indicado. Devuelve una fila si existe
---   un periodo anterior, o ninguna fila si es el primero.
+--   anterior al periodo indicado por los parametros p_perano
+--   y p_pernum. Devuelve una fila si existe un periodo
+--   anterior, o ninguna fila si es el primero registrado.
 -- --------------------------------------------------------------
 -- Parametros de entrada:
---   p_perano  INTEGER  Ano del periodo de referencia (ej: 2026)
+--   p_perano  INTEGER  Ano  del periodo de referencia (ej: 2026)
 --   p_pernum  INTEGER  Numero del periodo de referencia (ej: 6)
 -- --------------------------------------------------------------
--- Campos retornados (en orden original):
+-- Campos retornados:
 --   PERANO   INTEGER      Ano del periodo anterior
 --   PERNUM   INTEGER      Numero del periodo anterior
 --   PERDES   VARCHAR(15)  Descripcion del periodo
@@ -27,21 +28,34 @@
 --   PERFFP   DATE         Fecha final del periodo
 -- --------------------------------------------------------------
 -- Tablas referenciadas:
---   CogPer    Tabla de periodos contables
+--   CogPer (COGPER)       Periodos contables
 -- --------------------------------------------------------------
 -- Logica de resolucion de fechas:
---   Las fechas PERFIP y PERFFP provienen directamente de
---   CogPer en tipo DATE. No usa SegFec.
+--   PERFIP: construida con TIMESTAMP_FORMAT sobre
+--     PerAin/PerMin/PerDin (ano/mes/dia inicio).
+--   PERFFP: construida con LAST_DAY sobre TIMESTAMP_FORMAT de
+--     PerAfi/PerMfi/PerDfi (ano/mes/dia fin). LAST_DAY
+--     garantiza el ultimo dia del mes aunque PerDfi no sea
+--     correcto.
+--   No usa SegFec. Las fechas se calculan directamente desde
+--   los campos de CogPer con TIMESTAMP_FORMAT + LAST_DAY.
 -- --------------------------------------------------------------
 -- Sugerencias de mejora:
---   1. Si el periodo indicado no existe en CogPer, la funcion
---      devuelve tabla vacia. Documentar este comportamiento
---      para los consumidores de la funcion.
+--   1. Eliminar caracteres especiales en comentarios para
+--      compatibilidad con encodings EBCDIC/ASCII del IBM i.
+--   2. Agregar parametro de validacion para rechazar periodos
+--      negativos o fuera de rango.
+--   3. Evaluar si LAST_DAY es necesario o si PerDfi siempre
+--      almacena el dia correcto para reducir complejidad.
+-- --------------------------------------------------------------
+-- Uso:
+--   SELECT * FROM TABLE(SEGLIB.CG_PERIODO_ANTERIOR(2026, 6));
 -- --------------------------------------------------------------
 -- Historial de cambios:
 --   Fecha       Autor       Descripcion
 --   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, formato 80 cols
+--   2026-08-03  L. Miranda  Documentacion, eliminacion de
+--                           caracteres especiales en comentarios
 -- ==============================================================
 
 CREATE OR REPLACE FUNCTION SEGLIB.CG_PERIODO_ANTERIOR (
@@ -76,8 +90,8 @@ RETURN
         ) AS PERFIP,
 
         /* Fecha final del periodo contable.
-           LAST_DAY garantiza el ultimo dia del mes incluso si PerDfi
-           no almacena el valor correcto. */
+           LAST_DAY garantiza el ultimo dia del mes incluso si
+           PerDfi no almacena el valor correcto. */
         LAST_DAY(
             DATE(
                 TIMESTAMP_FORMAT(
@@ -97,7 +111,8 @@ RETURN
         FROM COGPER
         WHERE
             INTEGER(PERANO) < p_perano
-            OR (INTEGER(PERANO) = p_perano AND INTEGER(PERNUM) < p_pernum)
+            OR (INTEGER(PERANO) = p_perano
+                AND INTEGER(PERNUM) < p_pernum)
         ORDER BY
             INTEGER(PERANO) DESC,
             INTEGER(PERNUM) DESC

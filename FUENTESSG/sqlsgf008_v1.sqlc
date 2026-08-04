@@ -1,0 +1,106 @@
+-- Calculo de Impuesto Compuesto para Articulos
+-- Para calcular el ITBIS, Selectivo y Advaloren
+
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02)
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_CALCULO_IMPUESTO_COMPUESTO
+(
+    CodArt VARCHAR(20),
+    Precio DECIMAL(16,6)
+)
+RETURNS TABLE
+(
+    Predi1 DECIMAL(16,6),   -- Precio sin ITBIS (si está incluido)
+    Imp1   DECIMAL(16,6),   -- ITBIS
+    Predi2 DECIMAL(16,6),   -- Precio + Selectivo + Advaloren
+    Imp2   DECIMAL(16,6),   -- Selectivo
+    Predi3 DECIMAL(16,6),   -- Precio + Selectivo + Advaloren
+    Imp3   DECIMAL(16,6)    -- Advaloren
+)
+LANGUAGE SQL
+DETERMINISTIC
+RETURNS NULL ON NULL INPUT
+BEGIN
+
+    DECLARE ArtImp CHAR(1);
+    DECLARE ArtMsi DECIMAL(16,6);
+    DECLARE ArtMti DECIMAL(16,6);
+
+    DECLARE PorIm1 DECIMAL(9,4);
+    DECLARE PorIm2 DECIMAL(9,4);
+    DECLARE PorIm3 DECIMAL(9,4);
+    DECLARE ParPim CHAR(1);
+
+    DECLARE PreImp DECIMAL(16,6);
+    DECLARE PreDi1 DECIMAL(16,6);
+
+    /* ================================
+       Obtener parámetros del artículo
+       ================================ */
+    SELECT ArtImp, ArtMsi, ArtMti
+      INTO ArtImp, ArtMsi, ArtMti
+      FROM InvArt
+     WHERE ArtCve = CodArt
+     FETCH FIRST 1 ROW ONLY;
+
+    /* ================================
+       Obtener parámetros globales
+       ================================ */
+    SELECT ParIm1, ParIm2, ParIm3, ParPim
+      INTO PorIm1, PorIm2, PorIm3, ParPim
+      FROM InvPar
+     WHERE ParCve = '@'
+     FETCH FIRST 1 ROW ONLY;
+
+    /* Convertir porcentajes */
+    SET PorIm1 = PorIm1 / 100;
+    SET PorIm2 = PorIm2 / 100;
+    SET PorIm3 = PorIm3 / 100;
+
+    /* ================================
+       Cálculo base
+       ================================ */
+    SET PreImp = Precio + ArtMsi + ArtMti;
+
+    SET Imp2 = ArtMsi;
+    SET Imp3 = ArtMti;
+
+    /* ================================
+       Cálculo ITBIS
+       ================================ */
+    IF ArtImp = 'S' THEN
+
+        IF ParPim = 'N' THEN
+            /* ITBIS no incluido */
+            SET Imp1   = PreImp * PorIm1;
+            SET Predi1 = PreImp;
+        ELSE
+            /* ITBIS incluido */
+            SET PreDi1 = PreImp / (1 + PorIm1);
+            SET Imp1   = PreImp - PreDi1;
+            SET Predi1 = PreDi1;
+        END IF;
+
+    ELSE
+        SET Imp1   = 0;
+        SET Imp2   = 0;
+        SET Imp3   = 0;
+        SET Predi1 = Precio;
+    END IF;
+
+    /* ================================
+       Retorno final tipo tabla
+       ================================ */
+    RETURN
+        SELECT
+            Predi1,
+            Imp1,
+            PreImp,
+            Imp2,
+            PreImp,
+            Imp3
+        FROM SYSIBM.SYSDUMMY1;
+
+END;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_CALCULO_IMPUESTO_COMPUESTO TO PUBLIC;
