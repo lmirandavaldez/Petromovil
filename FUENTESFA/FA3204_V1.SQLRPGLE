@@ -1,4 +1,4 @@
-h   Dh   Datedit(*Dmy)
+     h   Datedit(*Dmy)
      h   Copyright ('Miranda Valdez, S. A., 2005')
      H   Debug Option(*SRCSTMT:*NODEBUGIO)
      h   Dftactgrp(*NO)
@@ -40,15 +40,6 @@ h   Dh   Datedit(*Dmy)
       *                                unificar UPDATE doble subconsulta,*
       *                                limpieza de codigo comentado,     *
       *                                validacion parametros entrada     *
-      *  -----------  ---------------  --------------------------------- *
-      *  25/07/2026   IBM Bob          Agregar campo FecFam (Ano+Mes,    *
-      *               (asistente)      6 digitos) al inicio de las       *
-      *                                tablas FAC3204, FAC3204RV,        *
-      *                                FAC3204RS y FAC3204RC. El campo   *
-      *                                se toma de FecFam (overlay sobre  *
-      *                                FechaYmd). DELETE inicial y       *
-      *                                comparacion de FecFam ya incluido *
-      *                                en la logica preexistente.        *
       *==================================================================*
      d SupCod          s                   Like(SqlCxcVen.SupCve)
      d VenCod          s                   Like(SqlCxcVen.VenCve)
@@ -260,13 +251,11 @@ h   Dh   Datedit(*Dmy)
         //Crear Tabla para Exportar a Excel
            Exec Sql
              Insert Into Fac3204
-                    (FecFam,
-                     SupCve, SupNom, VenCve, VenNom, ClaCve,
+                    (SupCve, SupNom, VenCve, VenNom, ClaCve,
                      ClaDes, CliCve, CliNom, Feulco, DiasPr,
                      DiaSco, Canu12, Monu12, Canu24, MonU24,
                      VarCan, PorCan, TenCli, Estado)
-              Select :FecFam,
-                     T4.SupCve,
+              Select T4.SupCve,
                      T5.SupNom,
                      T3.VenCve,
                      T4.VenNom,
@@ -283,24 +272,14 @@ h   Dh   Datedit(*Dmy)
                      Coalesce(T1.Monto12Prev, 0),
 
           --Variacion absoluta de cantidad
-          Case
-            When (Coalesce(T1.Cantidad12, 0) -
-                  Coalesce(T1.CantidadPrev12, 0)) > 99999.99
-            Then 99999.99
-            Else Coalesce(T1.Cantidad12, 0) - Coalesce(T1.CantidadPrev12, 0)
-          End,
+            Coalesce(T1.Cantidad12, 0) - Coalesce(T1.CantidadPrev12, 0),
 
           --Variacion porcentual de cantidad
-          Case
-            When Coalesce(T1.CantidadPrev12, 0) = 0 Then 0 Else
-              Case
-                When (((Coalesce(T1.Cantidad12, 0) - Coalesce(T1.CantidadPrev12,
-                      0)) * 100.0) /
-                      Coalesce(Nullif(T1.CantidadPrev12, 0), 1)) > 99.99
-                      Then 99.99
-                Else Dec(((Coalesce(T1.Cantidad12, 0) -
-                      Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
-                      Coalesce(Nullif(T1.CantidadPrev12, 0), 1), 7, 2) End End,
+            Dec(Case When Coalesce(T1.CantidadPrev12, 0) = 0 Then 0
+                Else ((Coalesce(T1.Cantidad12, 0) -
+                Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
+                Coalesce(Nullif(T1.CantidadPrev12, 0), 1)
+                End, 7, 2),
 
           --Indicador textual de tendencia
             Case When Coalesce(T1.CantidadPrev12, 0) = 0
@@ -354,8 +333,7 @@ h   Dh   Datedit(*Dmy)
                  And Not Exists (
                          Select 1
                             From Fac3204
-                           Where (FecFam = :FecFam)
-                             And (SupCve = T4.SupCve)
+                           Where (SupCve = T4.SupCve)
                              And (VenCve = T3.VenCve)
                              And (ClaCve = T2.ClaCve)
                              And (CliCve = T1.CliCve));
@@ -374,8 +352,7 @@ h   Dh   Datedit(*Dmy)
         //Ranking por Supervisor y Vendedor
            Exec Sql
              Insert Into FAC3204RV
-                  (FECFAM,
-                   SUPCVE,
+                  (SUPCVE,
                    SUPNOM,
                    VENCVE,
                    VENNOM,
@@ -387,7 +364,6 @@ h   Dh   Datedit(*Dmy)
                    PORCHU,
                    RANKIN)
              Select
-                   :FecFam,
                    T1.SupCve,
                    T1.SupNom,
                    T1.VenCve,
@@ -411,7 +387,6 @@ h   Dh   Datedit(*Dmy)
                                 Then 1 else 0 end) * 1.0)
                                 / Nullif(Count(*),0)) as Ranking
              From Fac3204 T1
-            Where (T1.FecFam = :FecFam)
             Group by T1.SupCve, T1.SupNom, T1.VenCve, T1.VenNom;
 
            If SqlCod < *Zeros ;
@@ -422,8 +397,7 @@ h   Dh   Datedit(*Dmy)
         //Ranking por Supervisor
            Exec Sql
              Insert Into FAC3204RS
-                  (FECFAM,
-                   SUPCVE,
+                  (SUPCVE,
                    SUPNOM,
                    TOTCLI,
                    CLIACT,
@@ -433,7 +407,6 @@ h   Dh   Datedit(*Dmy)
                    PORCHU,
                    RANKIN)
              Select
-                   :FecFam,
                    T1.SupCve,
                    T1.SupNom,
                    Count(*) as TotalClientes,
@@ -455,7 +428,6 @@ h   Dh   Datedit(*Dmy)
                                 Then 1 else 0 end) * 1.0)
                                 / Nullif(Count(*),0)) as Ranking
              From Fac3204 T1
-            Where (T1.FecFam = :FecFam)
             Group by T1.SupCve, T1.SupNom;
 
            If SqlCod < *Zeros ;
@@ -466,8 +438,7 @@ h   Dh   Datedit(*Dmy)
         //Ranking por Supervisor, Vendedor y Clasificacion
            Exec Sql
              Insert Into FAC3204RC
-                  (FECFAM,
-                   SUPCVE,
+                  (SUPCVE,
                    SUPNOM,
                    VENCVE,
                    VENNOM,
@@ -481,7 +452,6 @@ h   Dh   Datedit(*Dmy)
                    PORCHU,
                    RANKIN)
              Select
-                   :FecFam,
                    T1.SupCve,
                    T1.SupNom,
                    T1.VenCve,
@@ -507,7 +477,6 @@ h   Dh   Datedit(*Dmy)
                                 Then 1 else 0 end) * 1.0)
                                 / Nullif(Count(*),0)) as Ranking
              From Fac3204 T1
-            Where (T1.FecFam = :FecFam)
             Group by T1.SupCve, T1.SupNom, T1.VenCve, T1.VenNom,
                      T1.ClaCve, T1.ClaDes                                  ;
 
@@ -602,7 +571,7 @@ h   Dh   Datedit(*Dmy)
            VenCod = %Dec(CodVen:3:0)  ;
            FechaPro = %Date(%Dec(FechaP:8:0):*Iso)  ;
 
-           FechaYmd = %Dec(FechaP:8:0) ;
+           FechaYmd = FechaPro ;
            FechaDia = %Date(*Date)  ;
 
         //Borrar Tabla Detalle por Clientes
@@ -632,4 +601,3 @@ h   Dh   Datedit(*Dmy)
            EndSr;
       /End-Free
         // -----------------------------------------------------
-
