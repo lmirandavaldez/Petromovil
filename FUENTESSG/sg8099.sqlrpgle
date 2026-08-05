@@ -17,7 +17,7 @@
       *  DESCR: Poner en Sql y formato Free                              *
       *  ================================================================*
      d StaPro          s               n   Inz(*Off)
-     d TstApl          s             z
+     d TstApl          s                   Like(SqlSegCep.AplTst)
       *
       * Archivos usado en el programa
      d SqlSegCep     e Ds                  ExtName(SegCep) Qualified
@@ -49,19 +49,19 @@
        // ------------------------------------------------------
           BegSr Ejecucion ;
 
-      //Actualiza la Tabla Control
+      //Si Existe el Registro lo debe Borrar de lo Contrario lo Crea
           TstApl = %Timestamp();
 
-            Exec Sql
-                Merge Into SegCep As Tgt
-                Using (Values (:CodCia, :CodPgm)) As Src(CiaCve, PgmCve)
-                   On Tgt.CiaCve = Src.CiaCve
-                  And Tgt.PgmCve = Src.PgmCve
-                When Matched Then
-                    Delete
-                When Not Matched Then
-                    Insert (CiaCve, PgmCve, AplUsr, AplTst)
-                    Values (:CodCia, :CodPgm, User, :TstApl) ;
+          Exec Sql
+             Merge Into SegCep As Tgt
+             Using (Values (:CodCia, :CodPgm)) As Src(CiaCve, PgmCve)
+                On (Tgt.CiaCve = Src.CiaCve)
+               And (Tgt.PgmCve = Src.PgmCve)
+              When Matched Then
+            Delete
+              When Not Matched Then
+            Insert (CiaCve, PgmCve, AplUsr, AplTst)
+                    Values (:CodCia, :CodPgm, :User, :TstApl) ;
 
           SqlCod = *Zeros ;
 
