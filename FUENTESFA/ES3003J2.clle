@@ -1,0 +1,44 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: ES3003J2                         */
+ /*   APLICACION.................: Estadisticas de Ventas           */
+ /*   AUTOR .....................: Luis J. Miranda V.               */
+ /*   FECHA ESCRITURA ...........: 28 / 05 / 2009                   */
+ /*                                                                 */
+ /* Crea Archivo por Vendedor clientes y productos entre fechas     */
+ /*=================================================================*/
+ INI:        PGM        PARM(&CODCLI &CODVEN &FECDES &FECHAS &CODDIS +
+                          &CODCAT &CODSUP)
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&CODCLI)  TYPE(*CHAR) LEN(7)
+             DCL        VAR(&CODVEN) TYPE(*CHAR) LEN(3)
+             DCL        VAR(&CODSUP) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&CODCAT) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&CODDIS) TYPE(*CHAR) LEN(3)
+             DCL        VAR(&FECDES)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&FECHAS)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DESFEC)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&HASFEC)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&NCIA)  TYPE(*CHAR) LEN(11)
+
+             RTVDTAARA  DTAARA(*LDA (412 11)) RTNVAR(&NCIA)
+             CHGDTAARA  DTAARA(*LDA (50 8)) VALUE(&FECDES)
+             CHGDTAARA  DTAARA(*LDA (58 8)) VALUE(&FECHAS)
+
+             CVTDAT     DATE(&FECDES) TOVAR(&DESFEC) FROMFMT(*DMYY) +
+                          TOFMT(*YYMD) TOSEP(*NONE)
+             CVTDAT     DATE(&FECHAS) TOVAR(&HASFEC) FROMFMT(*DMYY) +
+                          TOFMT(*YYMD) TOSEP(*NONE)
+
+             CLRPFM     FILE(*LIBL/ESTTVCP)
+
+ /*          SBMJOB     CMD(CALL PGM(ES3003J3) PARM((&CODCLI) +
+                          (&CODVEN) (&DESFEC) (&HASFEC) (&CODDIS) +
+                          (&CODCAT) (&CODSUP))) JOB(ES3003) +
+                          JOBQ(*LIBL/MEYKERJOBQ)               */
+
+             CALL       PGM(*LIBL/ES3003J3) PARM((&CODCLI) (&CODVEN) +
+                          (&DESFEC) (&HASFEC) (&CODDIS) (&CODCAT) +
+                          (&CODSUP))
+
+ END:        ENDPGM

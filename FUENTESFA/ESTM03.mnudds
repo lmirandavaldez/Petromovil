@@ -1,0 +1,47 @@
+     A* Menú de Formato Libre: ESTM03
+     A*%%TS  SD  20260702  091735  MEYKER      REL-V7R5M0  5770-WDS
+     A*  91/07/16  10:48:22    MUNOZ       REL-R03M00  5728-PW1
+     A*%%EC
+     A                                      DSPSIZ(24 80 *DS3                  -
+     A                                             27 132 *DS4)
+     A                                      CHGINPDFT
+     A                                      INDARA
+     A                                      PRINT(*LIBL/QSYSPRT)
+     A*  91/07/16  10:48:22    MUNOZ       REL-R03M00  5728-PW1
+     A          R ESTM03
+     A*%%TS  SD  20021230  161435  LMIRANDA    REL-V5R1M0  5722-WDS
+     A                                      DSPMOD(*DS3)
+     A                                      LOCK
+     A                                      SLNO(01)
+     A                                      CLRL(*ALL)
+     A                                      ALWROL
+     A                                      CF03
+     A                                      HELP
+     A                                      HOME
+     A                                      HLPRTN
+     A                                  3  3'Consultas'
+     A                                      COLOR(BLU)
+     A* CMDPROMPT  No suprima esta especificación DDS.
+     A                                019  2'Selección o mandato               -
+     A                                          '
+     A                                 20  1'Entre una opción'
+     A                                  1 37'ESTM03'
+     A                                      DSPATR(HI)
+     A                                 17  6'24. Salir de linea'
+     A                                 15  6'22. Cambio de compañia'
+     A                                 18  6'30. Control Spool-file'
+     A                                 16  6'23. Menu anterior'
+     A                                  1 70DATE
+     A                                      EDTCDE(Y)
+     A                                      DSPATR(HI)
+     A                                  2 70TIME
+     A                                      DSPATR(HI)
+     A                                  3 70USER
+     A                                      DSPATR(HI)
+     A                                  2 35'Estadisticas'
+     A                                      DSPATR(HI)
+     A                                  7  6' 2. Ventas mensuales por articulos'
+     A                                  8  6' 3. Ventas mensuales por marcas'
+     A                                  9  6' 4. Ventas mensuales por vendedor'
+     A                                 10  6' 5. Ventas mensuales por clientes'
+     A                                  6  6' 1. Ventas mensuales generales'

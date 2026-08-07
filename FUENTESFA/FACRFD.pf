@@ -1,0 +1,37 @@
+      * ------------------------------------------------------------*
+      * IDENTIFICACION:                                             *
+      * --------------                                              *
+      *     NOMBRE DEL ARCHIVO..:  FACRFD                           *
+      *     SISTEMA.............:  FACTURACION                      *
+      *     FECHA ESCRITURA.....:  16 / 06 / 2026                   *
+      *                                                             *
+      *                                                             *
+      *    ARCHIVO FISICO REGLA FRECUENCIA DE DESPACHO              *
+      * ------------------------------------------------------------*
+     A                                      REF(*LIBL/FACREPF)
+     A          R FACRFDF                   TEXT('CUOTA PRODUCTOS CLIENTES')
+     A            RFDCVE         2  0       TEXT('CODIGO REGLA FRECUENCIA')
+     A                                      COLHDG('Codigo' 'Regla' +
+     A                                             'Frecuencia')
+     A                                      ALIAS(CODIGO_REGLA_FRECUENCIA)
+      *
+     A            RFDMIR         9  0       TEXT('CANTIDAD MINIMA DE REGISTROS')
+     A                                      COLHDG('Cantidad' 'Minima' +
+     A                                             'De Registros')
+     A                                      ALIAS(CANTIDAD_MINIMA_DE_REGISTROS)
+     A            RFDMAR         9  0       TEXT('CANTIDAD MAXIMA DE REGISTROS')
+     A                                      COLHDG('Cantidad' 'Maxima' +
+     A                                             'De Registros')
+     A                                      ALIAS(CANTIDAD_MAXIMA_DE_REGISTROS)
+     A            RFDMID         9  0       TEXT('DIAS MINIMO TRANSCURRIDOS')
+     A                                      COLHDG('Dias' 'Minimo' +
+     A                                             'Transcurridos')
+     A                                      ALIAS(DIAS_MINIMO_TRANSCURRIDOS)
+     A            RFDMAD         9  0       TEXT('DIAS MAXIMO TRANSCURRIDOS')
+     A                                      COLHDG('Dias' 'Maximo' +
+     A                                             'Transcurridos')
+     A                                      ALIAS(DIAS_MAXIMO_TRANSCURRIDOS)
+     A            RFDCDD         3  0       TEXT('CANTIDAD DIAS PARA DESPACHO')
+     A                                      COLHDG('Cantidad' 'Dias' +
+     A                                             'Para Despacho')
+     A                                      ALIAS(CANTIDAD_DIAS_PARA_COMPRA)

@@ -1,0 +1,43 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: FA3206J2                         */
+ /*   APLICACION.................: Sistema de Facturacion           */
+ /*   AUTOR .....................: Luis J. Miranda V.               */
+ /*   FECHA ESCRITURA ...........: 07 / 08 / 2026                   */
+ /*                                                                 */
+ /*    Proceso Crear Archivo KPI Productividad Conductores          */
+ /*=================================================================*/
+ INI:        PGM        PARM(&FECHAS)
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&FECHAS)   TYPE(*CHAR) LEN(8)
+
+             DCL        VAR(&WSID) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&CIA)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&PGM) TYPE(*CHAR) LEN(10) VALUE('FA3206')
+             DCL        VAR(&EJECUTA) TYPE(*CHAR) LEN(1)
+
+             RTVDTAARA  DTAARA(*LDA (401 2)) RTNVAR(&CIA)
+             RTVJOBA    JOB(&WSID) USER(&USER)
+
+ /* Verifica si esta ejecutando el programa                             */
+Atras:
+             CALL       PGM(*LIBL/SG8098) PARM(&CIA &PGM &EJECUTA)
+
+             IF         COND(&EJECUTA *EQ 'S') THEN(DO)
+             DLYJOB     DLY(60)
+             GOTO       CMDLBL(ATRAS)
+             ENDDO
+
+/* Actualiza control ejecucion Proceso */
+             CALL       PGM(*LIBL/SG8099) PARM(&CIA &PGM)
+
+/*           SBMJOB     CMD(CALL PGM(*LIBL/FA3206J3) +
+                          PARM((&FECHAS))) JOB(FA3206) +
+                          JOBQ(*LIBL/MEYKERJOBQ) */
+
+             CALL       PGM(*LIBL/FA3206J3) PARM((&FECHAS))
+
+             SNDPGMMSG  MSGID(SEG8888) MSGF(SEGLIB/SEGMSGF)
+
+ END:        ENDPGM

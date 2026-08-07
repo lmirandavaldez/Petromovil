@@ -1,0 +1,57 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: FA3205J1                         */
+ /*   APLICACION.................: Sistema de Facturacion           */
+ /*   AUTOR .....................: Luis J. Miranda V.               */
+ /*   FECHA ESCRITURA ...........: 29 / 07 / 2026                   */
+ /*                                                                 */
+ /*            Proceso Crear Archivo Temporal KPI Clientes Nuevos   */
+ /*=================================================================*/
+ INI:        PGM
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&CIA)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&CTL)  TYPE(*CHAR) LEN(1)
+             DCL        VAR(&INI)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&WSID) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&NCIA) TYPE(*CHAR) LEN(11)
+             DCL        VAR(&PGM)  TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PGM1)  TYPE(*CHAR) LEN(10)
+             DCL        VAR(&RESP) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&NOMREP) TYPE(*CHAR) LEN(50)
+
+             RTVDTAARA  DTAARA(*LDA (401 2)) RTNVAR(&CIA)
+             RTVJOBA    JOB(&WSID) USER(&USER)
+             CHGDTAARA  DTAARA(*LDA (551 10)) VALUE(&WSID)
+             CHGDTAARA  DTAARA(*LDA (561 10)) VALUE(&USER)
+
+             CALL       PGM(SEGLIB/SEGLIBL)
+
+             IF         COND(&CIA *EQ ' ') THEN(CALL +
+                          PGM(*LIBL/SG0000J1))
+
+             RTVDTAARA  DTAARA(*LDA (400 1)) RTNVAR(&CTL)
+             RTVDTAARA  DTAARA(*LDA (401 2)) RTNVAR(&CIA)
+             IF         COND(&CTL *EQ ' ') THEN(RETURN)
+
+             RTVDTAARA  DTAARA(*LDA (403 2)) RTNVAR(&INI)
+             RTVDTAARA  DTAARA(*LDA (412 11)) RTNVAR(&NCIA)
+
+             CHGVAR     VAR(&NOMREP) VALUE('Proceso Para Crear +
+                          Tablas Temporales KPI Clientes Nuevos')
+
+             CHGVAR     VAR(&PGM1) VALUE('FA3205J2')
+             CHGVAR     VAR(&PGM) VALUE('FA3205')
+             CALL       PGM(SEGLIB/SG2050J1) PARM(&PGM &RESP)
+
+             IF         COND(&RESP *NE ' ') THEN(DO)
+             SNDPGMMSG  MSGID(SEG0000) MSGF(SEGLIB/SEGMSGF)
+             GOTO       CMDLBL(END)
+             ENDDO
+
+             ADDLIBLE &NCIA
+             MONMSG     MSGID(CPF2103)
+
+             CALL       PGM(*LIBL/FA3132) PARM(&NOMREP &PGM1)
+
+ END:        ENDPGM

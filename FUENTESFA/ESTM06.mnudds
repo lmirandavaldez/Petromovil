@@ -1,0 +1,47 @@
+     A* Menú de Formato Libre: ESTM06
+     A*%%TS  SD  20260729  110527  MEYKER      REL-V7R5M0  5770-WDS
+     A*  91/07/16  10:48:22    MUNOZ       REL-R03M00  5728-PW1
+     A*%%EC
+     A                                      DSPSIZ(24 80 *DS3                  -
+     A                                             27 132 *DS4)
+     A                                      CHGINPDFT
+     A                                      INDARA
+     A                                      PRINT(*LIBL/QSYSPRT)
+     A*  91/07/16  10:48:22    MUNOZ       REL-R03M00  5728-PW1
+     A          R ESTM06
+     A*%%TS  SD  20260729  110527  MEYKER      REL-V7R5M0  5770-WDS
+     A                                      DSPMOD(*DS3)
+     A                                      LOCK
+     A                                      SLNO(01)
+     A                                      CLRL(*ALL)
+     A                                      ALWROL
+     A                                      CF03
+     A                                      HELP
+     A                                      HOME
+     A                                      HLPRTN
+     A                                  3  3'Procesos mensuales'
+     A                                      COLOR(BLU)
+     A* CMDPROMPT  No suprima esta especificación DDS.
+     A                                019  2'Selección o mandato               -
+     A                                          '
+     A                                 20  1'Entre una opción'
+     A                                  1 37'ESTM06'
+     A                                      DSPATR(HI)
+     A                                 17  6'24. Salir de linea'
+     A                                 15  6'22. Cambio de compañia'
+     A                                 18  6'30. Control Spool-file'
+     A                                 16  6'23. Menu anterior'
+     A                                  1 70DATE
+     A                                      EDTCDE(Y)
+     A                                      DSPATR(HI)
+     A                                  2 70TIME
+     A                                      DSPATR(HI)
+     A                                  3 70USER
+     A                                      DSPATR(HI)
+     A                                  6  7'1. Archivo Estad. General de Venta-
+     A                                      s'
+     A                                  2 30'Estadisticas de Ventas'
+     A                                      DSPATR(HI)
+     A                                  7  7'2. Archivo Estad. Vendedor-Cliente'
+     A                                  8  7'3. KPI Churn'
+     A                                  9  7'4. KPI Clientes Nuevos'

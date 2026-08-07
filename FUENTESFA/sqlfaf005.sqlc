@@ -1,4 +1,4 @@
---CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 -- ==============================================================
 -- Modulo    : Facturacion
 -- Programa  : sqlfaf005
@@ -76,3 +76,4 @@ RETURN
     WHERE V.VehFic = Vehiculo;
 
 GRANT EXECUTE ON FUNCTION SEGLIB.FA_Capa_Nominal_Vehiculos TO PUBLIC;
+

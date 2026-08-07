@@ -1,0 +1,14 @@
+      * ------------------------------------------------------------*
+      * IDENTIFICACION:                                             *
+      * --------------                                              *
+      *     NOMBRE DEL ARCHIVO..:  FACRFD01                         *
+      *     SISTEMA.............:  FACTURACION                      *
+      *     FECHA ESCRITURA.....:  16 / 06 / 2026                   *
+      *                                                             *
+      *                                                             *
+      *    ARCHIVO LOGICO REGLA FRECUENCIA PARA DESPACHOS           *
+      * ------------------------------------------------------------*
+     A                                      UNIQUE
+     A          R FACRFDF                   PFILE(FACRFD)
+      *
+     A          K RFDCVE

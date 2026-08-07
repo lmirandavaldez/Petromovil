@@ -1,4 +1,4 @@
-h   Dh   Datedit(*Dmy)
+     h   Datedit(*Dmy)
      h   Copyright ('Miranda Valdez, S. A., 2005')
      H   Debug Option(*SRCSTMT:*NODEBUGIO)
      h   Dftactgrp(*NO)
@@ -44,16 +44,17 @@ h   Dh   Datedit(*Dmy)
       *  25/07/2026   IBM Bob          Agregar campo FecFam (Ano+Mes,    *
       *               (asistente)      6 digitos) al inicio de las       *
       *                                tablas FAC3204, FAC3204RV,        *
-      *                                FAC3204RS y FAC3204RC. El campo   *
-      *                                se toma de FecFam (overlay sobre  *
-      *                                FechaYmd). DELETE inicial y       *
-      *                                comparacion de FecFam ya incluido *
-      *                                en la logica preexistente.        *
+      *                                FAC3204RS y FAC3204RC.            *
+      *  -----------  ---------------  --------------------------------- *
+      *  07/08/2026   L.Miranda        Correccion H-spec espuria (Dh),   *
+      *                                validacion SqlCod en 4 DELETEs,   *
+      *                                SupCod/VenCod tipo explicito,     *
+      *                                alineamiento p_MsgKey (col 33)    *
       *==================================================================*
-     d SupCod          s                   Like(SqlCxcVen.SupCve)
-     d VenCod          s                   Like(SqlCxcVen.VenCve)
+     d SupCod          s              2  0
+     d VenCod          s              3  0
       *
-      **Variables para manejo de errores SQL
+      **Variables para manejo de errores SQL
      d SqlMsgTxt       s            256a
      d SqlErrCod       s             10i 0
      d ErrMsgKey       s              4a
@@ -61,9 +62,8 @@ h   Dh   Datedit(*Dmy)
      d ErrCode         s             15a   Inz(*Blanks)
       *
      d FechaPro        s               d   DatFmt(*Iso)
-     d FechaDia        s               d   DatFmt(*Iso)
       *
-      **Prototipo QMHSNDPM (Send Program Message)
+      **Prototipo QMHSNDPM (Send Program Message)
      d QMHSNDPM        Pr                  ExtPgm('QMHSNDPM')
      d  p_MsgId                       7a   Const
      d  p_MsgFile                    20a   Const
@@ -75,7 +75,7 @@ h   Dh   Datedit(*Dmy)
      d  p_MsgKey                      4a
      d  p_ErrCode                    15a   Options(*VarSize)
       *
-      **Archivos Externos
+      **Archivos Externos
      dSqlFac3204     e Ds                  ExtName(Fac3204) Qualified
      dSqlFacDtoh     e Ds                  ExtName(FacDtoh) Qualified
      dSqlFacDtod     e Ds                  ExtName(FacDtod) Qualified
@@ -100,13 +100,13 @@ h   Dh   Datedit(*Dmy)
       *
      d/Copy *Libl/Fuentes,sg9001
       *
-      **FA3204 Prototype
+      **FA3204 Prototype
      d FA3204          Pr
      d  CodSup                        2
      d  CodVen                        3
      d  FechaP                        8
       *
-      **FA3204 Program Interface
+      **FA3204 Program Interface
      d FA3204          Pi
      d  CodSup                        2
      d  CodVen                        3
@@ -140,7 +140,7 @@ h   Dh   Datedit(*Dmy)
         // ------------------------------------------------------
            Begsr Proceso       ;
 
-        //Insertar clientes Activo solo Compras por Pedidos
+        //Insertar clientes Activo solo Compras por Pedidos
            Exec Sql
            Insert Into Qtemp/Churnwk (CliCve, CliNom)
             Select
@@ -168,9 +168,9 @@ h   Dh   Datedit(*Dmy)
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Proceso: INSERT Churnwk clientes' ;
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
-        //Actualizar FechaUlt usando la función SEGLIB.FA_FECHAS_CLIENTE
+        //Actualizar FechaUlt usando la función SEGLIB.FA_FECHAS_CLIENTE
            Exec Sql
            Update Qtemp/Churnwk T1
               Set FechaUlt =
@@ -183,9 +183,9 @@ h   Dh   Datedit(*Dmy)
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Proceso: UPDATE FechaUlt desde función';
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
-        //Actualizar PromDias usando la función FA_PATRON_COMPRA_CLIENTE
+        //Actualizar PromDias usando la función FA_PATRON_COMPRA_CLIENTE
             Exec Sql
             Update Qtemp/Churnwk T1
                  Set PromDias =
@@ -198,9 +198,9 @@ h   Dh   Datedit(*Dmy)
             If SqlCod < *Zeros ;
                 SqlMsgTxt = 'Proceso: UPDATE PromDias desde función';
                 Exsr ErrSql ;
-             Endif ;
+            Endif ;
 
-        //Actualizar Monto y Cantidad de los Ultimos 12 Meses
+        //Actualizar Monto y Cantidad de los Ultimos 12 Meses
            Exec Sql
               Update Qtemp/Churnwk T
                  Set (Monto12, Cantidad12) = (
@@ -223,9 +223,9 @@ h   Dh   Datedit(*Dmy)
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Proceso: UPDATE Monto12/Cantidad12' ;
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
-        //Actualizar Monto y Cantidad del Periodo Anterior (12-24 meses)
+        //Actualizar Monto y Cantidad del Periodo Anterior (12-24 meses)
            Exec Sql
               Update Qtemp/Churnwk T
                  Set (Monto12Prev, CantidadPrev12) = (
@@ -249,7 +249,7 @@ h   Dh   Datedit(*Dmy)
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Proceso: UPDATE Monto12Prev/CantidadPrev12';
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
            EndSr ;
         // ------------------------------------------------------
@@ -257,7 +257,7 @@ h   Dh   Datedit(*Dmy)
         // ------------------------------------------------------
            Begsr Impresion     ;
 
-        //Crear Tabla para Exportar a Excel
+        //Crear Tabla para Exportar a Excel
            Exec Sql
              Insert Into Fac3204
                     (FecFam,
@@ -309,11 +309,10 @@ h   Dh   Datedit(*Dmy)
                  When Coalesce(T1.CantidadPrev12, 0) = 0
                   And Coalesce(T1.Cantidad12, 0) = 0
                  Then 'Estable'
-
                  When (((Coalesce(T1.Cantidad12, 0) -
                          Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
                          Coalesce(Nullif(T1.CantidadPrev12, 0), 1)) > 10
-                 Then 'Crecimiento fuerte'
+                 Then 'Crecimiento Fuerte'
                  When (((Coalesce(T1.Cantidad12, 0) -
                          Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
                          Coalesce(Nullif(T1.CantidadPrev12, 0), 1)) > 0
@@ -325,8 +324,8 @@ h   Dh   Datedit(*Dmy)
                  When (((Coalesce(T1.Cantidad12, 0) -
                          Coalesce(T1.CantidadPrev12, 0)) * 100.0) /
                          Coalesce(Nullif(T1.CantidadPrev12, 0), 1)) < -10
-                 Then 'Caida fuerte'
-                 Else 'Caida leve' End,
+                 Then 'Caida Fuerte'
+                 Else 'Caida Leve' End,
 
           --Estado del cliente (KPI Churn)
             Case When T1.FechaUlt Is Null
@@ -337,7 +336,7 @@ h   Dh   Datedit(*Dmy)
                       Then 'ACTIVO'
                  When Days(:FechaPro) - Days(T1.FechaUlt) <= T1.PromDias * 1.5
                  Then 'EN RIESGO'
-                 Else 'CHURN'End
+                 Else 'CHURN' End
                 From Qtemp/Churnwk T1
                 Join CxcAdc T2
                   On (T1.CliCve = T2.CliCve)
@@ -363,7 +362,7 @@ h   Dh   Datedit(*Dmy)
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Impresion: INSERT masivo Fac3204' ;
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
            EndSr ;
         // ------------------------------------------------------
@@ -371,7 +370,7 @@ h   Dh   Datedit(*Dmy)
         // ------------------------------------------------------
            Begsr Ranking       ;
 
-        //Ranking por Supervisor y Vendedor
+        //Ranking por Supervisor y Vendedor
            Exec Sql
              Insert Into FAC3204RV
                   (FECFAM,
@@ -393,33 +392,31 @@ h   Dh   Datedit(*Dmy)
                    T1.VenCve,
                    T1.VenNom,
                    Count(*) as TotalClientes,
-
-                   Sum(Case When Estado = 'ACTIVO' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'ACTIVO' Then 1 Else 0 End)
                        As ClientesActivos,
-                   Sum(Case When Estado = 'EN RIESGO' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'EN RIESGO' Then 1 Else 0 End)
                        As ClientesEnRiesgo,
-                   Sum(Case When Estado = 'CHURN' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'CHURN' Then 1 Else 0 End)
                        As ClientesChurn,
-                   Sum(Case When Estado = 'SIN HISTORIAL' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'SIN HISTORIAL' Then 1 Else 0 End)
                        As ClientesSinHistorial,
-                   -- Porcentaje de churn
-        --Porcentaje de churn
+                   --Porcentaje de churn
                    Dec((Sum(Case When Estado = 'CHURN' Then 1 Else 0 End)
-                        * 100.0) / Nullif(Count(*),0),5,2) as PorcChurn,
-        --Ranking por vendedor basado en % churn
-                   Rank() over (Order by (Sum(case when Estado = 'CHURN'
-                                Then 1 else 0 end) * 1.0)
-                                / Nullif(Count(*),0)) as Ranking
+                        * 100.0) / Nullif(Count(*),0),5,2) As PorcChurn,
+                   --Ranking por vendedor basado en % churn
+                   Rank() Over (Order By (Sum(Case When Estado = 'CHURN'
+                                Then 1 Else 0 End) * 1.0)
+                                / Nullif(Count(*),0)) As Ranking
              From Fac3204 T1
             Where (T1.FecFam = :FecFam)
-            Group by T1.SupCve, T1.SupNom, T1.VenCve, T1.VenNom;
+            Group By T1.SupCve, T1.SupNom, T1.VenCve, T1.VenNom;
 
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Ranking: INSERT FAC3204RV' ;
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
-        //Ranking por Supervisor
+        //Ranking por Supervisor
            Exec Sql
              Insert Into FAC3204RS
                   (FECFAM,
@@ -437,33 +434,31 @@ h   Dh   Datedit(*Dmy)
                    T1.SupCve,
                    T1.SupNom,
                    Count(*) as TotalClientes,
-
-                   Sum(Case When Estado = 'ACTIVO' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'ACTIVO' Then 1 Else 0 End)
                        As ClientesActivos,
-                   Sum(Case When Estado = 'EN RIESGO' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'EN RIESGO' Then 1 Else 0 End)
                        As ClientesEnRiesgo,
-                   Sum(Case When Estado = 'CHURN' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'CHURN' Then 1 Else 0 End)
                        As ClientesChurn,
-                   Sum(Case When Estado = 'SIN HISTORIAL' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'SIN HISTORIAL' Then 1 Else 0 End)
                        As ClientesSinHistorial,
-                   -- Porcentaje de churn
-        --Porcentaje de churn
+                   --Porcentaje de churn
                    Dec((Sum(Case When Estado = 'CHURN' Then 1 Else 0 End)
-                        * 100.0) / Nullif(Count(*),0),5,2) as PorcChurn,
-        --Ranking por vendedor basado en % churn
-                   Rank() over (Order by (Sum(case when Estado = 'CHURN'
-                                Then 1 else 0 end) * 1.0)
-                                / Nullif(Count(*),0)) as Ranking
+                        * 100.0) / Nullif(Count(*),0),5,2) As PorcChurn,
+                   --Ranking por supervisor basado en % churn
+                   Rank() Over (Order By (Sum(Case When Estado = 'CHURN'
+                                Then 1 Else 0 End) * 1.0)
+                                / Nullif(Count(*),0)) As Ranking
              From Fac3204 T1
             Where (T1.FecFam = :FecFam)
-            Group by T1.SupCve, T1.SupNom;
+            Group By T1.SupCve, T1.SupNom;
 
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Ranking: INSERT FAC3204RS' ;
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
-        //Ranking por Supervisor, Vendedor y Clasificacion
+        //Ranking por Supervisor, Vendedor y Clasificacion
            Exec Sql
              Insert Into FAC3204RC
                   (FECFAM,
@@ -489,32 +484,30 @@ h   Dh   Datedit(*Dmy)
                    T1.ClaCve,
                    T1.ClaDes,
                    Count(*) as TotalClientes,
-
-                   Sum(Case When Estado = 'ACTIVO' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'ACTIVO' Then 1 Else 0 End)
                        As ClientesActivos,
-                   Sum(Case When Estado = 'EN RIESGO' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'EN RIESGO' Then 1 Else 0 End)
                        As ClientesEnRiesgo,
-                   Sum(Case When Estado = 'CHURN' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'CHURN' Then 1 Else 0 End)
                        As ClientesChurn,
-                   Sum(Case When Estado = 'SIN HISTORIAL' Then 1 Else 0 end)
+                   Sum(Case When Estado = 'SIN HISTORIAL' Then 1 Else 0 End)
                        As ClientesSinHistorial,
-                   -- Porcentaje de churn
-        --Porcentaje de churn
+                   --Porcentaje de churn
                    Dec((Sum(Case When Estado = 'CHURN' Then 1 Else 0 End)
-                        * 100.0) / Nullif(Count(*),0),5,2) as PorcChurn,
-        --Ranking por vendedor basado en % churn
-                   Rank() over (Order by (Sum(case when Estado = 'CHURN'
-                                Then 1 else 0 end) * 1.0)
-                                / Nullif(Count(*),0)) as Ranking
+                        * 100.0) / Nullif(Count(*),0),5,2) As PorcChurn,
+                   --Ranking por clasificacion basado en % churn
+                   Rank() Over (Order By (Sum(Case When Estado = 'CHURN'
+                                Then 1 Else 0 End) * 1.0)
+                                / Nullif(Count(*),0)) As Ranking
              From Fac3204 T1
             Where (T1.FecFam = :FecFam)
-            Group by T1.SupCve, T1.SupNom, T1.VenCve, T1.VenNom,
-                     T1.ClaCve, T1.ClaDes                                  ;
+            Group By T1.SupCve, T1.SupNom, T1.VenCve, T1.VenNom,
+                     T1.ClaCve, T1.ClaDes;
 
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Ranking: INSERT FAC3204RC' ;
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
            EndSr ;
         // ------------------------------------------------------
@@ -522,22 +515,22 @@ h   Dh   Datedit(*Dmy)
         // ------------------------------------------------------
            Begsr Crear_Tabla   ;
 
-        //Tabla temporal KPI Churn
+        //Tabla temporal KPI Churn
            Exec Sql
            Create Table Qtemp/Churnwk (
-               CliCve        Dec(7,0),
-               CliNom        Char(55),
-               FechaUlt      Date,
-               PromDias      Dec(10,4),
-               Cantidad12    Dec(12,2),
-               Monto12       Dec(15,2),
+               CliCve         Dec(7,0),
+               CliNom         Char(55),
+               FechaUlt       Date,
+               PromDias       Dec(10,4),
+               Cantidad12     Dec(12,2),
+               Monto12        Dec(15,2),
                CantidadPrev12 Dec(12,2),
-               Monto12Prev   Dec(15,2));
+               Monto12Prev    Dec(15,2));
 
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Crear_Tabla: CREATE TABLE Churnwk' ;
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
            EndSr ;
         // ------------------------------------------------------
@@ -551,7 +544,7 @@ h   Dh   Datedit(*Dmy)
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Borrar_Tabla: DROP Churnwk' ;
               Exsr ErrSql ;
-            Endif ;
+           Endif ;
 
            EndSr ;
         // ------------------------------------------------------
@@ -592,7 +585,7 @@ h   Dh   Datedit(*Dmy)
         // -----------------------------------------------------
            BegSr *Inzsr;
 
-        //Validar parametro de fecha antes de la conversion
+        //Validar parametro de fecha antes de la conversion
            If %Check('0123456789':FechaP) > 0 ;
               SqlMsgTxt = 'Inzsr: FechaP invalido: ' + FechaP ;
               Exsr ErrSql ;
@@ -603,33 +596,52 @@ h   Dh   Datedit(*Dmy)
            FechaPro = %Date(%Dec(FechaP:8:0):*Iso)  ;
 
            FechaYmd = %Dec(FechaP:8:0) ;
-           FechaDia = %Date(*Date)  ;
 
-        //Borrar Tabla Detalle por Clientes
+        // FecFam = primeros 6 digitos de FechaYmd (DS superpuesta)
+        //Borrar Tabla Detalle por Clientes
            Exec Sql
                Delete From Fac3204
                 Where (FecFam = :FecFam)
                  With NC;
 
-        //Borrar Tabla Ranking por Vendedor
+           If SqlCod < *Zeros ;
+              SqlMsgTxt = 'Inzsr: DELETE Fac3204' ;
+              Exsr ErrSql ;
+           Endif ;
+
+        //Borrar Tabla Ranking por Vendedor
            Exec Sql
                Delete From Fac3204RV
                 Where (FecFam = :FecFam)
                  With NC;
 
-        //Borrar Tabla Ranking por Supervisor
+           If SqlCod < *Zeros ;
+              SqlMsgTxt = 'Inzsr: DELETE Fac3204RV' ;
+              Exsr ErrSql ;
+           Endif ;
+
+        //Borrar Tabla Ranking por Supervisor
            Exec Sql
                Delete From Fac3204RS
                 Where (FecFam = :FecFam)
                  With NC;
 
-        //Borrar Tabla Ranking por Supervisor, Vendedor y Clasificacion
+           If SqlCod < *Zeros ;
+              SqlMsgTxt = 'Inzsr: DELETE Fac3204RS' ;
+              Exsr ErrSql ;
+           Endif ;
+
+        //Borrar Tabla Ranking por Supervisor, Vendedor y Clasificacion
            Exec Sql
                Delete From Fac3204RC
                 Where (FecFam = :FecFam)
                  With NC;
 
+           If SqlCod < *Zeros ;
+              SqlMsgTxt = 'Inzsr: DELETE Fac3204RC' ;
+              Exsr ErrSql ;
+           Endif ;
+
            EndSr;
       /End-Free
         // -----------------------------------------------------
-

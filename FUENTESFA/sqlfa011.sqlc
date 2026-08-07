@@ -1,111 +1,117 @@
--- ==============================================================
--- Modulo    : Facturacion
--- Programa  : SQLFA011
--- Objeto    : VWFAC_Comprobantes_Planillas
--- Tipo      : Vista SQL (View)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 3
--- Proyecto  : Petromovil
--- --------------------------------------------------------------
--- Proposito:
---   Ver descripcion en comentarios dentro del SQL.
--- --------------------------------------------------------------
--- Campos retornados (en orden original):
---   Ver definicion en el SELECT del SQL.
--- --------------------------------------------------------------
--- Tablas referenciadas:
---   Ver comentarios en los JOINs del SQL.
--- --------------------------------------------------------------
--- Logica de resolucion de fechas:
---   Ver comentarios en el SQL.
--- --------------------------------------------------------------
--- Sugerencias de mejora:
---   Ver seccion Cambios en el historial del archivo original.
--- --------------------------------------------------------------
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
---                           formato 80 cols
--- ==============================================================
+-- ============================================================
+-- Vista   : VWFAC_Comprobantes_Planillas
+-- Módulo  : Facturación
+-- Objeto  : Devuelve los renglones de planillas de carga
+--           activas que son de origen Pedido (PlaOri='P') y
+--           cuyo cliente tiene asignado un tipo de comprobante
+--           fiscal (TcfCve) válido para emisión.
+--           Se usa para determinar qué pedidos de la planilla
+--           requieren comprobante fiscal y de qué tipo.
+-- Tablas  : FacPlah   cabecera de planilla de carga
+--           FacPlad   detalle de planilla (solo PlaOri='P')
+--           FacVeh    maestro de vehículos (solo filtro)
+--           FacOrdh   encabezado del pedido origen (almacén)
+--           CxcAdc    tipo de comprobante fiscal por cliente
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se corrige LEFT JOIN CxcAdc a INNER JOIN: el filtro
+--          T5.TcfCve In(...) en el WHERE convertía el LEFT en
+--          INNER efectivo; se hace explícito para claridad.
+--          Solo se devuelven clientes con tipo comprobante
+--          válido  el LEFT JOIN original era engañoso.
+--        Se convierte INNER JOIN FacVeh a LEFT OUTER JOIN
+--          con COALESCE en WHERE, consistente con sqlfa009
+--          y sqlfa010.
+--        Se normaliza el casing de columnas de T1 y T2 de
+--          MAYÚSCULAS a mixed-case (T1.PlaDis, T2.DisCve).
+--        Se alinea IfNull(T4.AlmCve) con el resto del SELECT.
+--        Se agrega alias explícito As en FROM y todos los JOINs.
+--        Se reformatea SELECT, JOINs y WHERE con una
+--          condición por línea y comentarios descriptivos.
+--        Se documenta la lista de TcfCve válidos.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentación completa.
+-- ============================================================
 
 Create Or Replace View VWFAC_Comprobantes_Planillas As
 
 Select
     -- --------------------------------------------------------
-    -- Identificacion de la planilla (FacPlah = T1)
+    -- Identificación de la planilla (FacPlah = T1)
     -- --------------------------------------------------------
-    T1.PlaDis                   As CODIGO_DISTRITO_PLANILLA_Plah,   
-                                   -- Codigo de distrito de la planilla
-    T1.PlaNro                   As NUMERO_DEFINITIVO_PLANILLA_Plah, 
-                                   -- Numero definitivo de la planilla
-    T1.VehFic                   As FICHA_DEL_VEHICULO_Plah,         
-                                   -- Ficha / placa del vehiculo
-    T1.PlaFpl                   As FECHA_DE_LA_PLANILLA_Plah,       
+    T1.PlaDis                   As CODIGO_DISTRITO_PLANILLA_Plah,
+                                   -- Código de distrito de la planilla
+    T1.PlaNro                   As NUMERO_DEFINITIVO_PLANILLA_Plah,
+                                   -- Número definitivo de la planilla
+    T1.VehFic                   As FICHA_DEL_VEHICULO_Plah,
+                                   -- Ficha / placa del vehículo
+    T1.PlaFpl                   As FECHA_DE_LA_PLANILLA_Plah,
                                    -- Fecha de la planilla
 
     -- --------------------------------------------------------
     -- Detalle del pedido en planilla (FacPlad = T2)
     -- --------------------------------------------------------
-    T2.DisCve                   As CODIGO_DE_DISTRITO_Plad,         
-                                   -- Codigo de distrito del pedido
-    Coalesce(T4.AlmCve, 0)        As CODIGO_DEL_ALMACEN_Ordh,         
-                                   -- Almacen del pedido
+    T2.DisCve                   As CODIGO_DE_DISTRITO_Plad,
+                                   -- Código de distrito del pedido
+    IfNull(T4.AlmCve, 0)        As CODIGO_DEL_ALMACEN_Ordh,
+                                   -- Almacén del pedido
                                    -- (FacOrdh; 0 si sin pedido)
-    T2.OrdNro                   As NUMERO_ORDEN_PEDIDO_Plad,        
-                                   -- Numero de orden / pedido
-    T2.OrdAmd                   As FECHA_ORDEN_DEL_PEDIDO_AMD_Plad, 
+    T2.OrdNro                   As NUMERO_ORDEN_PEDIDO_Plad,
+                                   -- Número de orden / pedido
+    T2.OrdAmd                   As FECHA_ORDEN_DEL_PEDIDO_AMD_Plad,
                                    -- Fecha de la orden (formato AMD)
-    T2.CliCve                   As CODIGO_DEL_CLIENTE_Plad,         
-                                   -- Codigo del cliente
+    T2.CliCve                   As CODIGO_DEL_CLIENTE_Plad,
+                                   -- Código del cliente
 
     -- --------------------------------------------------------
     -- Tipo de comprobante fiscal del cliente (CxcAdc = T5)
     -- --------------------------------------------------------
-    T5.TcfCve                   As TIPO_COMPROBANTE_FISCAL          
-                                   -- Tipo comprobante fiscal 
+    T5.TcfCve                   As TIPO_COMPROBANTE_FISCAL
+                                   -- Tipo comprobante fiscal
                                    -- asignado al cliente
 
 From FacPlah As T1
 
--- Detalle de planilla — INNER JOIN intencional:
--- una cabecera sin detalle no aporta informacion
+-- Detalle de planilla  INNER JOIN intencional:
+-- una cabecera sin detalle no aporta información
 Inner Join FacPlad As T2
     On  T1.PlaDis = T2.PlaDis
     And T1.PlaNro = T2.PlaNro
 
--- Vehiculo — LEFT OUTER para preservar planillas cuyo vehiculo
--- no este en el maestro; COALESCE en WHERE maneja los NULL
+-- Vehículo  LEFT OUTER para preservar planillas cuyo vehículo
+-- no esté en el maestro; COALESCE en WHERE maneja los NULL
 Left Outer Join FacVeh As T3
     On T1.VehFic = T3.VehFic
 
--- Pedido origen — LEFT: el almacen puede no estar disponible
--- (solo activo cuando PlaOri='P', condicion en WHERE)
+-- Pedido origen  LEFT: el almacén puede no estar disponible
+-- (solo activo cuando PlaOri='P', condición en WHERE)
 Left Outer Join FacOrdh As T4
     On  T2.DisCve = T4.DisCve
     And T2.OrdNro = T4.OrdNro
     And T2.CliCve = T4.CliCve
     And T2.PlaOri = 'P'
 
--- Tipo de comprobante fiscal por cliente — INNER JOIN:
--- solo se incluyen clientes con TcfCve valido para emision.
+-- Tipo de comprobante fiscal por cliente  INNER JOIN:
+-- solo se incluyen clientes con TcfCve válido para emisión.
 -- El original era LEFT JOIN con filtro en WHERE (equivalente
--- a INNER JOIN efectivo pero enganoso). Se hace explicito.
+-- a INNER JOIN efectivo pero engañoso). Se hace explícito.
 Inner Join CxcAdc As T5
     On T2.CliCve = T5.CliCve
 
 Where
-    -- Planillas en situacion valida para carga
+    -- Planillas en situación válida para carga
     -- Excluye: 'O'=Ocupada, 'R'=Recibida/Revertida, 'Y'=Ya procesada
     T1.SitCve Not In ('O', 'R', 'Y')
 
-    -- Solo vehiculos propios ('P'=Propio; excluye 'T'=Tercero)
-    -- COALESCE: si el vehiculo no existe en FacVeh, VehOri=NULL -> excluye
+    -- Solo vehículos propios ('P'=Propio; excluye 'T'=Tercero)
+    -- COALESCE: si el vehículo no existe en FacVeh, VehOri=NULL  excluye
     And COALESCE(T3.VehOri, '') = 'P'
 
-    -- Solo vehiculos tipo 1 o 2 (livianos/medianos)
-    -- COALESCE: si el vehiculo no existe en FacVeh, VehTip=NULL -> excluye
+    -- Solo vehículos tipo 1 o 2 (livianos/medianos)
+    -- COALESCE: si el vehículo no existe en FacVeh, VehTip=NULL  excluye
     And COALESCE(T3.VehTip, 99) <= 2
 
     -- Solo detalles activos ('A'=Activo)
@@ -114,15 +120,16 @@ Where
     -- Solo renglones de origen Pedido (no facturas ya emitidas)
     And T2.PlaOri = 'P'
 
-    -- Solo tipos de comprobante fiscal validos para emision:
-    -- 01=Factura de Credito Fiscal, 02=Factura de Consumidor Final,
-    -- 14=Reg. Unico de Ingresos, 15=Comp. de Compras,
-    -- 31=Fact. de Exportacion, 32=Fact. p/Reg. Esp. de Tributacion,
+    -- Solo tipos de comprobante fiscal válidos para emisión:
+    -- 01=Factura de Crédito Fiscal, 02=Factura de Consumidor Final,
+    -- 14=Reg. Único de Ingresos, 15=Comp. de Compras,
+    -- 31=Fact. de Exportación, 32=Fact. p/Reg. Esp. de Tributación,
     -- 44=Reg. de Gastos Menores, 45=Comp. para Gastos Gubernamentales
     And T5.TcfCve In (01, 02, 14, 15, 31, 32, 44, 45)
 
-    -- Solo planillas cuya fecha de programacion ya llego o paso
+    -- Solo planillas cuya fecha de programación ya llegó o pasó
     And Date(T1.PlaTpl) <= Current Date
 
 -- Orden sugerido para consultas directas sobre la vista:
 -- Order By T1.PlaDis, T1.PlaNro, T2.OrdNro
+
