@@ -56,26 +56,32 @@
     "extensions": ["SQL", "SQLC"]
   },
   {
+    "name": "📤 Exportar miembro QSYS → IFS/Git + commit + push",
+    "command": "QSYS/CPYTOSTMF FROMMBR('/QSYS.LIB/&LIBRARY.LIB/&FILE.FILE/&NAME.MBR') TOSTMF('/home/MEYKER/git/Petromovil/&FILE/&NAME.&EXT') STMFOPT(*REPLACE) CVTDTA(*AUTO) STMFCCSID(1208) && cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git add '&FILE/&NAME.&EXT' && /QOpenSys/pkgs/bin/git commit -m 'Exporta &LIBRARY/&FILE/&NAME' && /QOpenSys/pkgs/bin/git push origin main",
+    "environment": "pase",
+    "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
+  },
+  {
     "name": "📦 Git: commit + push este archivo",
-    "command": "cd /home/MEYKER/git/Petromovil && git add '&RELATIVEPATH' && git commit -m 'Actualiza &NAME (&CURLIB)' && git push origin main",
+    "command": "cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git add '&RELATIVEPATH' && /QOpenSys/pkgs/bin/git commit -m 'Actualiza &NAME (&CURLIB)' && /QOpenSys/pkgs/bin/git push origin main",
     "environment": "pase",
     "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
   },
   {
     "name": "📦 Git: status del repositorio",
-    "command": "cd /home/MEYKER/git/Petromovil && git status",
+    "command": "cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git status",
     "environment": "pase",
     "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
   },
   {
     "name": "📦 Git: pull desde GitHub",
-    "command": "cd /home/MEYKER/git/Petromovil && git pull origin main",
+    "command": "cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git pull origin main",
     "environment": "pase",
     "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
   },
   {
     "name": "📦 Git: log últimos 10 commits",
-    "command": "cd /home/MEYKER/git/Petromovil && git log --oneline -10",
+    "command": "cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git log --oneline -10",
     "environment": "pase",
     "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
   }
