@@ -1,0 +1,78 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ==============================================================
+-- Modulo    : Facturacion
+-- Programa  : sqlfaf005
+-- Objeto    : SEGLIB.FA_Capa_Nominal_Vehiculos
+-- Tipo      : Funcion SQL con valor de tabla (UDTF)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2.0
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Proposito:
+--   Devuelve la capacidad nominal de un vehiculo junto con datos
+--   complementarios: numero de bocas, tipo y origen. La capacidad
+--   nominal se calcula sumando los litros de hasta 8 compartimentos
+--   (VehCb1..VehCb8); valores nulos se tratan como cero.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   VehFic            CHAR(4)    Ficha / clave del vehiculo
+--   Capacidad_Nominal INTEGER    Suma de capacidades Cb1..Cb8
+--   Cantidad_Bocas    INTEGER    Numero de bocas (VehCbo)
+--   Tipo_Vehiculo     CHAR(1)    Tipo de vehiculo (VehTip)
+--   Origen            CHAR(1)    Origen del vehiculo (VehOri)
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   FacVeh   Maestro de vehiculos
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica; esta funcion no maneja campos de fecha.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar NOT DETERMINISTIC y READS SQL DATA ya que el
+--      resultado depende del estado de la tabla FacVeh.
+--   2. Considerar RETURNS NULL ON NULL INPUT para evitar scans
+--      innecesarios cuando el parametro Vehiculo sea NULL.
+--   3. Documentar el rango valido del parametro Vehiculo (ej.
+--      codigos alfanumericos de 4 posiciones sin padding).
+--   4. Evaluar si Capacidad_Nominal debe ser DECIMAL en lugar
+--      de INTEGER si los compartimentos admiten fracciones.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-06  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.FA_Capa_Nominal_Vehiculos (
+    Vehiculo CHAR(4)
+)
+RETURNS TABLE (
+    VehFic            CHAR(4),
+    Capacidad_Nominal INTEGER,
+    Cantidad_Bocas    INTEGER,
+    Tipo_Vehiculo     CHAR(1),
+    Origen            CHAR(1)
+)
+LANGUAGE SQL
+NOT DETERMINISTIC
+READS SQL DATA
+RETURNS NULL ON NULL INPUT
+RETURN
+    SELECT
+        V.VehFic,
+        ( COALESCE(V.VehCb1, 0)
+        + COALESCE(V.VehCb2, 0)
+        + COALESCE(V.VehCb3, 0)
+        + COALESCE(V.VehCb4, 0)
+        + COALESCE(V.VehCb5, 0)
+        + COALESCE(V.VehCb6, 0)
+        + COALESCE(V.VehCb7, 0)
+        + COALESCE(V.VehCb8, 0) )   AS Capacidad_Nominal,
+        V.VehCbo                    AS Cantidad_Bocas,
+        V.VehTip                    AS Tipo_Vehiculo,
+        V.VehOri                    AS Origen
+    FROM FacVeh V
+    WHERE V.VehFic = Vehiculo;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_Capa_Nominal_Vehiculos TO PUBLIC;

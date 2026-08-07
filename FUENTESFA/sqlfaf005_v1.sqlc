@@ -1,0 +1,37 @@
+-CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-- ============================================================
+-- Función  : SEGLIB.FA_Capa_Nominal_Vehiculos
+-- Propósito: Devuelve la capacidad Nomina de cada Vehiculo y
+--            Otros Datos del Mismo.
+-- Versión  : 1.0
+-- Parámetros:
+CREATE OR REPLACE FUNCTION SEGLIB.FA_Capa_Nominal_Vehiculos (
+    Vehiculo CHAR(4)
+)
+RETURNS TABLE (
+    VehFic CHAR(4),
+    Capacidad_Nominal INTEGER,
+    Cantidad_Bocas INTEGER,
+    Tipo_Vehiculo CHAR(1),
+    Origen CHAR(1)
+)
+LANGUAGE SQL
+READS SQL DATA
+RETURN
+    SELECT
+        V.VehFic,
+        (COALESCE(V.VehCb1,0) +
+         COALESCE(V.VehCb2,0) +
+         COALESCE(V.VehCb3,0) +
+         COALESCE(V.VehCb4,0) +
+         COALESCE(V.VehCb5,0) +
+         COALESCE(V.VehCb6,0) +
+         COALESCE(V.VehCb7,0) +
+         COALESCE(V.VehCb8,0)) AS Capacidad_Nominal,
+        V.VehCbo AS Cantidad_Bocas,
+        V.VehTip AS Tipo_Vehiculo,
+        V.VehOri AS Origen
+    FROM FacVeh V
+    WHERE V.VehFic = Vehiculo;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_Capa_Nominal_Vehiculos TO PUBLIC;

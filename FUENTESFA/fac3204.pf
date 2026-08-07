@@ -1,0 +1,86 @@
+      * -----------------------------------------------------------*
+      * IDENTIFICACION:                                            *
+      * --------------                                             *
+      *     NOMBRE DEL ARCHIVO..:  FAC3204                         *
+      *     SISTEMA.............:  FACTURACION                     *
+      *     FECHA ESCRITURA.....:  24 / 06 / 2026                  *
+      *                                                            *
+      *    ARCHIVO FÍSICO KPI CHURN CLIENTES DETALLE FA3204        *
+      * -----------------------------------------------------------*
+     A                                      REF(*LIBL/FACREPF)
+     A          R FAC3204F                  TEXT('KPI CHURN DE CLIENTES +
+     A                                            DETALLE FAC3204')
+     A            FECFAM         6  0       TEXT('ANO MES DE LA FECHA')
+     A                                      COLHDG('Ano Mes' 'De la' 'Fecha')
+     A                                      ALIAS(ANO_MES_DE_LA_FECHA)
+     A            SUPCVE         2  0       TEXT('CODIGO DE SUPERVISOR')
+     A                                      COLHDG('Codigo' 'de' 'Supervisor')
+     A                                      ALIAS(CODIGO_DE_SUPERVISOR)
+     A            SUPNOM        40          TEXT('NOMBRE DEL SUPERVISOR')
+     A                                      COLHDG('Nombre' 'del supervisor')
+     A                                      ALIAS(NOMBRE_DEL_SUPERVISOR)
+     A            VENCVE         3  0       TEXT('CODIGO DE VENDEDOR')
+     A                                      COLHDG('Codigo' 'de vendedor')
+     A                                      ALIAS(CODIGO_DE_VENDEDOR)
+     A            VENNOM        40          TEXT('NOMBRE DEL VENDEDOR')
+     A                                      COLHDG('Nombre')
+     A                                      ALIAS(NOMBRE_DEL_VENDEDOR)
+     A            CLACVE         2  0       TEXT('CODIGO CLASIFICACION CLIENTE')
+     A                                      COLHDG('Codigo' 'clasificacion' +
+     A                                             'cliente')
+     A                                      ALIAS(CODIGO_CLASIFICACION_CLIENTE)
+     A            CLADES        30          TEXT('DESCRIPCION')
+     A                                      COLHDG('Descripcion')
+     A                                      ALIAS(DESCRIPCION_CLASIFICACION)
+     A            CLICVE    R               TEXT('CODIGO DEL CLIENTE')
+     A            CLINOM    R               TEXT('NOMBRE DEL NEGOCIO')
+      *
+     A            FEULCO          L         TEXT('FECHA ULTIMA COMPRA')
+     A                                      COLHDG('Fecha' 'Ultima' 'Compra')
+     A                                      ALIAS(FECHA_ULTIMA_COMPRA_ISO)
+     A                                      DATFMT(*ISO)
+     A            DIASPR        10  2       TEXT('DIAS PROMEDIO DE COMPRA')
+     A                                      COLHDG('Dias' 'Promedio' +
+     A                                      'De Compras')
+     A                                      ALIAS(DIAS_PROMEDIO_COMPRAS)
+     A            DIASCO        10  2       TEXT('DIAS SIN COMPRAS')
+     A                                      COLHDG('Dias' 'Sin' +
+     A                                      'Compras')
+     A                                      ALIAS(DIAS_SIN_COMPRAS)
+     A            CANU12        12  2       TEXT('CANTIDAD COMPRADA ULTIMOS 12')
+     A                                      COLHDG('Cantidad' 'Comprada' +
+     A                                      'Ultimos 12 Meses')
+     A                                      ALIAS(CANTIDAD_COMPRADA_ULTIMOS_12M)
+     A            MONU12        15  2       TEXT('MONTO COMPRADO ULTIMOS 12')
+     A                                      COLHDG('Monto' 'Comprado' +
+     A                                      'Ultimos 12 Meses')
+     A                                      ALIAS(MONTO_COMPRADO_ULTIMOS_12M)
+     A            CANU24        12  2       TEXT('CANTIDAD COMPRADA ULTIMOS 24')
+     A                                      COLHDG('Cantidad' 'Comprada' +
+     A                                      'Ultimos 24 Meses')
+     A                                      ALIAS(CANTIDAD_COMPRADA_ULTIMOS_24M)
+     A            MONU24        15  2       TEXT('MONTO COMPRADO ULTIMOS 24')
+     A                                      COLHDG('Monto' 'Comprado' +
+     A                                      'Ultimos 24 Meses')
+     A                                      ALIAS(MONTO_COMPRADO_ULTIMOS_24M)
+     A            VARCAN        12  2       TEXT('VARIACION EN CANTIDAD')
+     A                                      COLHDG('Variacion' 'En' +
+     A                                      'Cantidad')
+     A                                      ALIAS(VARIACION_EN_CANTIDAD)
+     A            PORCAN         7  2       TEXT('PORCIENTO DE VARACION')
+     A                                      COLHDG('Porciento' 'De' +
+     A                                      'Variacion')
+     A                                      ALIAS(PORCIENTO_DE_VARIACION)
+     A            TENCLI        20          TEXT('TENDENCIA DEL CLIENTE')
+     A                                      COLHDG('Tendencia' 'Del' +
+     A                                      'Cliente')
+     A                                      ALIAS(TENDENCIA_DEL_CLIENTE)
+     A            ESTADO        15          TEXT('ESTADO DEL CLIENTE')
+     A                                      COLHDG('Estado' 'Del' +
+     A                                      'Cliente')
+     A                                      ALIAS(ESTADO_DEL_CLIENTE)
+      *
+     A          K SUPCVE
+     A          K VENCVE
+     A          K CLACVE
+     A          K CLICVE

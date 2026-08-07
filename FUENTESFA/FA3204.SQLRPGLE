@@ -54,7 +54,7 @@ h   Dh   Datedit(*Dmy)
      d VenCod          s                   Like(SqlCxcVen.VenCve)
       *
       **Variables para manejo de errores SQL
-     d SqlMsgTxt       s             80a
+     d SqlMsgTxt       s            256a
      d SqlErrCod       s             10i 0
      d ErrMsgKey       s              4a
      d ErrSqlState     s              5a

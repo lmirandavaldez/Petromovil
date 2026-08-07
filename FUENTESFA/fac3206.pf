@@ -1,0 +1,118 @@
+      * -----------------------------------------------------------*
+      * IDENTIFICACION:                                            *
+      * --------------                                             *
+      *     NOMBRE DEL ARCHIVO..:  FAC3206                         *
+      *     SISTEMA.............:  FACTURACION                     *
+      *     FECHA ESCRITURA.....:  06 / 08 / 2026                  *
+      *                                                            *
+      *    ARCHIVO FÍSICO KPI PRODUCTIVIDAD CONDUCTORES FA3206     *
+      * -----------------------------------------------------------*
+     A                                      REF(*LIBL/FACREPF)
+     A          R FAC3206F                  TEXT('KPI PRODUCTIVIDAD  +
+     A                                            CONDUCTORES FAC3206')
+     A            FECFAM         6  0       TEXT('ANO MES DE LA FECHA')
+     A                                      COLHDG('Ano Mes' 'De la' 'Fecha')
+     A                                      ALIAS(ANO_MES_DE_LA_FECHA)
+     A            CHOCVE    R               TEXT('CODIGO DEL CHOFER')
+     A            CHONOM    R               TEXT('NOMBRE DEL CHOFER')
+     A            CHOTIP    R               TEXT('TIPO CHOFER')
+     A            GRUCAP        30          TEXT('GRUPO CAPACIDAD VEHICULO')
+     A                                      COLHDG('Grupo' 'Capacidad' +
+     A                                             'Vehiculo')
+     A                                      ALIAS(GRUPO_CAPACIDAD_VEHICULO)
+     A            VIAJES         8  0       TEXT('CANTIDAD DE VIAJES')
+     A                                      COLHDG('Cantidad' 'De' +
+     A                                             'Viajes')
+     A                                      ALIAS(CANTIDAD_DE_VIAJES)
+     A            DIASTR        10  0       TEXT('DIAS TRABAJADO')
+     A                                      COLHDG('Dias'  +
+     A                                             'Trabajado')
+     A                                      ALIAS(DIAS_TRABAJADO)
+     A            GLSCARG       15  2       TEXT('CANTIDAD DE GALONES +
+     A                                            CARGADOS')
+     A                                      COLHDG('Cantidad' 'Galones' +
+     A                                             'Cargados')
+     A                                      ALIAS(CANTIDAD_DE_GALONES_CARGADOS)
+     A            GLSENTR       15  2       TEXT('CANTIDAD DE GALONES +
+     A                                               ENTREGADOS')
+     A                                      COLHDG('Cantidad' 'Galones' +
+     A                                             'Entregados')
+     A                                      ALIAS(CANTIDAD_GALONES_ENTREGADOS)
+     A            GLSNOEN       15  2       TEXT('CANTIDAD GALONES NO +
+     A                                            ENTREGADOS')
+     A                                      COLHDG('Cantidad' 'Galones' +
+     A                                             'No Entregados')
+     A                                      ALIAS(CANTIDAD_GLS_NO_ENTREGADOS)
+     A            CAPNOM        10  0       TEXT('CAPACIDAD NOMINAL EN +
+     A                                              GALONES')
+     A                                      COLHDG('Capacidad' 'Nominal' +
+     A                                             'En Galones')
+     A                                      ALIAS(CAPACIDAD_NOMINAL_EN_GALONES)
+     A            KPIEFIC       11  4       TEXT('KPI DE EFICIENCIA DE +
+     A                                              ENTREGA')
+     A                                      COLHDG('Eficiencia' 'de' +
+     A                                             'Entrega')
+     A                                      ALIAS(EFICIENCIA_DE_ENTREGA)
+     A            KPIINT        11  4       TEXT('KPI DE INTENSIDAD')
+     A                                      COLHDG('De'  +
+     A                                             'Intensidad')
+     A                                      ALIAS(DE_INTENSIDAD)
+     A            KPIPROD       11  4       TEXT('KPI DE PRODUCTIVIDAD DE +
+     A                                              CAPACIDAD')
+     A                                      COLHDG('De' 'Productividad' +
+     A                                             'De Capacidad')
+     A                                      ALIAS(DE_PRODUCTIVIDAD_CAPACIDAD)
+     A            KPIAPRO       11  4       TEXT('KPI DE APROVECHAMIENTO DE +
+     A                                              CAPACIDAD')
+     A                                      COLHDG('De' 'Aprovechamiento' +
+     A                                             'De Capacidad')
+     A                                      ALIAS(DE_APROVECHAMIENTO_CAPACIDAD)
+     A            KPIMERM       11  4       TEXT('KPI DE MERMA')
+     A                                      COLHDG('De' 'Merma')
+     A                                      ALIAS(DE_MERMA)
+     A            VOLPROM       11  4       TEXT('VOLUMEN PROMEDIO POR VIAJE')
+     A                                      COLHDG('Volumen' 'Promedio' +
+     A                                             'Por Viaje')
+     A                                      ALIAS(VOLUMEN_PROMEDIO_POR_VIAJE)
+     A            KPIEFIR       11  4       TEXT('KPI DE EFICIENCIA REAL')
+     A                                      COLHDG('De' 'Eficiencia' +
+     A                                             'Real')
+     A                                      ALIAS(DE_EFICIENCIA_REAL)
+     A            KPIUTIL       11  4       TEXT('KPI DE UTILIZACION')
+     A                                      COLHDG('De' 'Utilizacion')
+     A                                      ALIAS(DE_UTILIZACION)
+     A            DESVVOL       11  4       TEXT('DESVIACION ESTANDAR DEL +
+     A                                              VOLUMEN ENTREGADO')
+     A                                      COLHDG('Desviacion' 'Estandar' +
+     A                                             'Volumen Entregado')
+     A                                      ALIAS(DESVIACION_ESTANDAR_VOL_ENT)
+     A            TOTENTR        8  0       TEXT('TOTAL DE ENTREGAS')
+     A                                      COLHDG('Total' 'De' +
+     A                                             'Entregas')
+     A                                      ALIAS(TOTAL_DE_ENTREGAS)
+     A            KPIENTR       11  4       TEXT('KPI DE ENTREGAS POR VIAJES')
+     A                                      COLHDG('De' 'Entregas' +
+     A                                             'Por Viajes')
+     A                                      ALIAS(DE_ENTREGAS_POR_VIAJES)
+     A            KPIGLSX       11  4       TEXT('KPI DE GALONES POR ENTREGA')
+     A                                      COLHDG('De' 'Galones' +
+     A                                             'Por Entregas')
+     A                                      ALIAS(DE_GALONES_POR_ENTREGAS)
+     A            KPIFRAG       11  4       TEXT('KPI DE FRAGMENTACION DEL +
+     A                                              VIAJE EN GALONES')
+     A                                      COLHDG('De' 'Fragmentacion' +
+     A                                             'Del Viaje en GLS')
+     A                                      ALIAS(DE_FRAGMENTACION_VIAJE_GLS)
+     A            KPICUMB       11  4       TEXT('KPI DE CUMPLIMIENTO DE +
+     A                                               GALONES')
+     A                                      COLHDG('De' 'Cumplimiento' +
+     A                                             'De Galones')
+     A                                      ALIAS(DE_CUMPLIMIENTO_DE_GALONES)
+     A            KPIFRAB       11  4       TEXT('KPI DE FRAGMENTACION DE +
+     A                                              GALONES')
+     A                                      COLHDG('De' 'Fragmentacion' +
+     A                                             'De Galones')
+     A                                      ALIAS(DE_FRAGMENTACION_DE_GALONES)
+      *
+     A          K FECFAM
+     A          K CHOCVE

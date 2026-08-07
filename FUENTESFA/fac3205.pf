@@ -1,0 +1,76 @@
+      * -----------------------------------------------------------*
+      * IDENTIFICACION:                                            *
+      * --------------                                             *
+      *     NOMBRE DEL ARCHIVO..:  FAC3205                         *
+      *     SISTEMA.............:  FACTURACION                     *
+      *     FECHA ESCRITURA.....:  26 / 07 / 2026                  *
+      *                                                            *
+      *    ARCHIVO FÍSICO KPI CLIENTES NUEVOS DETALLE FA3205       *
+      * -----------------------------------------------------------*
+     A                                      REF(*LIBL/FACREPF)
+     A          R FAC3205F                  TEXT('KPI CLIENTES NUEVOS +
+     A                                            DETALLE FAC3205')
+     A            FECFAM         6  0       TEXT('ANO MES DE LA FECHA')
+     A                                      COLHDG('Ano Mes' 'De la' 'Fecha')
+     A                                      ALIAS(ANO_MES_DE_LA_FECHA)
+     A            SUPCVE         2  0       TEXT('CODIGO DE SUPERVISOR')
+     A                                      COLHDG('Codigo' 'de' 'Supervisor')
+     A                                      ALIAS(CODIGO_DE_SUPERVISOR)
+     A            SUPNOM        40          TEXT('NOMBRE DEL SUPERVISOR')
+     A                                      COLHDG('Nombre' 'del supervisor')
+     A                                      ALIAS(NOMBRE_DEL_SUPERVISOR)
+     A            VENCVE         3  0       TEXT('CODIGO DE VENDEDOR')
+     A                                      COLHDG('Codigo' 'de vendedor')
+     A                                      ALIAS(CODIGO_DE_VENDEDOR)
+     A            VENNOM        40          TEXT('NOMBRE DEL VENDEDOR')
+     A                                      COLHDG('Nombre')
+     A                                      ALIAS(NOMBRE_DEL_VENDEDOR)
+     A            CLACVE         2  0       TEXT('CODIGO CLASIFICACION CLIENTE')
+     A                                      COLHDG('Codigo' 'clasificacion' +
+     A                                             'Cliente')
+     A                                      ALIAS(CODIGO_CLASIFICACION_CLIENTE)
+     A            CLADES        30          TEXT('DESCRIPCION')
+     A                                      COLHDG('Descripcion')
+     A                                      ALIAS(DESCRIPCION_CLASIFICACION)
+     A            CLICVE    R               TEXT('CODIGO DEL CLIENTE')
+     A            CLINOM    R               TEXT('NOMBRE DEL NEGOCIO')
+     A            ESTADO        15          TEXT('ESTADO DEL CLIENTE')
+     A                                      COLHDG('Estado' 'Del' +
+     A                                      'Cliente')
+     A                                      ALIAS(ESTADO_DEL_CLIENTE)
+     A            DIASPR        10  2       TEXT('DIAS PROMEDIO DE COMPRA')
+     A                                      COLHDG('Dias' 'Promedio' +
+     A                                      'De Compras')
+     A                                      ALIAS(DIAS_PROMEDIO_COMPRAS)
+     A            CLIFCR          L         TEXT('FECHA CREACION DEL CLIENTE')
+     A                                      COLHDG('Fecha' 'Creacion' +
+     A                                      'Del Cliente')
+     A                                      ALIAS(FECHA_CREACION_DEL_CLIENTE)
+     A                                      DATFMT(*ISO)
+     A            CLIFMO          L         TEXT('FECHA MODIFICACION  +
+     A                                            DEL CLIENTE')
+     A                                      COLHDG('Fecha' 'Modificacion' +
+     A                                      'Del Cliente')
+     A                                      ALIAS(FECHA_MODIFICACION_CLIENTE)
+     A                                      DATFMT(*ISO)
+      *
+     A            FEPRCO          L         TEXT('FECHA PRIMERA COMPRA')
+     A                                      COLHDG('Fecha' 'Primera' 'Compra')
+     A                                      ALIAS(FECHA_PRIMERA_COMPRA_ISO)
+     A                                      DATFMT(*ISO)
+      *
+     A            FEULCO          L         TEXT('FECHA ULTIMA COMPRA')
+     A                                      COLHDG('Fecha' 'Ultima' 'Compra')
+     A                                      ALIAS(FECHA_ULTIMA_COMPRA_ISO)
+     A                                      DATFMT(*ISO)
+      *
+     A            FECOPE          L         TEXT('FECHA COMPRA DEL PERIODO')
+     A                                      COLHDG('Fecha' 'Compra' +
+     A                                      'Del Periodo')
+     A                                      ALIAS(FECHA_COMPRA_DEL_PERIODO_ISO)
+     A                                      DATFMT(*ISO)
+      *
+     A*         K SUPCVE
+     A*         K VENCVE
+     A*         K CLACVE
+     A          K CLICVE

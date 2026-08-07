@@ -1,0 +1,69 @@
+      * -----------------------------------------------------------*
+      * IDENTIFICACION:                                            *
+      * --------------                                             *
+      *     NOMBRE DEL ARCHIVO..:  FAC3204                         *
+      *     SISTEMA.............:  FACTURACION                     *
+      *     FECHA ESCRITURA.....:  24 / 06 / 2026                  *
+      *                                                            *
+      * ARCHIVO FÍSICO RANKING POR VENDEDORES CLASIFICACION        *
+      * -----------------------------------------------------------*
+     A                                      REF(*LIBL/FACREPF)
+     A          R FAC3204RCF                TEXT('RANKING POR VENDEDORES +
+     A                                            CLASIFICACION FAC3204RC')
+     A            FECFAM         6  0       TEXT('ANO MES DE LA FECHA')
+     A                                      COLHDG('Ano Mes' 'De la' 'Fecha')
+     A                                      ALIAS(ANO_MES_DE_LA_FECHA)
+     A            SUPCVE         2  0       TEXT('CODIGO DE SUPERVISOR')
+     A                                      COLHDG('Codigo' 'de' 'Supervisor')
+     A                                      ALIAS(CODIGO_DE_SUPERVISOR)
+     A            SUPNOM        40          TEXT('NOMBRE DEL SUPERVISOR')
+     A                                      COLHDG('Nombre' 'del supervisor')
+     A                                      ALIAS(NOMBRE_DEL_SUPERVISOR)
+     A            VENCVE         3  0       TEXT('CODIGO DE VENDEDOR')
+     A                                      COLHDG('Codigo' 'de vendedor')
+     A                                      ALIAS(CODIGO_DE_VENDEDOR)
+     A            VENNOM        40          TEXT('NOMBRE DEL VENDEDOR')
+     A                                      COLHDG('Nombre')
+     A                                      ALIAS(NOMBRE_DEL_VENDEDOR)
+     A            CLACVE         2  0       TEXT('CODIGO CLASIFICACION CLIENTE')
+     A                                      COLHDG('Codigo' 'clasificacion' +
+     A                                             'cliente')
+     A                                      ALIAS(CODIGO_CLASIFICACION_CLIENTE)
+     A            CLADES        30          TEXT('DESCRIPCION')
+     A                                      COLHDG('Descripcion')
+     A                                      ALIAS(DESCRIPCION_CLASIFICACION)
+      *
+     A            TOTCLI         8  0       TEXT('TOTAL DE CLIENTES')
+     A                                      COLHDG('Total' 'De' +
+     A                                      'Clientes')
+     A                                      ALIAS(TOTAL_DE_CLIENTES)
+      *
+     A            CLIACT         8  0       TEXT('TOTAL CLIENTES ACTIVOS')
+     A                                      COLHDG('Total' 'Clientes' +
+     A                                      'Activos')
+     A                                      ALIAS(TOTAL_CLIENTES_ACTIVOS)
+      *
+     A            CLIRIE         8  0       TEXT('TOTAL CLIENTES EN RIESGO')
+     A                                      COLHDG('Total' 'Clientes' +
+     A                                      'En Riesgo')
+     A                                      ALIAS(TOTAL_CLIENTES_EN_RIESGO)
+      *
+     A            CLICHU         8  0       TEXT('TOTAL CLIENTES EN CHURN')
+     A                                      COLHDG('Total' 'Clientes' +
+     A                                      'En Churn')
+     A                                      ALIAS(TOTAL_CLIENTES_EN_CHURN)
+      *
+     A            CLIHIS         8  0       TEXT('TOTAL CLIENTES SIN HISTORIAL')
+     A                                      COLHDG('Total' 'Clientes' +
+     A                                      'Sin Historial')
+     A                                      ALIAS(TOTAL_CLIENTES_SIN_HISTORIAL)
+      *
+     A            PORCHU         5  2       TEXT('PORCIENTO DE CLIENTES CHURN')
+     A                                      COLHDG('Porciento' 'De Clientes' +
+     A                                      'Churn')
+     A                                      ALIAS(PORCIENTO_DE_CLIENTES_CHURN)
+      *
+     A            RANKIN         8  0       TEXT('POSICION DEL RANKING')
+     A                                      COLHDG('Posicion' 'Del' +
+     A                                      'Ranking')
+     A                                      ALIAS(POSICION_DEL_RANKING)
