@@ -1,0 +1,5 @@
+{
+  "code-for-ibmi.deployDirectory": "/home/MEYKER/git/Petromovil/FUENTESFA",
+  "code-for-ibmi.currentLibrary": "FACLIB.V2",
+  "code-for-ibmi.libraryList": ["FACLIB.V2", "SEGLIB", "CXCLIB.V1", "QTEMP"]
+}
