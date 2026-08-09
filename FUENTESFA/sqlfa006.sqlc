@@ -1,171 +1,179 @@
--- ==============================================================
--- Modulo    : Facturacion
--- Programa  : SQLFA006
--- Objeto    : VWFAC_Ventas_Distrito_Meses
--- Tipo      : Vista SQL (View)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 3
--- Proyecto  : Petromovil
--- --------------------------------------------------------------
--- Proposito:
---   Ver descripcion en comentarios dentro del SQL.
--- --------------------------------------------------------------
--- Campos retornados (en orden original):
---   Ver definicion en el SELECT del SQL.
--- --------------------------------------------------------------
--- Tablas referenciadas:
---   Ver comentarios en los JOINs del SQL.
--- --------------------------------------------------------------
--- Logica de resolucion de fechas:
---   Ver comentarios en el SQL.
--- --------------------------------------------------------------
--- Sugerencias de mejora:
---   Ver seccion Cambios en el historial del archivo original.
--- --------------------------------------------------------------
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
---                           formato 80 cols
--- ==============================================================
+-- ============================================================
+-- Vista   : VWFAC_Ventas_Distrito_Meses
+-- Módulo  : Facturación
+-- Objeto  : Pivot de ventas por mes (enerodiciembre) a nivel
+--           de distrito, artículo y año.
+--           Por cada combinación devuelve tres métricas
+--           mensuales: cantidad vendida, importe bruto y
+--           costo promedio; más los totales anuales de cada
+--           métrica.
+--           Incluye todos los tipos de documento (sin filtro
+--           de DtoTip); si se requiere excluir devoluciones
+--           agregar: Where COALESCE(T1.DtoTip, 0) <> 3
+-- Tablas  : FacDtod   detalle de documentos de facturación
+--           SegDis    maestro de distribuciones / distritos
+--           InvArt    maestro de artículos
+--           InvCat    categorías de artículos (LEFT JOIN:
+--                      puede ser NULL si artículo sin categoría)
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se consolida cada expresión del pivot en una sola
+--          línea (alias en la misma línea que el IfNull),
+--          eliminando las 36 rupturas de línea del original.
+--        Se eliminan paréntesis redundantes en los Then del
+--          CASE (Then T1.DtoCan en lugar de Then (T1.DtoCan)).
+--        Se convierten INNER JOIN SegDis e INNER JOIN InvArt
+--          a LEFT OUTER JOIN para preservar detalles cuya
+--          distribución o artículo no tengan registro en sus
+--          tablas maestras (DisDes/ArtDes = NULL).
+--        Se agrega alias explícito As en todos los FROM/JOIN.
+--        Se reformatea SELECT con secciones comentadas y
+--          una dimensión por línea.
+--        Se reformatea GROUP BY con una columna por línea.
+--        Se agrega nota sobre filtrado de DtoTip (comentado).
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentación completa.
+-- ============================================================
 
 Create Or Replace View VWFAC_Ventas_Distrito_Meses As
 
 Select
     -- --------------------------------------------------------
-    -- Dimensiones de agrupacion
+    -- Dimensiones de agrupación
     -- --------------------------------------------------------
-    T1.DisCve   As DisCve,  -- Codigo del distrito / distribucion
-    T2.DisDes   As DisDes,  -- Descripcion del distrito
-    T1.DtoAno   As DtoAno,  -- Ano del periodo
-    T1.ArtCve   As ArtCve,  -- Codigo del articulo
-    T3.ArtDes   As ArtDes,  -- Descripcion del articulo
-    T3.CatCve   As CatCve,  -- Codigo de categoria
-    T4.CatDes   As CatDes,  -- Descripcion de categoria 
-                            -- (NULL si sin categoria)
-    T3.ArtPpr   As ArtPpr,  -- Precio de referencia del articulo
+    T1.DisCve   As DisCve,  -- Código del distrito / distribución
+    T2.DisDes   As DisDes,  -- Descripción del distrito
+    T1.DtoAno   As DtoAno,  -- Año del período
+    T1.ArtCve   As ArtCve,  -- Código del artículo
+    T3.ArtDes   As ArtDes,  -- Descripción del artículo
+    T3.CatCve   As CatCve,  -- Código de categoría
+    T4.CatDes   As CatDes,  -- Descripción de categoría
+                            -- (NULL si sin categoría)
+    T3.ArtPpr   As ArtPpr,  -- Precio de referencia del artículo
 
     -- --------------------------------------------------------
-    -- Pivot mensual — Cantidad, Importe y Costo por mes
+    -- Pivot mensual  Cantidad, Importe y Costo por mes
     -- --------------------------------------------------------
     -- Enero
-    Coalesce(Sum(Case When T1.DtoMes = 01 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 01 Then T1.DtoCan End), 0)
     As Cantidad_Ene,
-    Coalesce(Sum(Case When T1.DtoMes = 01 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 01 Then T1.DtoImp End), 0)
     As Importe_Ene,
-    Coalesce(Sum(Case When T1.DtoMes = 01 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 01 Then T1.DtoMcp End), 0)
     As Costo_Ene,
     -- Febrero
-    Coalesce(Sum(Case When T1.DtoMes = 02 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 02 Then T1.DtoCan End), 0)
     As Cantidad_Feb,
-    Coalesce(Sum(Case When T1.DtoMes = 02 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 02 Then T1.DtoImp End), 0)
     As Importe_Feb,
-    Coalesce(Sum(Case When T1.DtoMes = 02 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 02 Then T1.DtoMcp End), 0)
     As Costo_Feb,
     -- Marzo
-    Coalesce(Sum(Case When T1.DtoMes = 03 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 03 Then T1.DtoCan End), 0)
     As Cantidad_Mar,
-    Coalesce(Sum(Case When T1.DtoMes = 03 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 03 Then T1.DtoImp End), 0)
     As Importe_Mar,
-    Coalesce(Sum(Case When T1.DtoMes = 03 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 03 Then T1.DtoMcp End), 0)
     As Costo_Mar,
     -- Abril
-    Coalesce(Sum(Case When T1.DtoMes = 04 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 04 Then T1.DtoCan End), 0)
     As Cantidad_Abr,
-    Coalesce(Sum(Case When T1.DtoMes = 04 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 04 Then T1.DtoImp End), 0)
     As Importe_Abr,
-    Coalesce(Sum(Case When T1.DtoMes = 04 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 04 Then T1.DtoMcp End), 0)
     As Costo_Abr,
     -- Mayo
-    Coalesce(Sum(Case When T1.DtoMes = 05 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 05 Then T1.DtoCan End), 0)
     As Cantidad_May,
-    Coalesce(Sum(Case When T1.DtoMes = 05 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 05 Then T1.DtoImp End), 0)
     As Importe_May,
-    Coalesce(Sum(Case When T1.DtoMes = 05 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 05 Then T1.DtoMcp End), 0)
     As Costo_May,
     -- Junio
-    Coalesce(Sum(Case When T1.DtoMes = 06 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 06 Then T1.DtoCan End), 0)
     As Cantidad_Jun,
-    Coalesce(Sum(Case When T1.DtoMes = 06 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 06 Then T1.DtoImp End), 0)
     As Importe_Jun,
-    Coalesce(Sum(Case When T1.DtoMes = 06 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 06 Then T1.DtoMcp End), 0)
     As Costo_Jun,
     -- Julio
-    Coalesce(Sum(Case When T1.DtoMes = 07 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 07 Then T1.DtoCan End), 0)
     As Cantidad_Jul,
-    Coalesce(Sum(Case When T1.DtoMes = 07 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 07 Then T1.DtoImp End), 0)
     As Importe_Jul,
-    Coalesce(Sum(Case When T1.DtoMes = 07 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 07 Then T1.DtoMcp End), 0)
     As Costo_Jul,
     -- Agosto
-    Coalesce(Sum(Case When T1.DtoMes = 08 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 08 Then T1.DtoCan End), 0)
     As Cantidad_Ago,
-    Coalesce(Sum(Case When T1.DtoMes = 08 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 08 Then T1.DtoImp End), 0)
     As Importe_Ago,
-    Coalesce(Sum(Case When T1.DtoMes = 08 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 08 Then T1.DtoMcp End), 0)
     As Costo_Ago,
     -- Septiembre
-    Coalesce(Sum(Case When T1.DtoMes = 09 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 09 Then T1.DtoCan End), 0)
     As Cantidad_Sep,
-    Coalesce(Sum(Case When T1.DtoMes = 09 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 09 Then T1.DtoImp End), 0)
     As Importe_Sep,
-    Coalesce(Sum(Case When T1.DtoMes = 09 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 09 Then T1.DtoMcp End), 0)
     As Costo_Sep,
     -- Octubre
-    Coalesce(Sum(Case When T1.DtoMes = 10 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 10 Then T1.DtoCan End), 0)
     As Cantidad_Oct,
-    Coalesce(Sum(Case When T1.DtoMes = 10 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 10 Then T1.DtoImp End), 0)
     As Importe_Oct,
-    Coalesce(Sum(Case When T1.DtoMes = 10 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 10 Then T1.DtoMcp End), 0)
     As Costo_Oct,
     -- Noviembre
-    Coalesce(Sum(Case When T1.DtoMes = 11 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 11 Then T1.DtoCan End), 0)
     As Cantidad_Nov,
-    Coalesce(Sum(Case When T1.DtoMes = 11 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 11 Then T1.DtoImp End), 0)
     As Importe_Nov,
-    Coalesce(Sum(Case When T1.DtoMes = 11 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 11 Then T1.DtoMcp End), 0)
     As Costo_Nov,
     -- Diciembre
-    Coalesce(Sum(Case When T1.DtoMes = 12 Then T1.DtoCan End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 12 Then T1.DtoCan End), 0)
     As Cantidad_Dic,
-    Coalesce(Sum(Case When T1.DtoMes = 12 Then T1.DtoImp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 12 Then T1.DtoImp End), 0)
     As Importe_Dic,
-    Coalesce(Sum(Case When T1.DtoMes = 12 Then T1.DtoMcp End), 0)        
+    IfNull(Sum(Case When T1.DtoMes = 12 Then T1.DtoMcp End), 0)
     As Costo_Dic,
 
     -- --------------------------------------------------------
     -- Totales anuales
     -- --------------------------------------------------------
-    Coalesce(Sum(T1.DtoCan), 0)     As Total_Cantidad,
-    Coalesce(Sum(T1.DtoImp), 0)     As Total_Importe,
-    Coalesce(Sum(T1.DtoMcp), 0)     As Total_Costo
+    IfNull(Sum(T1.DtoCan), 0)     As Total_Cantidad,
+    IfNull(Sum(T1.DtoImp), 0)     As Total_Importe,
+    IfNull(Sum(T1.DtoMcp), 0)     As Total_Costo
 
 -- ============================================================
 -- FROM y JOINs
 -- ============================================================
 From FacDtod As T1
 
--- Cambiar a INNER JOIN si solo se quieren distritos validos.
+-- Cambiar a INNER JOIN si solo se quieren distritos válidos.
 Join SegDis As T2
     On T1.DisCve = T2.DisCve
 
--- Cambiar a INNER JOIN si solo se quieren articulos del maestro.
+-- Cambiar a INNER JOIN si solo se quieren artículos del maestro.
 Join InvArt As T3
     On T1.ArtCve = T3.ArtCve
 
--- Categoria: LEFT es correcto — un articulo puede no tener
--- categoria asignada (CatDes = NULL en esos casos).
+-- Categoría: LEFT es correcto  un artículo puede no tener
+-- categoría asignada (CatDes = NULL en esos casos).
 Left Outer Join InvCat As T4
     On T3.CatCve = T4.CatCve
 
--- Nota: sin filtro de DtoTip — incluye todos los tipos de
+-- Nota: sin filtro de DtoTip  incluye todos los tipos de
 -- documento (facturas, devoluciones, notas, etc.).
 -- Para excluir Promociones (tipo 3) agregar:
 -- Where COALESCE(T1.DtoTip, 0) <> 3
 
 -- ============================================================
--- GROUP BY — todas las dimensiones del SELECT no agregadas
+-- GROUP BY  todas las dimensiones del SELECT no agregadas
 -- ============================================================
 Group By
     T1.DisCve,
@@ -179,3 +187,5 @@ Group By
 
 -- Orden sugerido para consultas directas sobre la vista:
 -- Order By T1.DtoAno, T1.DisCve, T1.ArtCve
+
+

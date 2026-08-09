@@ -1,0 +1,14 @@
+{
+  "code-for-ibmi.deployDirectory": "/home/MEYKER/git/Petromovil",
+  "code-for-ibmi.showDescInLibList": true,
+  "files.encoding": "utf8",
+  "git.enabled": true,
+  "git.path": "/QOpenSys/pkgs/bin/git",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/QOpenSys/pkgs/bin/bash",
+      "args": ["-l"]
+    }
+  }
+}

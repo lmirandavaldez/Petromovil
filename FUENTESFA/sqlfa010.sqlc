@@ -1,34 +1,43 @@
--- ==============================================================
--- Modulo    : Facturacion
--- Programa  : SQLFA010
--- Objeto    : VWFAC_Documentos_Planillas_Carga
--- Tipo      : Vista SQL (View)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 3
--- Proyecto  : Petromovil
--- --------------------------------------------------------------
--- Proposito:
---   Ver descripcion en comentarios dentro del SQL.
--- --------------------------------------------------------------
--- Campos retornados (en orden original):
---   Ver definicion en el SELECT del SQL.
--- --------------------------------------------------------------
--- Tablas referenciadas:
---   Ver comentarios en los JOINs del SQL.
--- --------------------------------------------------------------
--- Logica de resolucion de fechas:
---   Ver comentarios en el SQL.
--- --------------------------------------------------------------
--- Sugerencias de mejora:
---   Ver seccion Cambios en el historial del archivo original.
--- --------------------------------------------------------------
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
---                           formato 80 cols
--- ==============================================================
+-- ============================================================
+-- Vista   : VWFAC_Documentos_Planillas_Carga
+-- Módulo  : Facturación
+-- Objeto  : Resumen de planillas de carga activas que están
+--           pendientes de emisión, indicando por cada
+--           planilla (PlaDis + PlaNro + VehFic) cuántos
+--           renglones provienen de pedidos (PlaOri='P') y
+--           cuántos de facturas ya emitidas (PlaOri='F').
+--           Utiliza la misma lógica de filtrado que
+--           VWFAC_Carga_Planillas (sqlfa009), sin incluir
+--           el filtro de Imeccme (esta vista es un resumen
+--           de totales, no la carga de detalle).
+-- Tablas  : FacPlah   cabecera de planilla de carga
+--           FacPlad   detalle de planilla de carga
+--           FacVeh    maestro de vehículos (solo filtro)
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - CORRECCIÓN DE BUG: el CTE original usaba
+--          (Case When PlaOri='P' Then Count(*) Else 0 End)
+--          que es inválido  Count(*) es una función de
+--          agregación y no puede estar dentro de un CASE
+--          escalar en la lista del SELECT con GROUP BY.
+--          Corregido a Sum(Case When PlaOri='P' Then 1 Else 0
+--          End) que es el patrón correcto para contar
+--          condicionalmente, eliminando el CTE intermedio
+--          ya que la agregación se puede hacer directamente.
+--        Se convierte INNER JOIN FacVeh a LEFT OUTER JOIN
+--          con COALESCE en WHERE para preservar planillas
+--          cuyo vehículo no esté en el maestro (mismo
+--          criterio que sqlfa009).
+--        Se agrega alias explícito As en FROM y todos los JOINs.
+--        Se documenta el WHERE con el significado de cada
+--          valor de estado.
+--        Se reformatea con secciones y comentarios.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentación completa.
+-- ============================================================
 
 Create Or Replace View VWFAC_Documentos_Planillas_Carga As
 
@@ -36,9 +45,9 @@ Select
     -- --------------------------------------------------------
     -- Clave de la planilla
     -- --------------------------------------------------------
-    T1.PlaDis              As PlaDis,    -- Codigo de distrito de la planilla
-    T1.PlaNro              As PlaNro,    -- Numero de la planilla
-    T1.VehFic              As VehFic,    -- Ficha / placa del vehiculo
+    T1.PlaDis              As PlaDis,    -- Código de distrito de la planilla
+    T1.PlaNro              As PlaNro,    -- Número de la planilla
+    T1.VehFic              As VehFic,    -- Ficha / placa del vehículo
 
     -- --------------------------------------------------------
     -- Conteo de renglones por origen del documento
@@ -51,34 +60,34 @@ Select
 
 From FacPlah As T1
 
--- Detalle de planilla — INNER JOIN intencional:
+-- Detalle de planilla  INNER JOIN intencional:
 -- una cabecera sin detalle no aporta al conteo
 Inner Join FacPlad As T2
     On  T1.PlaDis = T2.PlaDis
     And T1.PlaNro = T2.PlaNro
 
--- Vehiculo — LEFT OUTER para preservar planillas cuyo vehiculo
--- no este en el maestro; COALESCE en WHERE maneja los NULL
+-- Vehículo  LEFT OUTER para preservar planillas cuyo vehículo
+-- no esté en el maestro; COALESCE en WHERE maneja los NULL
 Left Outer Join FacVeh As T3
     On T1.VehFic = T3.VehFic
 
 Where
-    -- Planillas en situacion valida para carga
+    -- Planillas en situación válida para carga
     -- Excluye: 'O'=Ocupada, 'R'=Recibida/Revertida, 'Y'=Ya procesada
     T1.SitCve Not In ('O', 'R', 'Y')
 
-    -- Solo vehiculos propios ('P'=Propio; excluye 'T'=Tercero)
-    -- COALESCE: si el vehiculo no existe en FacVeh, VehOri=NULL -> excluye
+    -- Solo vehículos propios ('P'=Propio; excluye 'T'=Tercero)
+    -- COALESCE: si el vehículo no existe en FacVeh, VehOri=NULL  excluye
     And COALESCE(T3.VehOri, '') = 'P'
 
-    -- Solo vehiculos tipo 1 o 2 (livianos/medianos)
-    -- COALESCE: si el vehiculo no existe en FacVeh, VehTip=NULL -> excluye
+    -- Solo vehículos tipo 1 o 2 (livianos/medianos)
+    -- COALESCE: si el vehículo no existe en FacVeh, VehTip=NULL  excluye
     And COALESCE(T3.VehTip, 99) <= 2
 
     -- Solo detalles de planilla activos ('A'=Activo)
     And T2.PlaSta = 'A'
 
-    -- Solo planillas cuya fecha de programacion ya llego o paso
+    -- Solo planillas cuya fecha de programación ya llegó o pasó
     And Date(T1.PlaTpl) <= Current Date
 
 Group By
@@ -88,3 +97,4 @@ Group By
 
 -- Orden sugerido para consultas directas sobre la vista:
 -- Order By T1.PlaDis, T1.PlaNro
+

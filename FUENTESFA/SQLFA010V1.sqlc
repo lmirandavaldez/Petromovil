@@ -1,0 +1,20 @@
+Create Or Replace View VWFAC_Documentos_Planillas_Carga as
+WITH Planillas AS(Select T1.PlaDis, T1.PlaNro, T1.VehFic, T2.PlaOri,
+    (Case When T2.PlaOri = 'P' Then Count(*) Else 0 End) As Pedidos,
+    (Case When T2.PlaOri = 'F' Then Count(*) Else 0 End) As Facturas
+                    From FacPlah T1
+                    Join FacPlad T2
+                      On (T1.PlaDis = T2.PlaDis)
+                     And (T1.PlaNro = T2.PlaNro)
+                    Join FacVeh T3
+                      On (T1.VehFic = T3.VehFic)
+                   Where (T1.SitCve Not In('O', 'R', 'Y'))
+                     And (T3.VehOri = 'P')
+                     And (T3.VehTip <= 2)
+                     And (T2.PlaSta = 'A')
+                     And (Date(T1.PlaTpl) <= Current Date)
+                Group By T1.PlaDis, T1.PlaNro, T1.VehFic, T2.PlaOri)
+   Select PlaDis, PlaNro, VehFic,
+         Sum(Pedidos) As Pedidos, Sum(Facturas) As Facturas
+     From Planillas
+ Group By PlaDis, PlaNro, VehFic

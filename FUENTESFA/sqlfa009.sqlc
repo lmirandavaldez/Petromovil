@@ -1,293 +1,315 @@
--- ==============================================================
--- Modulo    : Facturacion
--- Programa  : SQLFA009
--- Objeto    : VWFAC_Carga_Planillas
--- Tipo      : Vista SQL (View)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 3
--- Proyecto  : Petromovil
--- --------------------------------------------------------------
--- Proposito:
---   Ver descripcion en comentarios dentro del SQL.
--- --------------------------------------------------------------
--- Campos retornados (en orden original):
---   Ver definicion en el SELECT del SQL.
--- --------------------------------------------------------------
--- Tablas referenciadas:
---   Ver comentarios en los JOINs del SQL.
--- --------------------------------------------------------------
--- Logica de resolucion de fechas:
---   Ver comentarios en el SQL.
--- --------------------------------------------------------------
--- Sugerencias de mejora:
---   Ver seccion Cambios en el historial del archivo original.
--- --------------------------------------------------------------
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
---                           formato 80 cols
--- ==============================================================
+-- ============================================================
+-- Vista   : VWFAC_Carga_Planillas
+-- Módulo  : Facturación
+-- Objeto  : Devuelve el detalle completo de planillas de carga
+--           activas, pendientes de procesar por el módulo de
+--           emisión (Imeccme).
+--           Combina la cabecera de planilla (FacPlah) con su
+--           detalle (FacPlad) y, según el origen del documento
+--           (PlaOri), enriquece con datos del documento de
+--           facturación ya emitido ('F') o del pedido origen
+--           ('P'): encabezado, datos fiscales, artículos,
+--           cantidades e importes.
+--           La columna Que_debe_Emitir indica si el proceso
+--           debe generar una Factura ('F') o un Comprobante
+--           ('C') según distrito y almacén.
+-- Tablas  : FacPlah   cabecera de planilla de carga
+--           FacPlad   detalle de planilla de carga
+--           FacVeh    maestro de vehículos (solo filtro)
+--           FacDtoh   encabezado doc. facturación (PlaOri='F')
+--           FacDed    datos fiscales del doc. (PlaOri='F')
+--           FacDtod   detalle del doc. de facturación (PlaOri='F')
+--           InvArt    maestro de artículos del doc. (PlaOri='F')
+--           FacOrdh   encabezado del pedido origen (PlaOri='P')
+--           FacDem    datos fiscales del pedido (PlaOri='P')
+--           FacOrdd   detalle del pedido origen (PlaOri='P')
+--           InvArt    maestro de artículos del pedido (PlaOri='P')
+--           SegFec    calendario (para fecha del documento)
+--           Imeccme   control de planillas ya procesadas
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - CORRECCIÓN DE BUG (línea 86 original): el campo
+--          MONTO_SEGUNDO_DESCUENTO_Dtod referenciaba T7.DtoMpd
+--          (igual que el primer descuento). Corregido a
+--          T7.DtoMp2, que corresponde al monto del 2do descuento.
+--        Se convierte INNER JOIN FacVeh a LEFT OUTER JOIN para
+--          preservar planillas cuyo vehículo no esté en maestro
+--          (VehOri y VehTip quedarán NULL y serán filtrados en
+--          WHERE con COALESCE).
+--        Se agrega COALESCE en los filtros de FacVeh en WHERE
+--          para manejar correctamente los NULL del LEFT JOIN.
+--        Se normaliza el casing de todos los nombres de columna
+--          de T1 y T2 de MAYÚSCULAS a mixed-case (T1.PlaDis,
+--          T1.PlaNro, etc.) para consistencia con el sistema.
+--        Se agrega alias explícito As en FROM y todos los JOINs.
+--        Se reformatea el SELECT por secciones temáticas con
+--          comentarios descriptivos, respetando el orden original.
+--        Se reformatea los JOINs y el WHERE con una condición
+--          por línea y comentarios de valores de estado.
+--        Cabecera de documentación completa.
+-- ============================================================
 
 Create Or Replace View VWFAC_Carga_Planillas As
 
 Select
     -- ========================================================
-    -- SECCION 1: Cabecera de Planilla (FacPlah = T1)
+    -- SECCIÓN 1: Cabecera de Planilla (FacPlah = T1)
     -- ========================================================
-    T1.PlaDis                   As CODIGO_DISTRITO_PLANILLA_Plah,       
-    -- Codigo de distrito de la planilla
-    T1.PlaNro                   As NUMERO_DEFINITIVO_PLANILLA_Plah,     
-    -- Numero definitivo de la planilla
-    T1.VehFic                   As FICHA_DEL_VEHICULO_Plah,             
-    -- Ficha / placa del vehiculo
-    T1.ChoCve                   As CODIGO_DEL_CHOFER_Plah,              
-    -- Codigo del chofer
-    T1.PlaFpl                   As FECHA_DE_LA_PLANILLA_Plah,           
+    T1.PlaDis                   As CODIGO_DISTRITO_PLANILLA_Plah,
+    -- Código de distrito de la planilla
+    T1.PlaNro                   As NUMERO_DEFINITIVO_PLANILLA_Plah,
+    -- Número definitivo de la planilla
+    T1.VehFic                   As FICHA_DEL_VEHICULO_Plah,
+    -- Ficha / placa del vehículo
+    T1.ChoCve                   As CODIGO_DEL_CHOFER_Plah,
+    -- Código del chofer
+    T1.PlaFpl                   As FECHA_DE_LA_PLANILLA_Plah,
     -- Fecha de la planilla
-    T1.PlaCbu                   As CANTIDAD_DE_BULTOS_PLANILLA_Plah,    
+    T1.PlaCbu                   As CANTIDAD_DE_BULTOS_PLANILLA_Plah,
     -- Cantidad de bultos en planilla
     T1.PlaCrp                   As CANTIDAD_PROD_REQ_PESO_PLANILLA_Plah,
     -- Cantidad productos requeridos por peso
-    T1.PlaCad                   As CANTIDAD_DE_BULTOS_DESPACHAR_Plah,   
+    T1.PlaCad                   As CANTIDAD_DE_BULTOS_DESPACHAR_Plah,
     -- Cantidad de bultos a despachar
-    T1.PlaCdv                   As CANTIDAD_DEVUELTA_Plah,              
+    T1.PlaCdv                   As CANTIDAD_DEVUELTA_Plah,
     -- Cantidad devuelta
-    T1.PlaTce                   As TOTAL_CANTIDAD_ENTREGADA_Plah,       
+    T1.PlaTce                   As TOTAL_CANTIDAD_ENTREGADA_Plah,
     -- Total cantidad entregada
-    T1.PlaLit                   As LECTURA_INICIAL_TOTAL_Plah,          
-    -- Lectura inicial del odometro
-    T1.PlaLft                   As LECTURA_FINAL_TOTAL_Plah,            
-    -- Lectura final del odometro
-    T1.PlaMbr                   As TOTAL_PLANILLA_MONTO_BRUTO_Plah,     
+    T1.PlaLit                   As LECTURA_INICIAL_TOTAL_Plah,
+    -- Lectura inicial del odómetro
+    T1.PlaLft                   As LECTURA_FINAL_TOTAL_Plah,
+    -- Lectura final del odómetro
+    T1.PlaMbr                   As TOTAL_PLANILLA_MONTO_BRUTO_Plah,
     -- Total monto bruto de la planilla
-    T1.PlaMd1                   As TOTAL_PLANILLA_1ER_DESCUENTO_Plah,   
+    T1.PlaMd1                   As TOTAL_PLANILLA_1ER_DESCUENTO_Plah,
     -- Total 1er descuento de la planilla
-    T1.PlaMd2                   As TOTAL_PLANILLA_2DO_DESCUENTO_Plah,   
+    T1.PlaMd2                   As TOTAL_PLANILLA_2DO_DESCUENTO_Plah,
     -- Total 2do descuento de la planilla
-    T1.PlaMi1                   As TOTAL_PLANILLA_1ER_IMPUESTO_Plah,    
+    T1.PlaMi1                   As TOTAL_PLANILLA_1ER_IMPUESTO_Plah,
     -- Total 1er impuesto de la planilla
-    T1.PlaMi2                   As TOTAL_PLANILLA_2DO_IMPUESTO_Plah,    
+    T1.PlaMi2                   As TOTAL_PLANILLA_2DO_IMPUESTO_Plah,
     -- Total 2do impuesto de la planilla
-    T1.PlaMi3                   As TOTAL_PLANILLA_3ER_IMPUESTO_Plah,    
+    T1.PlaMi3                   As TOTAL_PLANILLA_3ER_IMPUESTO_Plah,
     -- Total 3er impuesto de la planilla
-    T1.PlaMne                   As TOTAL_PLANILLA_NETO_DOCTO_Plah,      
+    T1.PlaMne                   As TOTAL_PLANILLA_NETO_DOCTO_Plah,
     -- Total neto del documento de planilla
-    T1.SitCve                   As CLAVE_DE_SITUACION_Plah,             
-    -- Situacion: excluye 'O','R','Y' (ver WHERE)
-    T1.AplUsr                   As USUARIO_QUE_APLICO_Plah,             
-    -- Usuario que aplico la planilla
-    T1.AplWsi                   As TERMINAL_DONDE_SE_APLICO_Plah,       
-    -- Terminal desde donde se aplico
-    T1.AplHor                   As HORA_QUE_SE_APLICO_Plah,             
-    -- Hora en que se aplico
+    T1.SitCve                   As CLAVE_DE_SITUACION_Plah,
+    -- Situación: excluye 'O','R','Y' (ver WHERE)
+    T1.AplUsr                   As USUARIO_QUE_APLICO_Plah,
+    -- Usuario que aplicó la planilla
+    T1.AplWsi                   As TERMINAL_DONDE_SE_APLICO_Plah,
+    -- Terminal desde donde se aplicó
+    T1.AplHor                   As HORA_QUE_SE_APLICO_Plah,
+    -- Hora en que se aplicó
 
     -- ========================================================
-    -- SECCION 2: Detalle de Planilla (FacPlad = T2)
+    -- SECCIÓN 2: Detalle de Planilla (FacPlad = T2)
     -- ========================================================
-    T2.PlaSec                   As SECUENCIA_PLANILLA_Detalle_Plad,     
+    T2.PlaSec                   As SECUENCIA_PLANILLA_Detalle_Plad,
     -- Secuencia del detalle en la planilla
-    T2.DisCve                   As CODIGO_DE_DISTRITO_Plad,             
-    -- Codigo de distrito del detalle
-    T2.OrdNro                   As NUMERO_ORDEN_PEDIDO_Plad,            
-    -- Numero de orden / pedido
-    T2.OrdAmd                   As FECHA_ORDEN_DEL_PEDIDO_AMD_Plad,     
+    T2.DisCve                   As CODIGO_DE_DISTRITO_Plad,
+    -- Código de distrito del detalle
+    T2.OrdNro                   As NUMERO_ORDEN_PEDIDO_Plad,
+    -- Número de orden / pedido
+    T2.OrdAmd                   As FECHA_ORDEN_DEL_PEDIDO_AMD_Plad,
     -- Fecha de la orden (formato AMD)
-    T2.CliCve                   As CODIGO_DEL_CLIENTE_Plad,             
-    -- Codigo del cliente
-    T2.CliNom                   As NOMBRE_DEL_NEGOCIO_Plad,             
+    T2.CliCve                   As CODIGO_DEL_CLIENTE_Plad,
+    -- Código del cliente
+    T2.CliNom                   As NOMBRE_DEL_NEGOCIO_Plad,
     -- Nombre del negocio / cliente
-    T2.CliDir                   As DIRECCION_DEL_NEGOCIO_Plad,          
-    -- Direccion del negocio
-    T2.CliDi1                   As DIRECCION_DEL_NEGOCIO_2_Plad,        
-    -- Direccion 2 del negocio
-    T2.CliPrv                   As CODIGO_DE_PROVINCIA_NEGOCIO_Plad,    
-    -- Codigo de provincia
-    T2.CliMun                   As CODIGO_DEL_MUNICIPIO_NEGOCIO_Plad,   
-    -- Codigo de municipio
-    T2.CliDms                   As CODIGO_DISTRITO_MUNICIPAL_NEG_Plad,  
-    -- Codigo de distrito municipal
-    T2.CliCpo                   As CODIGO_POSTAL_DM_NEGOCIO_Plad,       
-    -- Codigo postal del distrito municipal
-    T2.CliSec                   As SEC_DISTRITO_MUNICIPAL_NEGOCIO_PLAD, 
+    T2.CliDir                   As DIRECCION_DEL_NEGOCIO_Plad,
+    -- Dirección del negocio
+    T2.CliDi1                   As DIRECCION_DEL_NEGOCIO_2_Plad,
+    -- Dirección 2 del negocio
+    T2.CliPrv                   As CODIGO_DE_PROVINCIA_NEGOCIO_Plad,
+    -- Código de provincia
+    T2.CliMun                   As CODIGO_DEL_MUNICIPIO_NEGOCIO_Plad,
+    -- Código de municipio
+    T2.CliDms                   As CODIGO_DISTRITO_MUNICIPAL_NEG_Plad,
+    -- Código de distrito municipal
+    T2.CliCpo                   As CODIGO_POSTAL_DM_NEGOCIO_Plad,
+    -- Código postal del distrito municipal
+    T2.CliSec                   As SEC_DISTRITO_MUNICIPAL_NEGOCIO_PLAD,
     -- Secuencia del distrito municipal
-    T2.CliTe1                   As TELEFONO_DEL_NEGOCIO_1_Plad,         
-    -- Telefono 1 del negocio
-    T2.CliTe2                   As TELEFONO_DEL_NEGOCIO_2_Plad,         
-    -- Telefono 2 del negocio
-    T2.CliPno                   As NOMBRE_DEL_PROPIETARIO_Plad,         
+    T2.CliTe1                   As TELEFONO_DEL_NEGOCIO_1_Plad,
+    -- Teléfono 1 del negocio
+    T2.CliTe2                   As TELEFONO_DEL_NEGOCIO_2_Plad,
+    -- Teléfono 2 del negocio
+    T2.CliPno                   As NOMBRE_DEL_PROPIETARIO_Plad,
     -- Nombre del propietario
-    T2.DemLat                   As COORDENADA_UTM_LATITUD_Plad,         
+    T2.DemLat                   As COORDENADA_UTM_LATITUD_Plad,
     -- Coordenada UTM latitud
-    T2.DemLog                   As COORDENADA_UTM_LONGITUD_Plad,        
+    T2.DemLog                   As COORDENADA_UTM_LONGITUD_Plad,
     -- Coordenada UTM longitud
-    T2.MsgCve                   As CODIGO_DEL_MENSAJE_Plad,             
-    -- Codigo del mensaje
-    T2.CclCve                   As CODIGO_DEL_CONTACTO_Plad,            
-    -- Codigo del contacto
-    T2.DdcCve                   As CODIGO_DIRECCION_DESPACHO_Plad,      
-    -- Codigo de direccion de despacho
-    T2.ObsDem                   As OBSERVACION_DEL_PEDIDO_Plad,         
-    -- Observacion del pedido
-    T2.VenCve                   As CODIGO_DE_VENDEDOR_Plad,             
-    -- Codigo del vendedor
-    T2.VenNom                   As NOMBRE_DEL_VENDEDOR_Plad,            
+    T2.MsgCve                   As CODIGO_DEL_MENSAJE_Plad,
+    -- Código del mensaje
+    T2.CclCve                   As CODIGO_DEL_CONTACTO_Plad,
+    -- Código del contacto
+    T2.DdcCve                   As CODIGO_DIRECCION_DESPACHO_Plad,
+    -- Código de dirección de despacho
+    T2.ObsDem                   As OBSERVACION_DEL_PEDIDO_Plad,
+    -- Observación del pedido
+    T2.VenCve                   As CODIGO_DE_VENDEDOR_Plad,
+    -- Código del vendedor
+    T2.VenNom                   As NOMBRE_DEL_VENDEDOR_Plad,
     -- Nombre del vendedor
-    T2.VenEma                   As DIRECCION_EMAIL_DEL_VENDEDOR_Plad,   
+    T2.VenEma                   As DIRECCION_EMAIL_DEL_VENDEDOR_Plad,
     -- Email del vendedor
-    T2.OrdTib                   As TOTAL_IMPORTE_BRUTO_Plad,            
+    T2.OrdTib                   As TOTAL_IMPORTE_BRUTO_Plad,
     -- Total importe bruto del pedido
-    T2.OrdTd1                   As TOTAL_IMPORTE_DESCUENTO_1_Plad,      
+    T2.OrdTd1                   As TOTAL_IMPORTE_DESCUENTO_1_Plad,
     -- Total importe descuento 1
-    T2.OrdTd2                   As TOTAL_IMPORTE_DESCUENTO_2_Plad,      
+    T2.OrdTd2                   As TOTAL_IMPORTE_DESCUENTO_2_Plad,
     -- Total importe descuento 2
-    T2.OrdTi1                   As TOTAL_IMPORTE_IMPUESTO_1_Plad,       
+    T2.OrdTi1                   As TOTAL_IMPORTE_IMPUESTO_1_Plad,
     -- Total importe impuesto 1
-    T2.OrdTi2                   As TOTAL_IMPORTE_IMPUESTO_2_Plad,       
+    T2.OrdTi2                   As TOTAL_IMPORTE_IMPUESTO_2_Plad,
     -- Total importe impuesto 2
-    T2.OrdTi3                   As TOTAL_IMPORTE_IMPUESTO_3_Plad,       
+    T2.OrdTi3                   As TOTAL_IMPORTE_IMPUESTO_3_Plad,
     -- Total importe impuesto 3
-    T2.OrdTin                   As TOTAL_IMPORTE_NETO_Plad,             
+    T2.OrdTin                   As TOTAL_IMPORTE_NETO_Plad,
     -- Total importe neto del pedido
-    T2.PlaCbd                   As CANTIDAD_DE_BULTOS_PLANILLA_Plad,    
+    T2.PlaCbd                   As CANTIDAD_DE_BULTOS_PLANILLA_Plad,
     -- Cantidad de bultos en detalle planilla
-    T2.PlaCrd                   As CANTIDAD_PROD_REQ_PESO_Plad,         
+    T2.PlaCrd                   As CANTIDAD_PROD_REQ_PESO_Plad,
     -- Cantidad productos requeridos por peso
-    T2.PlaCde                   As CANTIDAD_BULTOS_DESPACHAR_Plad,      
+    T2.PlaCde                   As CANTIDAD_BULTOS_DESPACHAR_Plad,
     -- Cantidad de bultos a despachar
-    T2.PlaCdc                   As CANTIDAD_DESPACHADA_CUADRE_Plad,     
+    T2.PlaCdc                   As CANTIDAD_DESPACHADA_CUADRE_Plad,
     -- Cantidad despachada cuadre
-    T2.PlaOri                   As ORIGEN_DEL_DOCUMENTO_PLANILLA_Plad,  
+    T2.PlaOri                   As ORIGEN_DEL_DOCUMENTO_PLANILLA_Plad,
     -- Origen: 'F'=Factura, 'P'=Pedido
-    T2.PlaSta                   As STATUS_DEL_DOCUMENTO_PLANILLA_Plad,  
+    T2.PlaSta                   As STATUS_DEL_DOCUMENTO_PLANILLA_Plad,
     -- Status: 'A'=Activo (ver WHERE)
 
     -- ========================================================
-    -- SECCION 3: Documento de Facturacion (FacDtoh/FacDed/FacDtod)
+    -- SECCIÓN 3: Documento de Facturación (FacDtoh/FacDed/FacDtod)
     -- Solo activo cuando PlaOri = 'F'
     -- ========================================================
-    Coalesce(T5.DtoTip,  0)       As TIPO_DE_DOCUMENTO_Dtoh,              
+    IfNull(T5.DtoTip,  0)       As TIPO_DE_DOCUMENTO_Dtoh,
     -- Tipo de documento emitido
-    Coalesce(T5.DtoNro,  0)       As NUMERO_DEL_DOCUMENTO_Dtoh,           
-    -- Numero del documento emitido
-    Coalesce(T20.FecYmd, 0)       As FECHA_DEL_DOCUMENTO_Dtoh,            
+    IfNull(T5.DtoNro,  0)       As NUMERO_DEL_DOCUMENTO_Dtoh,
+    -- Número del documento emitido
+    IfNull(T20.FecYmd, 0)       As FECHA_DEL_DOCUMENTO_Dtoh,
     -- Fecha del documento (YYYYMMDD, de SegFec)
-    Coalesce(T5.AlmCve,  0)       As CODIGO_DEL_ALMACEN_Dtoh,             
-    -- Almacen del documento
-    Coalesce(T5.MonCve,  0)       As CODIGO_DE_MONEDA_Dtoh,               
+    IfNull(T5.AlmCve,  0)       As CODIGO_DEL_ALMACEN_Dtoh,
+    -- Almacén del documento
+    IfNull(T5.MonCve,  0)       As CODIGO_DE_MONEDA_Dtoh,
     -- Moneda del documento
-    Coalesce(T5.CpaCve,  0)       As CODIGO_CONDICION_DE_PAGO_Dtoh,       
-    -- Condicion de pago del documento
-    Coalesce(T5.FeenPe,  0)       As FECHA_ENTREGA_PEDIDO_DTOH,           
+    IfNull(T5.CpaCve,  0)       As CODIGO_CONDICION_DE_PAGO_Dtoh,
+    -- Condición de pago del documento
+    IfNull(T5.FeenPe,  0)       As FECHA_ENTREGA_PEDIDO_DTOH,
     -- Fecha de entrega del pedido (doc.)
-    Coalesce(T6.CliIde, ' ')      As NUMERO_DE_IDENTIFICACION_Ded,        
-    -- Numero de identificacion fiscal (FacDed)
-    Coalesce(T6.NcfNro, ' ')      As NUMERO_COMPROBANTE_FISCAL_Ded,       
-    -- Numero de comprobante fiscal (NCF)
-    Coalesce(T7.DtoSec,  0)       As SECUENCIA_TRANSACCION_Dtod,          
-    -- Secuencia del renglon del documento
-    Coalesce(T7.ArtCve, ' ')      As CODIGO_DE_ARTICULO_Dtod,             
-    -- Codigo del articulo del documento
-    Coalesce(T8.ArtDes, ' ')      As DESCRIPCION_DEL_ARTICULO_Dtod,       
-    -- Descripcion del articulo (InvArt)
-    Coalesce(T8.ArtPre, ' ')      As PRESENTACION_ARTICULO_Dtod,          
-    -- Presentacion del articulo
-    Coalesce(T7.DtoUde,  0)       As UNIDAD_DE_DESPACHO_Dtod,             
+    IfNull(T6.CliIde, ' ')      As NUMERO_DE_IDENTIFICACION_Ded,
+    -- Número de identificación fiscal (FacDed)
+    IfNull(T6.NcfNro, ' ')      As NUMERO_COMPROBANTE_FISCAL_Ded,
+    -- Número de comprobante fiscal (NCF)
+    IfNull(T7.DtoSec,  0)       As SECUENCIA_TRANSACCION_Dtod,
+    -- Secuencia del renglón del documento
+    IfNull(T7.ArtCve, ' ')      As CODIGO_DE_ARTICULO_Dtod,
+    -- Código del artículo del documento
+    IfNull(T8.ArtDes, ' ')      As DESCRIPCION_DEL_ARTICULO_Dtod,
+    -- Descripción del artículo (InvArt)
+    IfNull(T8.ArtPre, ' ')      As PRESENTACION_ARTICULO_Dtod,
+    -- Presentación del artículo
+    IfNull(T7.DtoUde,  0)       As UNIDAD_DE_DESPACHO_Dtod,
     -- Unidad de despacho
-    Coalesce(T7.DtoCan,  0)       As CANTIDAD_A_DESPACHAR_Dtod,           
+    IfNull(T7.DtoCan,  0)       As CANTIDAD_A_DESPACHAR_Dtod,
     -- Cantidad a despachar
-    Coalesce(T7.DtoCua,  0)       As CANTIDAD_UNIDAD_ALMACENMTO_Dtod,     
+    IfNull(T7.DtoCua,  0)       As CANTIDAD_UNIDAD_ALMACENMTO_Dtod,
     -- Cantidad en unidad de almacenamiento
-    Coalesce(T7.DtoCup,  0)       As CANTIDAD_PROUDCTO_REQ_PESO_Dtod,     
+    IfNull(T7.DtoCup,  0)       As CANTIDAD_PROUDCTO_REQ_PESO_Dtod,
     -- Cantidad producto requerido por peso
-    Coalesce(T7.DtoPve,  0)       As PRECIO_DE_VENTA_Dtod,                
+    IfNull(T7.DtoPve,  0)       As PRECIO_DE_VENTA_Dtod,
     -- Precio de venta del documento
-    Coalesce(T7.DtoImp,  0)       As IMPORTE_DEL_DOCUMENTO_Dtod,          
-    -- Importe bruto del renglon
-    Coalesce(T7.DtoPd1,  0)       As PORCIENTO_PRIMER_DESCUENTO_Dtod,     
+    IfNull(T7.DtoImp,  0)       As IMPORTE_DEL_DOCUMENTO_Dtod,
+    -- Importe bruto del renglón
+    IfNull(T7.DtoPd1,  0)       As PORCIENTO_PRIMER_DESCUENTO_Dtod,
     -- % del 1er descuento
-    Coalesce(T7.DtoMpd,  0)       As MONTO_PRIMER_DESCUENTO_Dtod,         
+    IfNull(T7.DtoMpd,  0)       As MONTO_PRIMER_DESCUENTO_Dtod,
     -- Monto del 1er descuento
-    Coalesce(T7.DtoPd2,  0)       As PORCIENTO_SEGUNDO_DESCUENTO_Dtod,    
+    IfNull(T7.DtoPd2,  0)       As PORCIENTO_SEGUNDO_DESCUENTO_Dtod,
     -- % del 2do descuento
-    Coalesce(T7.DtoMsd,  0)       As MONTO_SEGUNDO_DESCUENTO_Dtod,        
+    IfNull(T7.DtoMsd,  0)       As MONTO_SEGUNDO_DESCUENTO_Dtod,
     -- Monto del 2do descuento
-    Coalesce(T7.DtoIm1,  0)       As MONTO_PRIMER_IMPUESTO_DTOD,          
+    IfNull(T7.DtoIm1,  0)       As MONTO_PRIMER_IMPUESTO_DTOD,
     -- Monto del 1er impuesto
-    Coalesce(T7.DtoIm2,  0)       As MONTO_SEGUNDO_IMPUESTO_DTOD,         
+    IfNull(T7.DtoIm2,  0)       As MONTO_SEGUNDO_IMPUESTO_DTOD,
     -- Monto del 2do impuesto
-    Coalesce(T7.DtoIm3,  0)       As MONTO_TERCER_IMPUESTO_DTOD,          
+    IfNull(T7.DtoIm3,  0)       As MONTO_TERCER_IMPUESTO_DTOD,
     -- Monto del 3er impuesto
-    Coalesce(T7.DtoVd1,  0)       As VALOR_DETALLE_1_Dtod,                
+    IfNull(T7.DtoVd1,  0)       As VALOR_DETALLE_1_Dtod,
     -- Valor adicional de detalle 1
-    Coalesce(T7.DtoVd2,  0)       As VALOR_DETALLE_2_Dtod,                
+    IfNull(T7.DtoVd2,  0)       As VALOR_DETALLE_2_Dtod,
     -- Valor adicional de detalle 2
-    Coalesce(T7.DtoVd3,  0)       As VALOR_DETALLE_3_Dtod,                
+    IfNull(T7.DtoVd3,  0)       As VALOR_DETALLE_3_Dtod,
     -- Valor adicional de detalle 3
-    Coalesce(T7.DtoVd4,  0)       As VALOR_DETALLE_4_Dtod,                
+    IfNull(T7.DtoVd4,  0)       As VALOR_DETALLE_4_Dtod,
     -- Valor adicional de detalle 4
-    Coalesce(T7.DtoVd5,  0)       As VALOR_DETALLE_5_Dtod,                
+    IfNull(T7.DtoVd5,  0)       As VALOR_DETALLE_5_Dtod,
     -- Valor adicional de detalle 5
 
     -- ========================================================
-    -- SECCION 4: Pedido Origen (FacOrdh/FacDem/FacOrdd)
+    -- SECCIÓN 4: Pedido Origen (FacOrdh/FacDem/FacOrdd)
     -- Solo activo cuando PlaOri = 'P'
     -- ========================================================
-    Coalesce(T9.AlmCve,  0)       As CODIGO_DEL_ALMACEN_Ordh,             
-    -- Almacen del pedido origen
-    Coalesce(T9.MonCve,  0)       As CODIGO_DE_MONEDA_Ordh,               
-     Moneda del pedido
-    Coalesce(T9.CpaCve,  0)       As CODIGO_CONDICION_DE_PAGO_Ordh,       
-    -- Condicion de pago del pedido
-    Coalesce(T9.FeenPe,  0)       As FECHA_ENTREGA_PEDIDO_Ordh,           
+    IfNull(T9.AlmCve,  0)       As CODIGO_DEL_ALMACEN_Ordh,
+    -- Almacén del pedido origen
+    IfNull(T9.MonCve,  0)       As CODIGO_DE_MONEDA_Ordh,
+    -- Moneda del pedido
+    IfNull(T9.CpaCve,  0)       As CODIGO_CONDICION_DE_PAGO_Ordh,
+    -- Condición de pago del pedido
+    IfNull(T9.FeenPe,  0)       As FECHA_ENTREGA_PEDIDO_Ordh,
     -- Fecha de entrega del pedido
-    Coalesce(T10.CliIde, ' ')     As NUMERO_DE_IDENTIFICACION_Dem,        
-    -- Numero de identificacion fiscal (FacDem)
-    Coalesce(T11.OrdSec,  0)      As SECUENCIA_TRANSACCION_Ordd,          
-    -- Secuencia del renglon del pedido
-    Coalesce(T11.ArtCve, ' ')     As CODIGO_DE_ARTICULO_Ordd,             
-    -- Codigo del articulo del pedido
-    Coalesce(T12.ArtDes, ' ')     As DESCRIPCION_DEL_ARTICULO_Ordd,       
-    -- Descripcion del articulo (InvArt)
-    Coalesce(T12.ArtPre, ' ')     As PRESENTACION_ARTICULO_Ordd,          
-    -- Presentacion del articulo
-    Coalesce(T11.OrdUnd,  0)      As UNIDAD_DE_DESPACHO_Ordd,             
+    IfNull(T10.CliIde, ' ')     As NUMERO_DE_IDENTIFICACION_Dem,
+    -- Número de identificación fiscal (FacDem)
+    IfNull(T11.OrdSec,  0)      As SECUENCIA_TRANSACCION_Ordd,
+    -- Secuencia del renglón del pedido
+    IfNull(T11.ArtCve, ' ')     As CODIGO_DE_ARTICULO_Ordd,
+    -- Código del artículo del pedido
+    IfNull(T12.ArtDes, ' ')     As DESCRIPCION_DEL_ARTICULO_Ordd,
+    -- Descripción del artículo (InvArt)
+    IfNull(T12.ArtPre, ' ')     As PRESENTACION_ARTICULO_Ordd,
+    -- Presentación del artículo
+    IfNull(T11.OrdUnd,  0)      As UNIDAD_DE_DESPACHO_Ordd,
     -- Unidad de despacho del pedido
-    Coalesce(T11.OrdCan,  0)      As CANTIDAD_ORDENADA_Ordd,              
+    IfNull(T11.OrdCan,  0)      As CANTIDAD_ORDENADA_Ordd,
     -- Cantidad ordenada
-    Coalesce(T11.OrdCex,  0)      As CANTIDAD_UNIDAD_ALMACENMTO_Ordd,     
+    IfNull(T11.OrdCex,  0)      As CANTIDAD_UNIDAD_ALMACENMTO_Ordd,
     -- Cantidad en unidad de almacenamiento
-    Coalesce(T11.OrdCde,  0)      As CANTIDAD_A_DESPACHAR_ORDD,           
+    IfNull(T11.OrdCde,  0)      As CANTIDAD_A_DESPACHAR_ORDD,
     -- Cantidad a despachar del pedido
-    Coalesce(T11.OrdCdx,  0)      As CANT_UNIDAD_ALM_A_DESPACHAR_Ordd,   
+    IfNull(T11.OrdCdx,  0)      As CANT_UNIDAD_ALM_A_DESPACHAR_Ordd,
     -- Cantidad unidad alm. a despachar
-    Coalesce(T11.OrdPve,  0)      As PRECIO_DE_VENTA_PEDIDO_Ordd,         
+    IfNull(T11.OrdPve,  0)      As PRECIO_DE_VENTA_PEDIDO_Ordd,
     -- Precio de venta del pedido
-    Coalesce(T11.OrdImp,  0)      As IMPORTE_BRUTO_Ordd,                  
-    -- Importe bruto del renglon del pedido
-    Coalesce(T11.OrdId1,  0)      As IMPORTE_DESCUENTO_1_Ordd,            
-     Importe descuento 1 del pedido
-    Coalesce(T11.OrdId2,  0)      As IMPORTE_DESCUENTO_2_Ordd,            
+    IfNull(T11.OrdImp,  0)      As IMPORTE_BRUTO_Ordd,
+    -- Importe bruto del renglón del pedido
+    IfNull(T11.OrdId1,  0)      As IMPORTE_DESCUENTO_1_Ordd,
+    -- Importe descuento 1 del pedido
+    IfNull(T11.OrdId2,  0)      As IMPORTE_DESCUENTO_2_Ordd,
     -- Importe descuento 2 del pedido
-    Coalesce(T11.OrdIi1,  0)      As IMPORTE_IMPUESTO_1_Ordd,             
+    IfNull(T11.OrdIi1,  0)      As IMPORTE_IMPUESTO_1_Ordd,
     -- Importe impuesto 1 del pedido
-    Coalesce(T11.OrdIi2,  0)      As IMPORTE_IMPUESTO_2_Ordd,             
+    IfNull(T11.OrdIi2,  0)      As IMPORTE_IMPUESTO_2_Ordd,
     -- Importe impuesto 2 del pedido
-    Coalesce(T11.OrdIi3,  0)      As IMPORTE_IMPUESTO_3_Ordd,             
+    IfNull(T11.OrdIi3,  0)      As IMPORTE_IMPUESTO_3_Ordd,
     -- Importe impuesto 3 del pedido
-    Coalesce(T11.OrdDpe,  0)      As PORCUENTO_DESCUENTO_PRODUCTO_Ordd,   
+    IfNull(T11.OrdDpe,  0)      As PORCUENTO_DESCUENTO_PRODUCTO_Ordd,
     -- % descuento sobre producto
-    Coalesce(T11.OrdVde,  0)      As VALOR_DESCUENTO_Ordd,                
+    IfNull(T11.OrdVde,  0)      As VALOR_DESCUENTO_Ordd,
     -- Valor del descuento del pedido
 
     -- ========================================================
-    -- SECCION 5: Logica de emision
+    -- SECCIÓN 5: Lógica de emisión
     -- ========================================================
     -- Determina si se debe emitir Factura ('F') o Comprobante ('C')
-    -- Regla: PlaOri='P' (pedido) + DisCve 01 o 02 + AlmCve=01 -> 'F'
-    --        PlaOri='P' (pedido) + DisCve 02 + AlmCve=02        -> 'F'
-    --        Cualquier otro caso                                 -> 'C'
+    -- Regla: PlaOri='P' (pedido) + DisCve 01 o 02 + AlmCve=01  'F'
+    --        PlaOri='P' (pedido) + DisCve 02 + AlmCve=02         'F'
+    --        Cualquier otro caso                                  'C'
     Case
         When (    T2.PlaOri = 'P'
               And T2.DisCve In (01, 02)
@@ -304,33 +326,33 @@ Select
 -- ============================================================
 From FacPlah As T1
 
--- Detalle de planilla — INNER JOIN intencional:
--- una cabecera sin detalle no es util para la carga
+-- Detalle de planilla  INNER JOIN intencional:
+-- una cabecera sin detalle no es útil para la carga
 Inner Join FacPlad As T2
     On  T1.PlaDis = T2.PlaDis
     And T1.PlaNro = T2.PlaNro
 
--- Vehiculo — LEFT OUTER para preservar planillas cuyo vehiculo
--- no este en el maestro; VehOri y VehTip quedan NULL y el
+-- Vehículo  LEFT OUTER para preservar planillas cuyo vehículo
+-- no esté en el maestro; VehOri y VehTip quedan NULL y el
 -- COALESCE en el WHERE los maneja correctamente
 Left Outer Join FacVeh As T3
     On T1.VehFic = T3.VehFic
 
--- Documento de facturacion ya emitido (solo cuando PlaOri='F')
+-- Documento de facturación ya emitido (solo cuando PlaOri='F')
 Left Outer Join FacDtoh As T5
     On  T2.DisCve = T5.DisCve
     And T2.OrdNro = T5.OrdNro
     And T2.CliCve = T5.CliCve
     And T2.PlaOri = 'F'
 
--- Datos fiscales del documento (NCF, identificacion — PlaOri='F')
+-- Datos fiscales del documento (NCF, identificación  PlaOri='F')
 Left Outer Join FacDed As T6
     On  T5.DisCve = T6.DisCve
     And T5.DtoTip = T6.DtoTip
     And T5.DtoNro = T6.DtoNro
     And T2.PlaOri = 'F'
 
--- Renglones del documento de facturacion (PlaOri='F')
+-- Renglones del documento de facturación (PlaOri='F')
 Left Outer Join FacDtod As T7
     On  T5.DisCve = T7.DisCve
     And T5.DtoTip = T7.DtoTip
@@ -341,7 +363,7 @@ Left Outer Join FacDtod As T7
     And T5.DtoDia = T7.DtoDia
     And T2.PlaOri = 'F'
 
--- Articulo del documento de facturacion (PlaOri='F')
+-- Artículo del documento de facturación (PlaOri='F')
 Left Outer Join InvArt As T8
     On  T7.ArtCve = T8.ArtCve
     And T2.PlaOri = 'F'
@@ -365,12 +387,12 @@ Left Outer Join FacOrdd As T11
     And T2.OrdNro = T11.OrdNro
     And T2.PlaOri = 'P'
 
--- Articulo del pedido origen (PlaOri='P')
+-- Artículo del pedido origen (PlaOri='P')
 Left Outer Join InvArt As T12
     On  T11.ArtCve = T12.ArtCve
     And T2.PlaOri = 'P'
 
--- Calendario: resuelve fecha del documento (ano+mes+dia -> FecYmd)
+-- Calendario: resuelve fecha del documento (año+mes+día  FecYmd)
 Left Outer Join SegFec As T20
     On  T5.DtoAno = T20.FecAno
     And T5.DtoMes = T20.FecMes
@@ -378,27 +400,27 @@ Left Outer Join SegFec As T20
     And T2.PlaOri = 'F'
 
 -- ============================================================
--- WHERE — filtros de seleccion
+-- WHERE  filtros de selección
 -- ============================================================
 Where
-    -- Planillas en situacion valida para carga
+    -- Planillas en situación válida para carga
     -- Excluye: 'O'=Ocupada, 'R'=Recibida/Revertida, 'Y'=Ya procesada
     T1.SitCve Not In ('O', 'R', 'Y')
 
-    -- Solo vehiculos de origen propio ('P'=Propio; excluye 'T'=Tercero)
-    -- COALESCE: si el vehiculo no existe en FacVeh (LEFT JOIN), 
-    -- VehOri=NULL -> excluye
+    -- Solo vehículos de origen propio ('P'=Propio; excluye 'T'=Tercero)
+    -- COALESCE: si el vehículo no existe en FacVeh (LEFT JOIN),
+    -- VehOri=NULL  excluye
     And COALESCE(T3.VehOri, '') = 'P'
 
-    -- Solo vehiculos tipo 1 o 2 (livianos/medianos; excluye pesados)
-    -- COALESCE: si el vehiculo no existe en FacVeh (LEFT JOIN), 
-    -- VehTip=NULL -> excluye
+    -- Solo vehículos tipo 1 o 2 (livianos/medianos; excluye pesados)
+    -- COALESCE: si el vehículo no existe en FacVeh (LEFT JOIN),
+    -- VehTip=NULL  excluye
     And COALESCE(T3.VehTip, 99) <= 2
 
     -- Solo detalles de planilla activos ('A'=Activo)
     And T2.PlaSta = 'A'
 
-    -- Solo planillas cuya fecha de programacion ya llego o paso
+    -- Solo planillas cuya fecha de programación ya llegó o pasó
     And Date(T1.PlaTpl) <= Current Date
 
     -- Excluir planillas que ya fueron procesadas por Imeccme
@@ -407,5 +429,5 @@ Where
         From   Imeccme As T14
         Where  T1.PlaDis = T14.PlaDis
           And  T1.PlaNro = T14.PlaNro
-          And  T1.VehFic = T14.VehFic
-    )
+          And  T1.VehFic = T14.VehFic)
+

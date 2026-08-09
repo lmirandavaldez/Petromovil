@@ -20,11 +20,15 @@
       *                                unificar 3 LEFT JOIN en uno solo, *
       *                                validacion parametros entrada,     *
       *                                limpieza variables no usadas       *
+      *  07/08/2026   L.Miranda        FA_PATRON_COMPRA_CLIENTE y         *
+      *                                FA_FECHAS_CLIENTE cambiados a      *
+      *                                LEFT JOIN para incluir clientes    *
+      *                                nuevos sin historial de compras    *
       *==================================================================*
      d SupCod          s                   Like(SqlCxcVen.SupCve)
      d VenCod          s                   Like(SqlCxcVen.VenCve)
       *
-      **Variables para manejo de errores SQL
+      **Variables para manejo de errores SQL
      d SqlMsgTxt       s            256a
      d SqlErrCod       s             10i 0
      d ErrMsgKey       s              4a
@@ -33,7 +37,7 @@
       *
      d FechaPro        s               d   DatFmt(*Iso)
       *
-      **Prototipo QMHSNDPM (Send Program Message)
+      **Prototipo QMHSNDPM (Send Program Message)
      d QMHSNDPM        Pr                  ExtPgm('QMHSNDPM')
      d  p_MsgId                       7a   Const
      d  p_MsgFile                    20a   Const
@@ -45,7 +49,7 @@
      d  p_MsgKey                      4a
      d  p_ErrCode                    15a   Options(*VarSize)
       *
-      **Archivos Externos
+      **Archivos Externos
      dSqlFac3205     e Ds                  ExtName(Fac3205) Qualified
      dSqlFacDtoh     e Ds                  ExtName(FacDtoh) Qualified
      dSqlCxcCli      e Ds                  ExtName(CxcCli) Qualified
@@ -68,13 +72,13 @@
       *
      d/Copy *Libl/Fuentes,sg9001
       *
-      **FA3205 Prototype
+      **FA3205 Prototype
      d FA3205          Pr
      d  CodSup                        2
      d  CodVen                        3
      d  FechaP                        8
       *
-      **FA3205 Program Interface
+      **FA3205 Program Interface
      d FA3205          Pi
      d  CodSup                        2
      d  CodVen                        3
@@ -99,7 +103,7 @@
         // ------------------------------------------------------
            Begsr Proceso       ;
 
-        //Crear Tabla para Exportar a Excel
+        //Crear Tabla para Exportar a Excel
            Exec Sql
             Insert Into Fac3205 (
                         FECFAM,
@@ -128,7 +132,7 @@
                    T1.CliCve,
                    T1.CliNom,
                    C.CLASIFICACION,
-                   P.PROMEDIO_DIAS,
+                   Coalesce(P.PROMEDIO_DIAS, 0),
                    Date(T1.CreTst),
                    Date(T1.ModTst),
                    Coalesce(F.FECHA_PRIMERA_COMPRA_HIST, Date('1900-01-01')),
@@ -146,21 +150,24 @@
               Join CxcCla T8
                 On (T4.ClaCve = T8.ClaCve)
 
-            /* CLASIFICACION KPI usando fecha tope */
+            /* CLASIFICACION KPI usando fecha tope - INNER JOIN:          */
+            /* cliente sin clasificacion no es procesable en este KPI     */
               Join Table(FA_CLASIFICACION_CLIENTE(
                          T1.CliCve,
                          :FechaPro)) As C
                       On 1 = 1
 
-            /* PATRON DE COMPRA usando fecha tope */
-              Join Table(FA_PATRON_COMPRA_CLIENTE(
+            /* PATRON DE COMPRA usando fecha tope - LEFT JOIN:            */
+            /* clientes nuevos sin historial deben aparecer con ceros     */
+              Left Join Table(FA_PATRON_COMPRA_CLIENTE(
                          T1.CliCve,
                          :FechaPro,
                          'T')) As P
                       On 1 = 1
 
-            /* FECHAS DE COMPRA: FUNCIÓN DE FECHAS */
-              Join Table(SEGLIB.FA_FECHAS_CLIENTE(
+            /* FECHAS DE COMPRA - LEFT JOIN:                              */
+            /* clientes nuevos sin compras deben aparecer con 1900-01-01  */
+              Left Join Table(SEGLIB.FA_FECHAS_CLIENTE(
                          T1.CliCve,
                          :FechaPro,
                          'T')) AS F
@@ -171,9 +178,9 @@
                And (T1.CliSta = 'A')
                And (T4.AdcDcr <> 998)
                And Not Exists (Select 1
-                         From Fac3205 F2
-                        Where (F2.FecFam = :FecFam)
-                          And (F2.CliCve = T1.CliCve));
+                         From Fac3205 X
+                        Where (X.FecFam = :FecFam)
+                          And (X.CliCve = T1.CliCve));
 
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Proceso: INSERT Fac3205' ;
@@ -186,7 +193,8 @@
         // ------------------------------------------------------
            Begsr Limpiar_Tabla ;
 
-        //Borrar Tabla Detalle por Clientes
+        // FecFam = primeros 6 digitos de FechaYmd (DS superpuesta)
+        //Borrar Tabla Detalle por Clientes
            Exec Sql
                Delete From Fac3205
                 Where (FecFam = :FecFam)
@@ -203,18 +211,18 @@
         // ------------------------------------------------------
            Begsr ErrSql   ;
 
-        //Capturar SQLCODE y SQLSTATE antes de ejecutar otra sentencia SQL
+        //Capturar SQLCODE y SQLSTATE antes de ejecutar otra sentencia SQL
            SqlErrCod   = SqlCod ;
            ErrSqlState = SqlState ;
 
-        //Construir texto del mensaje
+        //Construir texto del mensaje
            SqlMsgTxt = %TrimR(SqlMsgTxt) + ' | SQLCODE=' +
                        %Trim(%Char(SqlErrCod)) + ' SQLSTATE=' +
                        ErrSqlState;
 
            *InLr = *On ;
 
-        //Enviar mensaje *ESCAPE al joblog via API RPG nativa
+        //Enviar mensaje *ESCAPE al joblog via API RPG nativa
            CallP QMHSNDPM('CPF9898' : 'QCPFMSG   *LIBL' : SqlMsgTxt :
                  %Len(%TrimR(SqlMsgTxt)) : '*ESCAPE   ' :
                  '*         ' : 1 : ErrMsgKey : ErrCode);
@@ -234,7 +242,7 @@
         // -----------------------------------------------------
            BegSr *Inzsr;
 
-        //Validar parametro de fecha antes de la conversion
+        //Validar parametro de fecha antes de la conversion
            If %Check('0123456789':FechaP) > 0 ;
               SqlMsgTxt = 'Inzsr: FechaP invalido: ' + FechaP ;
               Exsr ErrSql ;

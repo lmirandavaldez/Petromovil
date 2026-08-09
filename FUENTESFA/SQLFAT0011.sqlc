@@ -1,0 +1,56 @@
+ Drop Table ESTICC cascade ;
+
+Create or Replace Table CLIENTE_INACTIVIDAD
+For System Name ESTICC
+(
+    ID_CLIENTE               For CLICVE Decimal(7,0) PRIMARY KEY,
+    FECHA_INGRESO            For IccFin Date Not Null,
+    FECHA_PRIMERA_COMPRA     For IccFPC Date Not NUll,
+    FECHA_ULTIMA_COMPRA      For ICCFUC DATE NOT NULL,
+    FECHA_ULTIMA_INACTIVIDAD For ICCFUI Date Not Null,
+    FECHA_REACTIVACION       For ICCFUR Date NOT NULL,
+    MESES_INACTIVO           For ICCMIN Decimal (10,0),
+    ES_NUEVO                 For ICCNUE CHAR(1) DEFAULT 'N',
+    ESTADO_CLIENTE           For ICCSTA Char(10) DEFAULT 'ACTIVO'
+
+)
+ Rcdfmt ESTICCF ;
+
+ /* Asignar label text for CLIENTE_INACTIVIDAD */
+ Label On Table CLIENTE_INACTIVIDAD is 'Tabla: Historico Inactividad Clientes' ;
+
+ /*-------------------------------------------------------*/
+ /* Asignar column labels for CLIENTE_INACTIVIDAD  */
+ Label on Column CLIENTE_INACTIVIDAD
+ (
+   ID_CLIENTE                   Text Is 'Codigo de Cliente',
+   FECHA_INGRESO                Text Is 'Fecha de Ingreso',
+   FECHA_PRIMERA_COMPRA         Text Is 'Fecha Primera Compra',
+   FECHA_ULTIMA_COMPRA          Text Is 'Fecha Ultima Compra',
+   FECHA_ULTIMA_INACTIVIDAD     Text Is 'Fecha Ultima Inactivadad',
+   FECHA_REACTIVACION           Text Is 'Fecha de Reactivacion' ,
+   MESES_INACTIVO               Text Is 'Meses Inactivo',
+   ES_NUEVO                     Text Is 'Es Nuevo el cliente',
+   ESTADO_CLIENTE               Text Is 'Estado de Cliente'
+ );
+
+ /*-------------------------------------------------------*/
+ /* Asignar column headings for CLIENTE_INACTIVIDAD */
+ Label on Column CLIENTE_INACTIVIDAD
+ (
+   ID_CLIENTE                 Is 'Codigo de Cliente',
+   FECHA_INGRESO              Is 'Fecha de Ingreso',
+   FECHA_PRIMERA_COMPRA       Is 'Fecha Primera Compra',
+   FECHA_ULTIMA_COMPRA        Is 'Fecha Ultima Compra',
+   FECHA_ULTIMA_INACTIVIDAD   Is 'Fecha Ultima Inactivadad',
+   FECHA_REACTIVACION         Is 'Fecha de Reactivacion' ,
+   MESES_INACTIVO             Is 'Meses Inactivo',
+   ES_NUEVO                   Is 'Es Nuevo el cliente',
+   ESTADO_CLIENTE             Is 'Estado de Cliente'
+ );
+
+ -- Agregar índice para mejorar el rendimiento
+ CREATE INDEX ESTICC_INDEX_00001 ON CLIENTE_INACTIVIDAD (ID_CLIENTE,
+ FECHA_ULTIMA_COMPRA);
+
+ Label on Index ESTICC_INDEX_00001 is 'Index: ID_CLIENTE, FECHA_ULTIMA_COMPRA' ;

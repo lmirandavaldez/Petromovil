@@ -7,6 +7,10 @@
       *                                                            *
       *    ARCHIVO FÍSICO KPI CHURN CLIENTES DETALLE FA3204        *
       * -----------------------------------------------------------*
+      * MODIFICACIONES:                                            *
+      * ---------------                                            *
+      * 07/08/2026 L.Miranda  TENCLI 20->25, ESTADO 15->20        *
+      * -----------------------------------------------------------*
      A                                      REF(*LIBL/FACREPF)
      A          R FAC3204F                  TEXT('KPI CHURN DE CLIENTES +
      A                                            DETALLE FAC3204')
@@ -55,11 +59,13 @@
      A                                      COLHDG('Monto' 'Comprado' +
      A                                      'Ultimos 12 Meses')
      A                                      ALIAS(MONTO_COMPRADO_ULTIMOS_12M)
-     A            CANU24        12  2       TEXT('CANTIDAD COMPRADA ULTIMOS 24')
+     A            CANU24        12  2       TEXT('CANTIDAD PERIODO ANTERIOR +
+     A                                           12-24 MESES')
      A                                      COLHDG('Cantidad' 'Comprada' +
      A                                      'Ultimos 24 Meses')
      A                                      ALIAS(CANTIDAD_COMPRADA_ULTIMOS_24M)
-     A            MONU24        15  2       TEXT('MONTO COMPRADO ULTIMOS 24')
+     A            MONU24        15  2       TEXT('MONTO PERIODO ANTERIOR +
+     A                                           12-24 MESES')
      A                                      COLHDG('Monto' 'Comprado' +
      A                                      'Ultimos 24 Meses')
      A                                      ALIAS(MONTO_COMPRADO_ULTIMOS_24M)
@@ -71,11 +77,11 @@
      A                                      COLHDG('Porciento' 'De' +
      A                                      'Variacion')
      A                                      ALIAS(PORCIENTO_DE_VARIACION)
-     A            TENCLI        20          TEXT('TENDENCIA DEL CLIENTE')
+     A            TENCLI        25          TEXT('TENDENCIA DEL CLIENTE')
      A                                      COLHDG('Tendencia' 'Del' +
      A                                      'Cliente')
      A                                      ALIAS(TENDENCIA_DEL_CLIENTE)
-     A            ESTADO        15          TEXT('ESTADO DEL CLIENTE')
+     A            ESTADO        20          TEXT('ESTADO DEL CLIENTE')
      A                                      COLHDG('Estado' 'Del' +
      A                                      'Cliente')
      A                                      ALIAS(ESTADO_DEL_CLIENTE)

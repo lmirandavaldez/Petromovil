@@ -34,7 +34,7 @@
      A                                      ALIAS(DESCRIPCION_CLASIFICACION)
      A            CLICVE    R               TEXT('CODIGO DEL CLIENTE')
      A            CLINOM    R               TEXT('NOMBRE DEL NEGOCIO')
-     A            ESTADO        15          TEXT('ESTADO DEL CLIENTE')
+     A            ESTADO        30          TEXT('ESTADO DEL CLIENTE')
      A                                      COLHDG('Estado' 'Del' +
      A                                      'Cliente')
      A                                      ALIAS(ESTADO_DEL_CLIENTE)

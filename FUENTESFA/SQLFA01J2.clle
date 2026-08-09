@@ -1,0 +1,270 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: SqlFA01J1                        */
+ /*   APLICACION.................: Contabilidad General             */
+ /*   AUTOR .....................: Luis J. Miranda V.               */
+ /*   FECHA ESCRITURA ...........: 25 / 08 / 2017                   */
+ /*                                                                 */
+ /*      Proceso Ejecucion Procedimientos Modulo Facturacion        */
+ /*=================================================================*/
+ INI:        PGM
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&CIA) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&CTL) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&INI) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&WSID) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&PGM) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&RESP) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&NCIA)  TYPE(*CHAR) LEN(11)
+             DCL        VAR(&NLIB) TYPE(*CHAR) LEN(11) VALUE(FACLIB.V2)
+             DCL        VAR(&PRT) TYPE(*CHAR) LEN(10)
+
+             RTVDTAARA  DTAARA(*LDA (401 2)) RTNVAR(&CIA)
+             RTVJOBA    JOB(&WSID) USER(&USER)
+             CHGDTAARA  DTAARA(*LDA (551 10)) VALUE(&WSID)
+             CHGDTAARA  DTAARA(*LDA (561 10)) VALUE(&USER)
+             RTVDTAARA  DTAARA(*LDA (450 10)) RTNVAR(&PRT)
+             RTVDTAARA  DTAARA(*LDA (412 11)) RTNVAR(&NCIA)
+
+            ADDLIBLE &NCIA
+             MONMSG     MSGID(CPF2103)
+
+             CHGCURLIB  CURLIB(&NCIA)
+/* ================================================================= */
+/*           GOTO       CMDLBL(SALTO)                                */
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA001) /* Crear +
+                          VWFAC_Ventas_Detalle_Meses */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00001) +
+                          TEXT(VWFAC_VENTAS_DETALLE_MESES)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+/*           QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +     */
+/*                        SRCMBR(SQLFA902) /*  Drop View  */
+/*           MONMSG     MSGID(CPF9999)                            */
+
+/*           QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA002)   */  /* +
+                          VWFAC_Fec_Ult_Doc_Ven_Cli_Art */
+/*           MONMSG     MSGID(CPF9999)                     */
+
+/*           CHGLF      FILE(&NCIA/VWFAC00002) +
+                          TEXT(VWFAC_FEC_ULT_DOC_VEN_CLI_ART)     */
+/*           MONMSG     MSGID(CPF9999)                            */
+
+/* ================================================================= */
+/*           QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +     */
+/*                        SRCMBR(SQLFA903) /*  Drop View  */
+/*           MONMSG     MSGID(CPF9999)                            */
+
+/*           QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA003) */ /* +
+                          VWFAC_Ventas_Vendedor_Cliente_Articulos_Dias */
+/*           MONMSG     MSGID(CPF9999)          */
+
+/*           CHGLF      FILE(&NCIA/VWFAC00003) +
+                          TEXT(VWFAC_VENTAS_VENDEDOR_CLIENTE_ARTICULO+
+                          S_DIAS) */
+/*           MONMSG     MSGID(CPF9999)  */
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA004) /* +
+                         VWFAC_Ventas_Sup_Ven_Cli_Art_Ano_Meses */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00002) +
+                          TEXT(VWFAC_VENTAS_SUP_VEN_CLI_ART_ANO_MESES)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA005) /* +
+                          VWFAC_Pedidos_Entregados             */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00003) +
+                          TEXT(VWFAC_PEDIDOS_ENTREGADOS)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA006) /* +
+                          VWFAC_Ventas_Distrito_Meses          */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00004) +
+                          TEXT(VWFAC_VENTAS_DISTRITO_MESES)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA007) /* +
+                          VWFAC_Pedidos_Autorizados            */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00005) +
+                          TEXT(VWFAC_PEDIDOS_AUTORIZADOS)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA008) /* +
+                          VWFAC_Fec_Ult_Documento              */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00006) +
+                          TEXT(VWFAC_FEC_ULT_DOCUMENTO)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA009) /* +
+                         VWFAC_Carga_Planillas                  */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00007) +
+                          TEXT(VWFAC_CARGA_PLANILLAS)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA010) /* +
+                         VWFAC_DOCUMENTOS_PLANILLAS_CARGA            */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00008) +
+                          TEXT(VWFAC_DOCUMENTOS_PLANILLAS_CARGA)
+             MONMSG     MSGID(CPF9999)
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA011) /* +
+                         VWFAC_COMPROBANTES_PLANILLAS                */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00009) +
+                          TEXT(VWFAC_COMPROBANTES_PLANILLAS)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA012) /* +
+                         VWFAC_EFICIENCIA_DESPACHOS                   */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00010) +
+                          TEXT(VWFAC_EFICIENCIA_DESPACHOS)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA013) /* +
+                        VWFAC_SubDividir_Montos_Unico_Ingreso Temporal */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00011) +
+                          TEXT(VWFAC_SUBDIVIDIR_MONTOS_UNICO_INGRESO_TEMPORAL)
+             MONMSG     MSGID(CPF9999)
+
+/* ================================================================= */
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFA014) /* +
+                        VWFAC_SubDividir_Montos_Unico_Ingreso Definitivo */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWFAC00012) +
+                          TEXT(VWFAC_SUBDIVIDIR_MONTOS_UNICO_INGRESO_+
+                          DEFINITIVO)
+             MONMSG     MSGID(CPF9999)
+Salto:
+/* =================================================================== */
+/*   Creacion de Tablas                                               */
+/* =================================================================== */
+             CHGCURLIB  CURLIB(&NCIA)
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFAT001) /* +
+                         VWFAC_CLIENTE_INACTIVIDAD                    */
+             MONMSG     MSGID(CPF9999)
+/* =================================================================== */
+
+/*           GOTO       CMDLBL(END)                                    */
+
+/* =================================================================== */
+/*   Creacion de procedimientos almacenados                           */
+/* =================================================================== */
+             CHGCURLIB  CURLIB(FACLIB.V2)
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFAP001) /* +
+                         PROCEDIMIENTO ACTUALIZAR_INACTIVIDAD         */
+             MONMSG     MSGID(CPF9999)
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLFAP002) /* +
+                         PROCEDIMIENTO ACTUALIZAR_MESES_INACTIVO      */
+             MONMSG     MSGID(CPF9999)
+
+/* =================================================================== */
+/*   Creacion Vista de Estadisticas de Ventas                         */
+/* =================================================================== */
+             CHGCURLIB  CURLIB(&NCIA)
+
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLEST01) /* +
+                        VWEST_Estadisticas_de_Ventas_General */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWEST00001) +
+                          TEXT(VWEST_Estadisticas_de_Ventas_General)
+             MONMSG     MSGID(CPF9999)
+
+/* =================================================================== */
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLEST02) /* +
+                        VWEST_Estadisticas_Ventas_Productos */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWEST00002) +
+                          TEXT(VWEST_ESTADISTICAS_VENTAS_PRODUCTOS)
+             MONMSG     MSGID(CPF9999)
+
+/* =================================================================== */
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLEST03) /* +
+                        VWEST_ESTADISTICAS_VENTAS_VENDEDOR */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWEST00003) +
+                          TEXT(VWEST_ESTADISTICAS_VENTAS_VENDEDOR)
+             MONMSG     MSGID(CPF9999)
+
+/* =================================================================== */
+             QSYS/RUNSQLSTM SRCFILE(FACLIB.V2/FUENTESFA) +
+                          SRCMBR(SQLEST04) /* +
+                        VWEST_ESTADISTICAS_VENTAS_CLIENTES */
+             MONMSG     MSGID(CPF9999)
+
+             CHGLF      FILE(&NCIA/VWEST00004) +
+                          TEXT(VWEST_ESTADISTICAS_VENTAS_CLIENTES)
+             MONMSG     MSGID(CPF9999)
+
+/* =================================================================== */
+END:         ENDPGM

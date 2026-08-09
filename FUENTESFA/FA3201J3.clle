@@ -1,0 +1,33 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: FA3201J3                         */
+ /*   APLICACION.................: Sistema de Facturacion           */
+ /*   AUTOR .....................: Luis J. Miranda V.               */
+ /*   FECHA ESCRITURA ...........: 08 / 10 / 2017                   */
+ /*                                                                 */
+ /*    Calculo para Determinar los dias para frecuencia de despacho */
+ /*=================================================================*/
+ INI:        PGM
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&WSID) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&ORIGEN) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&FECHAS)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&FECDMA)  TYPE(*CHAR) LEN(10)
+             DCL        VAR(&CODCIA) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&CODDIS) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DISCOD) TYPE(*DEC) LEN(2 0)
+             DCL        VAR(&CODVEN) TYPE(*DEC) LEN(3 0)
+             DCL        VAR(&VENCOD) TYPE(*CHAR) LEN(3)
+             DCL        VAR(&CATEGO) TYPE(*DEC) LEN(4 0)
+             DCL        VAR(&CODCAT) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&PRT) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&MAIL) TYPE(*CHAR) LEN(50)
+
+             RTVJOBA    JOB(&WSID) USER(&USER)
+             RTVDTAARA  DTAARA(*LDA (450 10)) RTNVAR(&PRT)
+             RTVDTAARA  DTAARA(*LDA (601 50)) RTNVAR(&Mail)
+
+             CALL       PGM(*LIBL/FA3201)
+
+ END:        ENDPGM

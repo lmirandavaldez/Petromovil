@@ -1,0 +1,32 @@
+Create Or Replace View VWFac_Eficiencia_Despachos As
+  With VWFAC_Vehiculos_Gls
+    As (Select T1.VehFic, Sum(T1.VehCgb) AS Total_Gls
+          From FacVehgb T1
+          Join FacVeh T2
+            On (T1.VehFic = T2.VehFic)
+         Where (T2.VehOri = 'P')
+           And (T2.VehTip In(1, 2))
+      Group By T1.VehFic),
+        Resumen_Planillas_Despachadas
+    As (SELECT T1.PlaDis, T1.PlaNro, T2.PlaFpl, T2.VehFic,
+             Sum(T1.PlaCbd) As Total_Cargado,
+             Sum(T1.PlaCdc) As Total_Depachado
+         From FacPlad T1
+          Join FacPlah T2
+            On (T1.PlaDis = T2.PlaDis)
+           And (T1.PlaNro = T2.PlaNro)
+         Where (T1.PlaSta = 'R')
+          And (T2.SitCve = 'Y')
+     Group By T1.PlaDis, T1.PlaNro, T2.PlaFpl, T2.VehFic)
+       Select T1.PlaDis, T1.PlaNro, T1.PlaFpl, T1.VehFic,
+              T2.Total_GLs, T1.Total_Cargado,
+              (T2.Total_Gls - Total_Cargado) As Merma_Cargado,
+             ((T1.Total_Cargado / T2.Total_Gls) * 100) As
+               Eficiencia_Cargado,
+               T1.Total_Depachado,
+              (T2.Total_Gls - Total_Depachado) As Merma_Despachado,
+             ((T1.Total_Depachado / T2.Total_Gls) * 100) As
+              Eficiencia_Despachado
+         From Resumen_Planillas_Despachadas T1
+         Join VWFAC_Vehiculos_Gls T2
+           On (T1.VehFic = T2.VehFic)

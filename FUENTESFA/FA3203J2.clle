@@ -1,0 +1,21 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: FA3203J2                         */
+ /*   APLICACION.................: Sistema de Facturacion           */
+ /*   AUTOR .....................: LUIS J. MIRANDA V.               */
+ /*   FECHA ESCRITURA ...........: 08 / 10 / 2017                   */
+ /*                                                                 */
+ /*    Calculo para Determinar los dias para frecuencia de despacho */
+ /*=================================================================*/
+ INI:        PGM        PARM(&FECDES &FECHAS)
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&FECDES) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&FECHAS)  TYPE(*CHAR) LEN(8)
+
+ /*          SBMJOB     CMD(CALL PGM(*LIBL/FA3203J3) PARM((&FECDES) +
+                          (&FECHAS))) JOB(FA3203) +
+                          JOBQ(*LIBL/MEYKERJOBQ)   */
+
+             CALL       PGM(*LIBL/FA3203J3) PARM(&FECDES &FECHAS)
+
+ END:        ENDPGM

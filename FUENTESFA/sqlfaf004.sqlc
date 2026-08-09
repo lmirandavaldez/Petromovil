@@ -1,46 +1,15 @@
--- ==============================================================
--- Modulo    : Facturacion
--- Programa  : SQLFAF004
--- Objeto    : SEGLIB.FA_FECHAS_CLIENTE
--- Tipo      : Funcion de tabla SQL (Table Function)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 3
--- Proyecto  : Petromovil
--- --------------------------------------------------------------
--- Proposito:
---   Ver descripcion en comentarios dentro del SQL.
--- --------------------------------------------------------------
--- Campos retornados (en orden original):
---   Ver definicion en el SELECT del SQL.
--- --------------------------------------------------------------
--- Tablas referenciadas:
---   Ver comentarios en los JOINs del SQL.
--- --------------------------------------------------------------
--- Logica de resolucion de fechas:
---   Ver comentarios en el SQL.
--- --------------------------------------------------------------
--- Sugerencias de mejora:
---   Ver seccion Cambios en el historial del archivo original.
--- --------------------------------------------------------------
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
---                           formato 80 cols
--- ==============================================================
---CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+-CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 -- ============================================================
--- Funcion  : SEGLIB.FA_FECHAS_CLIENTE
--- Proposito: Devuelve un conjunto de fechas clave del historial
---            de un cliente: fechas de creacion/modificacion en
+-- Función  : SEGLIB.FA_FECHAS_CLIENTE
+-- Propósito: Devuelve un conjunto de fechas clave del historial
+--            de un cliente: fechas de creación/modificación en
 --            el maestro y fechas relevantes de sus compras, todo
---            en un unico acceso por tabla.
--- Version  : 2.0
--- Parametros:
+--            en un único acceso por tabla.
+-- Versión  : 2.0
+-- Parámetros:
 --   P_CODIGO_CLIENTE  INTEGER  Clave del cliente a consultar.
---   P_FECHA_TOPE      DATE     Fecha limite de analisis (inclusive).
---                              Define tambien el "periodo" como el
+--   P_FECHA_TOPE      DATE     Fecha límite de análisis (inclusive).
+--                              Define también el "período" como el
 --                              mes calendario de esta fecha.
 --   P_TIPO            CHAR(1)  Filtro de tipo de distribuidor:
 --                                'N' = solo distribuidores tipo 'N'
@@ -48,30 +17,25 @@
 -- Retorna tabla con columnas (DATE; DATE('1900-01-01') si no existe):
 --   CODIGO_CLIENTE            INTEGER  Clave del cliente.
 --   FECHA_CREACION            DATE     Fecha de alta en CXCCLI.
---   FECHA_MODIFICACION        DATE     Ultima modificacion en CXCCLI.
---   FECHA_ULTIMA_COMPRA       DATE     Ultima compra <= P_FECHA_TOPE.
+--   FECHA_MODIFICACION        DATE     Última modificación en CXCCLI.
+--   FECHA_ULTIMA_COMPRA       DATE     Última compra <= P_FECHA_TOPE.
 --   FECHA_COMPRA_PERIODO      DATE     Primera compra dentro del mes
 --                                      de P_FECHA_TOPE.
 --   FECHA_PRIMERA_COMPRA_HIST DATE     Primera compra de toda la
---                                      historia hasta el ultimo dia
+--                                      historia hasta el último día
 --                                      del mes anterior a P_FECHA_TOPE.
 -- Notas:
 --   - Se usa DATE('1900-01-01') como centinela cuando no hay dato.
---   - CXCCLI y FacDtoh se acceden cada uno en un unico LATERAL,
---     minimizando el numero de scans.
---   - Si algun parametro es NULL retorna tabla vacia.
+--   - CXCCLI y FacDtoh se acceden cada uno en un único LATERAL,
+--     minimizando el número de scans.
+--   - Si algún parámetro es NULL retorna tabla vacía.
 -- Uso:
 --   SELECT * FROM TABLE(SEGLIB.FA_FECHAS_CLIENTE(
 --       1001,
 --       DATE('2026-07-23'),
 --       'N'
 --   )) AS x;
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Documentacion: secciones estandar,
---                           sin acentos, formato 80 cols
--- ==============================================================
+-- ============================================================
 
 CREATE OR REPLACE FUNCTION SEGLIB.FA_FECHAS_CLIENTE (
     P_CODIGO_CLIENTE INTEGER,
@@ -89,29 +53,29 @@ RETURNS TABLE (
 LANGUAGE SQL
 NOT DETERMINISTIC           -- el resultado depende del estado de las tablas
 READS SQL DATA
-RETURNS NULL ON NULL INPUT  -- si cualquier parametro es NULL retorna vacio
+RETURNS NULL ON NULL INPUT  -- si cualquier parámetro es NULL retorna vacío
 RETURN
     SELECT
-        P_CODIGO_CLIENTE                
+        P_CODIGO_CLIENTE
         AS CODIGO_CLIENTE,
-        -- Fechas de alta y modificacion del maestro de clientes
-        COALESCE(CXC.FECHA_CREACION,     DATE('1900-01-01'))  
+        -- Fechas de alta y modificación del maestro de clientes
+        COALESCE(CXC.FECHA_CREACION,     DATE('1900-01-01'))
         AS FECHA_CREACION,
-        COALESCE(CXC.FECHA_MODIFICACION, DATE('1900-01-01')) 
+        COALESCE(CXC.FECHA_MODIFICACION, DATE('1900-01-01'))
         AS FECHA_MODIFICACION,
 
-        -- Fechas de compra calculadas en un unico scan sobre FacDtoh
-        COALESCE(FAC.FECHA_ULTIMA_COMPRA,  
+        -- Fechas de compra calculadas en un único scan sobre FacDtoh
+        COALESCE(FAC.FECHA_ULTIMA_COMPRA,
         DATE('1900-01-01')) AS FECHA_ULTIMA_COMPRA,
-        COALESCE(FAC.FECHA_COMPRA_PERIODO,   
+        COALESCE(FAC.FECHA_COMPRA_PERIODO,
         DATE('1900-01-01')) AS FECHA_COMPRA_PERIODO,
-        COALESCE(FAC.FECHA_PRIMERA_COMPRA_HIST, 
+        COALESCE(FAC.FECHA_PRIMERA_COMPRA_HIST,
         DATE('1900-01-01')) AS FECHA_PRIMERA_COMPRA_HIST
 
     FROM SYSIBM.SYSDUMMY1
 
-    -- LATERAL: fechas de creacion y modificacion del cliente
-    -- (un unico acceso a CXCCLI)
+-- LATERAL: fechas de creación y modificación del cliente
+-- (un único acceso a CXCCLI)
     LEFT JOIN LATERAL (
         SELECT
             DATE(C.CreTst) AS FECHA_CREACION,
@@ -121,10 +85,10 @@ RETURN
         FETCH FIRST 1 ROW ONLY
     ) AS CXC ON 1 = 1
 
-    -- LATERAL: tres metricas de fecha en un unico scan sobre FacDtoh
+    -- LATERAL: tres métricas de fecha en un único scan sobre FacDtoh
     LEFT JOIN LATERAL (
         SELECT
-            -- Ultima compra del cliente hasta P_FECHA_TOPE
+            -- Última compra del cliente hasta P_FECHA_TOPE
             MAX(CASE WHEN T9.FecIso <= P_FECHA_TOPE
                      THEN T9.FecIso END) AS FECHA_ULTIMA_COMPRA,
 
@@ -135,7 +99,7 @@ RETURN
                      THEN T9.FecIso END) AS FECHA_COMPRA_PERIODO,
 
             -- Primera compra de toda la historia hasta fin del mes anterior
-            -- ADD_MONTHS evita desbordamiento en meses cortos (ej. 31 -> 28/29)
+            -- ADD_MONTHS evita desbordamiento en meses cortos (ej. 31  28/29)
             MIN(CASE WHEN T9.FecIso <= LAST_DAY(ADD_MONTHS(P_FECHA_TOPE, -1))
                      THEN T9.FecIso END)  AS FECHA_PRIMERA_COMPRA_HIST
 
@@ -153,3 +117,4 @@ RETURN
 
 
 GRANT EXECUTE ON FUNCTION SEGLIB.FA_FECHAS_CLIENTE TO PUBLIC;
+

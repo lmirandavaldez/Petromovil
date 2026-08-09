@@ -1,42 +1,11 @@
--- ==============================================================
--- Modulo    : Facturacion
--- Programa  : SQLFAF002
--- Objeto    : SEGLIB.FA_PATRON_COMPRA_CLIENTE
--- Tipo      : Funcion de tabla SQL (Table Function)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 3
--- Proyecto  : Petromovil
--- --------------------------------------------------------------
--- Proposito:
---   Ver descripcion en comentarios dentro del SQL.
--- --------------------------------------------------------------
--- Campos retornados (en orden original):
---   Ver definicion en el SELECT del SQL.
--- --------------------------------------------------------------
--- Tablas referenciadas:
---   Ver comentarios en los JOINs del SQL.
--- --------------------------------------------------------------
--- Logica de resolucion de fechas:
---   Ver comentarios en el SQL.
--- --------------------------------------------------------------
--- Sugerencias de mejora:
---   Ver seccion Cambios en el historial del archivo original.
--- --------------------------------------------------------------
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
---                           formato 80 cols
--- ==============================================================
 --CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
 -- ============================================================
--- Funcion  : SEGLIB.FA_PATRON_COMPRA_CLIENTE
--- Proposito: Calcula el patron de compra de un cliente hasta una
---            fecha tope. Devuelve metricas estadisticas sobre los
+-- Función  : SEGLIB.FA_PATRON_COMPRA_CLIENTE
+-- Propósito: Calcula el patrón de compra de un cliente hasta una
+--            fecha tope. Devuelve métricas estadísticas sobre los
 --            intervalos entre compras y una bandera de cliente nuevo.
--- Version  : 2.0
--- Parametros:
+-- Versión  : 2.0
+-- Parámetros:
 --   P_CODIGO_CLIENTE  INTEGER  Clave del cliente a analizar.
 --   P_FECHA           DATE     Fecha tope (inclusive). Solo se
 --                              consideran movimientos <= P_FECHA.
@@ -45,16 +14,16 @@
 --                                'T' = todos los distribuidores
 -- Retorna tabla con columnas:
 --   CODIGO_CLIENTE  INTEGER        Clave del cliente.
---   PROMEDIO_DIAS   DECIMAL(10,4)  Promedio de dias entre compras.
+--   PROMEDIO_DIAS   DECIMAL(10,4)  Promedio de días entre compras.
 --                                  0 si el cliente tiene 1 o 0 compras.
---   DESVIACION      DECIMAL(10,4)  Desviacion estandar de los intervalos.
+--   DESVIACION      DECIMAL(10,4)  Desviación estándar de los intervalos.
 --                                  0 si el cliente tiene 1 o 0 compras.
 --   FACTOR          DECIMAL(10,4)  2 + (DESVIACION / PROMEDIO_DIAS).
 --                                  2.00 si PROMEDIO_DIAS = 0.
 --   UMBRAL          DECIMAL(10,4)  PROMEDIO_DIAS * FACTOR.
 --                                  0 si PROMEDIO_DIAS = 0.
 --   ES_NUEVO        INTEGER        1 si la primera compra del cliente
---                                  ocurrio en el mismo mes/ano que
+--                                  ocurrió en el mismo mes/año que
 --                                  P_FECHA; 0 en caso contrario.
 --                                  0 si no hay movimientos.
 -- Notas:
@@ -67,15 +36,10 @@
 --       DATE('2026-07-23'),
 --       'N'
 --   )) AS x;
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Documentacion: secciones estandar,
---                           sin acentos, formato 80 cols
--- ==============================================================
+-- ============================================================
 
 CREATE OR REPLACE FUNCTION SEGLIB.FA_PATRON_COMPRA_CLIENTE (
-    P_CODIGO_CLIENTE INTEGER,   -- codigo cliente
+    P_CODIGO_CLIENTE INTEGER,   -- código cliente
     P_FECHA          DATE,      -- fecha tope (inclusive)
     P_TIPO           CHAR(1)    -- 'N' = solo dist. tipo N
                                 -- / 'T' = todos
@@ -92,10 +56,10 @@ LANGUAGE SQL
 NOT DETERMINISTIC        -- el resultado depende del estado
                          -- de las tablas
 READS SQL DATA
-RETURNS NULL ON NULL INPUT -- si cualquier parametro 
-                           -- es NULL retorna vacio
+RETURNS NULL ON NULL INPUT -- si cualquier parámetro
+                           -- es NULL retorna vacío
 RETURN
-    -- Movimientos validos del cliente hasta P_FECHA
+    -- Movimientos válidos del cliente hasta P_FECHA
     WITH Movs AS (
         SELECT
             T2.CliCve AS CODIGO_CLIENTE,
@@ -114,7 +78,7 @@ RETURN
           -- 'N' filtra solo distribuidores tipo N; 'T' incluye todos
           AND (P_TIPO = 'T' OR T3.DisTip = 'N')
     ),
-    -- Intervalo en dias entre compras consecutivas (LAG)
+    -- Intervalo en días entre compras consecutivas (LAG)
     Intervalos AS (
         SELECT
             CODIGO_CLIENTE,
@@ -124,7 +88,7 @@ RETURN
             )) AS DIAS
         FROM Movs
     ),
-    -- Estadisticas: promedio y desviacion de los intervalos
+    -- Estadísticas: promedio y desviación de los intervalos
     Stats AS (
         SELECT
             P_CODIGO_CLIENTE          AS CODIGO_CLIENTE,
@@ -155,8 +119,8 @@ RETURN
                 THEN CAST(0 AS DECIMAL(10,4))
             ELSE S.PROMEDIO * (2 + (S.DESVIACION / S.PROMEDIO))
         END                                         AS UMBRAL,
-        -- ES_NUEVO: 1 si la primera compra fue en el mismo mes/ano
-        -- que P_FECHA; 0 si no hay compras o es en otro periodo
+        -- ES_NUEVO: 1 si la primera compra fue en el mismo mes/año
+        -- que P_FECHA; 0 si no hay compras o es en otro período
         CASE
             WHEN F.FIRST_PURCHASE IS NOT NULL
              AND YEAR(F.FIRST_PURCHASE)  = YEAR(P_FECHA)
@@ -169,3 +133,4 @@ RETURN
 
 
 GRANT EXECUTE ON FUNCTION SEGLIB.FA_PATRON_COMPRA_CLIENTE TO PUBLIC;
+

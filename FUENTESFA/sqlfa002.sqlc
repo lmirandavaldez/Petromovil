@@ -1,34 +1,46 @@
--- ==============================================================
--- Modulo    : Facturacion
--- Programa  : SQLFA002
--- Objeto    : VWFAC_Fec_Ult_Doc_Ven_Cli_Art
--- Tipo      : Vista SQL (View)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 4
--- Proyecto  : Petromovil
--- --------------------------------------------------------------
--- Proposito:
---   Ver descripcion en comentarios dentro del SQL.
--- --------------------------------------------------------------
--- Campos retornados (en orden original):
---   Ver definicion en el SELECT del SQL.
--- --------------------------------------------------------------
--- Tablas referenciadas:
---   Ver comentarios en los JOINs del SQL.
--- --------------------------------------------------------------
--- Logica de resolucion de fechas:
---   Ver comentarios en el SQL.
--- --------------------------------------------------------------
--- Sugerencias de mejora:
---   Ver seccion Cambios en el historial del archivo original.
--- --------------------------------------------------------------
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
---                           formato 80 cols
--- ==============================================================
+-- ============================================================
+-- Vista   : VWFAC_Fec_Ult_Doc_Ven_Cli_Art
+-- Modulo  : Facturacion
+-- Objeto  : Devuelve la fecha del ultimo documento de venta
+--           valido (DtoFec) por combinacion de vendedor,
+--           cliente y articulo.
+--           Solo considera documentos de tipo factura
+--           (DtoTip = 1) o tipos superiores a 3 (notas de
+--           debito, etc.), excluyendo devoluciones (2 y 3).
+--           La fecha se resuelve a traves del calendario
+--           SegFec (ano+mes+dia -> FecYmd).
+-- Tablas  : CxcCli    maestro de clientes (tabla base)
+--           FacDtod   detalle de documentos de facturacion
+--           CxcRvc    vendedor por cliente
+--           InvArt    maestro de articulos
+--           SegFec    calendario / tabla de fechas
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Version : 3  (mejorada)
+-- Cambios :
+--   v2 - Se cambia el INNER JOIN a SegFec por LEFT OUTER JOIN
+--          para que los documentos sin coincidencia en el
+--          calendario no queden excluidos silenciosamente;
+--          cuando no haya fecha en SegFec, FecYmd = NULL y
+--          Max() lo ignora correctamente.
+--        Se protege el JOIN de CxcRvc con subconsulta
+--          FETCH FIRST 1 ROW ONLY para evitar multiplicacion
+--          de filas cuando un cliente tenga mas de un vendedor
+--          asignado (bug potencial de duplicacion en original).
+--        Se agrega COALESCE en el WHERE para manejar
+--          correctamente NULLs de DtoTip provenientes del
+--          LEFT JOIN de FacDtod.
+--        Se agrega alias explicito As en todos los FROM/JOIN.
+--        Se reformatea SELECT, FROM, JOINs, WHERE y GROUP BY
+--          con una columna/condicion por linea y comentarios.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentacion completa.
+--   v3 - Se reemplaza Left Outer Join + subconsulta FETCH FIRST
+--          por Join directo en CxcRvc, dado que la relacion
+--          con CxcCli es garantizada 1:1.
+--          La subconsulta sin WHERE provocaba SQL0206 en
+--          DB2 for i al no poder resolver la columna en contexto.
+-- ============================================================
 
 Create Or Replace View VWFAC_Fec_Ult_Doc_Ven_Cli_Art As
 
@@ -85,3 +97,4 @@ Group By
 
 -- Orden sugerido para consultas directas sobre la vista:
 -- Order By T3.VenCve, T1.CliCve, T2.ArtCve
+

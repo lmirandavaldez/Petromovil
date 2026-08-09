@@ -1,0 +1,60 @@
+     A* Menú de Formato Libre: ESTM05
+     A*%%TS  SD  20260702  091752  MEYKER      REL-V7R5M0  5770-WDS
+     A*  91/07/16  10:48:22    MUNOZ       REL-R03M00  5728-PW1
+     A*%%EC
+     A                                      DSPSIZ(24 80 *DS3                  -
+     A                                             27 132 *DS4)
+     A                                      CHGINPDFT
+     A                                      INDARA
+     A                                      PRINT(*LIBL/QSYSPRT)
+     A*  91/07/16  10:48:22    MUNOZ       REL-R03M00  5728-PW1
+     A          R ESTM05
+     A*%%TS  SD  20240207  105309  MEYKER      REL-V7R4M0  5770-WDS
+     A                                      DSPMOD(*DS3)
+     A                                      LOCK
+     A                                      SLNO(01)
+     A                                      CLRL(*ALL)
+     A                                      ALWROL
+     A                                      CF03
+     A                                      HELP
+     A                                      HOME
+     A                                      HLPRTN
+     A                                  3  3'Reportes Generales'
+     A                                      COLOR(BLU)
+     A                                  6  7'1. Vtas. prod. nacionales'
+     A* CMDPROMPT  No suprima esta especificación DDS.
+     A                                019  2'Selección o mandato               -
+     A                                          '
+     A                                 20  1'Entre una opción'
+     A                                  1 37'ESTM05'
+     A                                      DSPATR(HI)
+     A                                 17  6'24. Salir de linea'
+     A                                 15  6'22. Cambio de compañia'
+     A                                 18  6'30. Control Spool-file'
+     A                                 16  6'23. Menu anterior'
+     A                                  1 70DATE
+     A                                      EDTCDE(Y)
+     A                                      DSPATR(HI)
+     A                                  2 70TIME
+     A                                      DSPATR(HI)
+     A                                  3 70USER
+     A                                      DSPATR(HI)
+     A                                  2 35'Estadisticas'
+     A                                      DSPATR(HI)
+     A                                  6 47'9. Vtas. vendedor marcas'
+     A                                  7  7'2. Vtas. prod. zonas nacionales'
+     A                                  7 46'10. Vtas. clientes marcas'
+     A                                  8  7'3. Vtas. prod. categorias nacional-
+     A                                      es'
+     A                                 10  7'5. Vtas. prod. cliente tipo marca'
+     A                                 11  7'6. Reseumen acum. x marcas y tipo'
+     A                                 14 46'16. Ranking Ventas Clientes Montos'
+     A                                  9  7'4. Vtas. prod. marcas nacionales'
+     A                                  8 46'11. Vtas. prod. categ. / Exist.'
+     A                                  9 46'12. Vtas. vendedor/cliente/product-
+     A                                      o'
+     A                                 10 46'13. Vtas. Marca/cliente/producto'
+     A                                 11 46'14. Vtas. Marca/vendedor/producto'
+     A                                 12 46'15. Vtas. Marca/zona/producto'
+     A                                 15 46'17. Ranking Ventas Clientes Unds.'
+     A                                 16 46'18. Ventas Consolidadas'

@@ -1,0 +1,95 @@
+     A*%%TS  SD  20260703  103546  MEYKER      REL-V7R5M0  5770-WDS
+     A*  92/12/17  11:02:18                REL-R03M00  5728-PW1
+     A*%%EC
+     A                                      DSPSIZ(24 80 *DS3)
+     A          R FA313301
+     A*%%TS  SD  20260703  103546  MEYKER      REL-V7R5M0  5770-WDS
+     A                                      CF03(03 'Salir')
+     A                                      CF12(12 'Anterior')
+     A                                      CF24(24 'Aplicar')
+     A                                      CF04(04 'Lista')
+     A                                      RTNCSRLOC(&RECORD &CAMPO)
+     A                                      SLNO(01)
+     A                                      CLRL(23)
+     A                                      OVERLAY
+     A                                      PRINT
+     A            CAMPO         10A  H
+     A            RECORD        10A  H
+     A            COLUM          3S 0H
+     A            FILA           3S 0H
+     A            NOMCIA        40A  O  1  2DSPATR(HI)
+     A                                  1 52USER
+     A                                  1 70DATE
+     A                                      EDTCDE(Y)
+     A                                  2  2'Facturación'
+     A                                  2 70TIME
+     A            WSID          10A  O  3 70
+     A            CODVEN         3Y 0B 10 27CHECK(RZ)
+     A                                      EDTCDE(Z)
+     A  32                                  DSPATR(RI)
+     A  72                                  DSPATR(PC)
+     A            CODCLI         7Y 0B 11 27CHECK(RZ)
+     A                                      EDTCDE(Z)
+     A  33                                  DSPATR(RI)
+     A  73                                  DSPATR(PC)
+     A                                 23  6'F3=Salir'
+     A                                      COLOR(BLU)
+     A                                 23 62'F12=Anterior'
+     A                                      COLOR(BLU)
+     A                                 10 37'F4=Lista'
+     A                                  6  7'Digite y presione intro.'
+     A                                      COLOR(BLU)
+     A                                 11 37'F4=Lista'
+     A            TITULO        50A  O  3 16DSPATR(HI)
+     A                                 10  2'Código de vendedor . . .'
+     A                                 11  2'Código de cliente. . . .'
+     A                                 13  2'Fecha desde. . . . . . .'
+     A                                 14  2'Fecha hasta. . . . . . .'
+     A            FECDES         8Y 0B 13 27
+     A  35                                  DSPATR(RI)
+     A  75                                  DSPATR(PC)
+     A                                      CHECK(RB)
+     A                                      EDTCDE(Z)
+     A            FECHAS         8Y 0B 14 27
+     A  36                                  DSPATR(RI)
+     A  76                                  DSPATR(PC)
+     A                                      CHECK(RB)
+     A                                      EDTCDE(Z)
+     A                                 13 37'dd/mm/aaaa'
+     A                                  8  2'Distrito . . . . . . . .'
+     A            CODDIS         3Y 0B  8 27
+     A  30                                  DSPATR(RI)
+     A  70                                  DSPATR(PC)
+     A                                      CHECK(RB)
+     A                                      EDTCDE(Z)
+     A                                  8 37'F4=Lista'
+     A                                 12  2'Código de categoria. . .'
+     A            CODCAT         4Y 0B 12 27
+     A  34                                  DSPATR(RI)
+     A  74                                  DSPATR(PC)
+     A                                      CHECK(RB)
+     A                                      EDTCDE(Z)
+     A                                 12 37'F4=Lista'
+     A            MSGPGM        10A  O  3  2
+     A                                  9  2'Código de Supervisor . .'
+     A            CODSUP         2Y 0B  9 27CHECK(RZ)
+     A                                      EDTCDE(Z)
+     A  31                                  DSPATR(RI)
+     A  71                                  DSPATR(PC)
+     A                                  9 37'F4=Lista'
+     A          R MSGSFL                    SFL
+     A*%%TS  SD  19970623  123943  JTIBURCIO   REL-V3R7M0  5716-PW1
+     A                                      SFLMSGRCD(24)
+     A            MSGKEY                    SFLMSGKEY
+     A            @MSGQ                     SFLPGMQ(10)
+     A          R MSGCTL                    SFLCTL(MSGSFL)
+     A*%%TS  SD  19970623  144713  JTIBURCIO   REL-V3R7M0  5716-PW1
+     A                                      HELP
+     A                                      OVERLAY
+     A                                      SFLDSP
+     A                                      SFLDSPCTL
+     A  80                                  SFLINZ
+     A  80                                  SFLEND
+     A                                      SFLSIZ(0005)
+     A                                      SFLPAG(0001)
+     A            @MSGQ                     SFLPGMQ(10)

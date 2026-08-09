@@ -1,0 +1,16 @@
+ Create Or Replace View VWFAC_Carga_Panillas
+ As Select T1.PlaDis, T1.PlaNro, T1.VehFic, T1.ChoCve, T1.PlaFpl,
+           T2.PlaSec, T2.DisCve, T2.OrdNro, T2.OrdAmd, T2.CliCve,
+           T2.PlaOri
+      From FacPlah T1
+      Join FacPlad T2
+        On (T1.PlaDis = T2.PlaDis)
+       And (T1.PlaNro = T2.PlaNro)
+      Join FacVeh T3
+        On (T1.VehFic = T3.VehFic)
+      Join SegDis T4
+        On (T2.DisCve = T4.DisCve)
+     Where (T1.SitCve Not In('O', 'R', 'Y'))
+       And (T3.VehOri = 'P')
+       And (T3.VehTip <= 2)
+       And (T2.PlaSta = 'A')

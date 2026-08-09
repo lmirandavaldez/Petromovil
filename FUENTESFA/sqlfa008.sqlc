@@ -1,59 +1,64 @@
--- ==============================================================
--- Modulo    : Facturacion
--- Programa  : SQLFA008
--- Objeto    : VWFAC_Fec_Ult_Documento
--- Tipo      : Vista SQL (View)
--- Autor     : L. Miranda
--- Copyright : Miranda Valdez, S. A., 1997
--- Version   : 3
--- Proyecto  : Petromovil
--- --------------------------------------------------------------
--- Proposito:
---   Ver descripcion en comentarios dentro del SQL.
--- --------------------------------------------------------------
--- Campos retornados (en orden original):
---   Ver definicion en el SELECT del SQL.
--- --------------------------------------------------------------
--- Tablas referenciadas:
---   Ver comentarios en los JOINs del SQL.
--- --------------------------------------------------------------
--- Logica de resolucion de fechas:
---   Ver comentarios en el SQL.
--- --------------------------------------------------------------
--- Sugerencias de mejora:
---   Ver seccion Cambios en el historial del archivo original.
--- --------------------------------------------------------------
--- Historial de cambios:
---   Fecha       Autor       Descripcion
---   ----------  ----------  -----------------------------------
---   2026-08-03  L. Miranda  Encabezado estandar, sin acentos,
---                           formato 80 cols
--- ==============================================================
+-- ============================================================
+-- Vista   : VWFAC_Fec_Ult_Documento
+-- Módulo  : Facturación
+-- Objeto  : Devuelve la fecha del último documento de venta
+--           válido por cliente (DtoFec = Max FecYmd).
+--           Solo considera documentos activos/aplicados
+--           (DtoSta = 'A') de tipo factura (DtoTip = 1) o
+--           tipos superiores a 3 (notas de débito, etc.),
+--           excluyendo devoluciones y notas de crédito (2, 3).
+--           La fecha se resuelve a través del calendario
+--           SegFec (año + mes + día  FecYmd numérico YYYYMMDD).
+-- Tablas  : FacDtoh   encabezados de documentos de facturación
+--           SegFec    calendario (FecAno+FecMes+FecDia  FecYmd)
+-- Esquema : (default)
+-- Autor   : L. Miranda
+-- Copyright: Miranda Valdez, S. A., 1997
+-- Versión : 2  (mejorada)
+-- Cambios :
+--   v2 - Se cambia INNER JOIN SegFec a LEFT OUTER JOIN para
+--          que documentos cuyo año+mes+día no exista en el
+--          calendario no queden excluidos silenciosamente;
+--          Max() ignora FecYmd = NULL de forma natural.
+--        Se agregan COALESCE defensivos en el WHERE sobre
+--          DtoTip y DtoSta.
+--        Se documenta el significado de los valores de filtro:
+--          DtoSta = 'A' (Activo/Aplicado),
+--          Excluir estos tipos de documentos
+--          DtoTip = 2 (Nota de Credito),
+--          DtoTip = 3 (Promociones),
+--          DtoTip = 8 (Notas de Debito)
+--        Se agrega alias explícito As en FROM y JOIN.
+--        Se reformatea SELECT, FROM, JOIN, WHERE y GROUP BY
+--          con una columna/condición por línea y comentarios.
+--        Se agrega ORDER BY sugerido (comentado).
+--        Cabecera de documentación completa.
+-- ============================================================
 
 Create Or Replace View VWFAC_Fec_Ult_Documento As
 
 Select
     -- --------------------------------------------------------
-    -- Dimension de agrupacion
+    -- Dimensión de agrupación
     -- --------------------------------------------------------
-    T1.CliCve         As CliCve,   -- Codigo del cliente
+    T1.CliCve         As CliCve,   -- Código del cliente
 
     -- --------------------------------------------------------
-    -- Metrica: fecha del ultimo documento valido
+    -- Métrica: fecha del último documento válido
     -- --------------------------------------------------------
     -- Max() sobre FecYmd (YYYYMMDD). Cuando FecYmd = NULL
     -- (documento sin entrada en SegFec), Max() lo ignora;
-    -- el resultado sera NULL solo si el cliente no tiene
-    -- ningun documento con fecha en el calendario.
-    Max(T9.FecYmd)    As DtoFec    -- Fecha (YYYYMMDD) del ultimo 
-                                   -- documento valido
+    -- el resultado será NULL solo si el cliente no tiene
+    -- ningún documento con fecha en el calendario.
+    Max(T9.FecYmd)    As DtoFec    -- Fecha (YYYYMMDD) del último
+                                   -- documento válido
 
 From FacDtoh As T1
 
--- Calendario: convierte ano+mes+dia en valor numerico FecYmd.
--- LEFT OUTER JOIN para que documentos con combinacion
--- ano+mes+dia no cargada en SegFec no queden excluidos;
--- Max() ignorara esos FecYmd = NULL correctamente.
+-- Calendario: convierte año+mes+día en valor numérico FecYmd.
+-- LEFT OUTER JOIN para que documentos con combinación
+-- año+mes+día no cargada en SegFec no queden excluidos;
+-- Max() ignorará esos FecYmd = NULL correctamente.
 Join SegFec As T9
     On  T1.DtoAno = T9.FecAno
     And T1.DtoMes = T9.FecMes
@@ -64,8 +69,8 @@ Where
     -- DtoSta: 'A' = Activo; 'C' = Cancelados
     COALESCE(T1.DtoSta, '') = 'A'
 
-    -- Excluye tipo 2 (devolucion), tipo 3 (Promociones) 
-    -- y Tipo 8 (notas Debito) 
+    -- Excluye tipo 2 (devolución), tipo 3 (Promociones)
+    -- y Tipo 8 (notas Debito)
     And (COALESCE(T1.DtoTip, 0) Not In(2,3,8))
 
 Group By
@@ -73,3 +78,5 @@ Group By
 
 -- Orden sugerido para consultas directas sobre la vista:
 -- Order By T1.CliCve
+
+

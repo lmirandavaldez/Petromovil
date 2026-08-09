@@ -1,0 +1,23 @@
+Create Or Replace View VWFAC_Ventas_Sup_Ven_Cli_Art_Ano_Meses
+As Select T1.DtoAno, T4.SupCve, T3.VenCve, T1.CliCve, T1.ArtCve,
+IfNull (Sum(Case When T1.DtoMes = 01 Then T1.DtoCua End), 0) Ene,
+IfNull (Sum(Case When T1.DtoMes = 02 Then T1.DtoCua End), 0) Feb,
+IfNull (Sum(Case When T1.DtoMes = 03 Then T1.DtoCua End), 0) Mar,
+IfNull (Sum(Case When T1.DtoMes = 04 Then T1.DtoCua End), 0) Abr,
+IfNull (Sum(Case When T1.DtoMes = 05 Then T1.DtoCua End), 0) May,
+IfNull (Sum(Case When T1.DtoMes = 06 Then T1.DtoCua End), 0) Jun,
+IfNull (Sum(Case When T1.DtoMes = 07 Then T1.DtoCua End), 0) Jul,
+IfNull (Sum(Case When T1.DtoMes = 08 Then T1.DtoCua End), 0) Ago,
+IfNull (Sum(Case When T1.DtoMes = 09 Then T1.DtoCua End), 0) Sep,
+IfNull (Sum(Case When T1.DtoMes = 10 Then T1.DtoCua End), 0) Oct,
+IfNull (Sum(Case When T1.DtoMes = 11 Then T1.DtoCua End), 0) Nov,
+IfNull (Sum(Case When T1.DtoMes = 12 Then T1.DtoCua End), 0) Dic
+     From FacDtod T1
+     Join InvArt T2
+       On (T1.ArtCve = T2.ArtCve)
+     Join CxcRvc T3
+       On (T1.CliCve = T3.CliCve)
+     Join CxcVen T4
+       On (T3.VenCve = T4.VenCve)
+    Where (T1.DtoTip <> 3)
+ Group by T1.DtoAno, T4.SupCve, T3.VenCve, T1.CliCve, T1.ArtCve

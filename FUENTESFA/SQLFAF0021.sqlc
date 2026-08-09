@@ -1,0 +1,88 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.FA_PATRON_COMPRA_CLIENTE (
+    P_CODIGO_CLIENTE INTEGER,    -- código cliente
+    P_FECHA          DATE,       -- fecha tope
+    P_TIPO           CHAR(1)     -- tipo de filtro ('N' o 'T')
+)
+RETURNS TABLE (
+    CODIGO_CLIENTE  INTEGER,
+    PROMEDIO_DIAS   DECIMAL(10,4),
+    DESVIACION      DECIMAL(10,4),
+    FACTOR          DECIMAL(10,4),
+    UMBRAL          DECIMAL(10,4),
+    ES_NUEVO        INTEGER
+)
+LANGUAGE SQL
+DETERMINISTIC
+READS SQL DATA
+RETURN
+    WITH Movs AS (
+        SELECT
+            T2.CliCve AS CODIGO_CLIENTE,
+            T9.FecIso AS FECHA
+        FROM FacDtoh T2
+        JOIN SegDis T3
+          ON T2.DisCve = T3.DisCve
+        JOIN SegFec T9
+          ON T2.DtoAno = T9.FecAno
+         AND T2.DtoMes = T9.FecMes
+         AND T2.DtoDia = T9.FecDia
+       WHERE T2.CliCve = P_CODIGO_CLIENTE
+         AND T9.FecIso <= P_FECHA
+         AND T2.DtoSta = 'A'
+         AND T2.DtoTip NOT IN (2,8)
+ --      AND T3.DisTip = 'N'
+             /* NUEVA LÓGICA */
+         AND (P_TIPO = 'T' OR T3.DisTip = 'N')
+    ),
+    Intervalos AS (
+        SELECT
+            CODIGO_CLIENTE,
+            DAYS(FECHA) -
+            DAYS(LAG(FECHA) OVER (
+                PARTITION BY CODIGO_CLIENTE
+                ORDER BY FECHA
+            )) AS DIAS
+        FROM Movs
+    ),
+    Stats AS (
+        SELECT
+            P_CODIGO_CLIENTE AS CODIGO_CLIENTE,
+            AVG(DIAS) AS PROMEDIO,
+            STDDEV(DIAS) AS DESVIACION
+        FROM Intervalos
+        WHERE DIAS IS NOT NULL
+    ),
+    FirstBuy AS (
+        SELECT
+            P_CODIGO_CLIENTE AS CODIGO_CLIENTE,
+            MIN(FECHA) AS FIRST_PURCHASE
+        FROM Movs
+    )
+    SELECT
+        S.CODIGO_CLIENTE,
+        COALESCE(S.PROMEDIO, 0) AS PROMEDIO_DIAS,
+        COALESCE(S.DESVIACION, 0) AS DESVIACION,
+        CASE
+            WHEN S.PROMEDIO IS NULL OR S.PROMEDIO = 0
+                THEN 2.00
+            ELSE 2 + (S.DESVIACION / S.PROMEDIO)
+        END AS FACTOR,
+        CASE
+            WHEN S.PROMEDIO IS NULL OR S.PROMEDIO = 0
+                THEN 0
+            ELSE S.PROMEDIO * (2 + (S.DESVIACION / S.PROMEDIO))
+        END AS UMBRAL,
+        CASE
+            WHEN YEAR(F.FIRST_PURCHASE) = YEAR(P_FECHA)
+             AND MONTH(F.FIRST_PURCHASE) = MONTH(P_FECHA)
+                THEN 1
+            ELSE 0
+        END AS ES_NUEVO
+    FROM Stats S
+    JOIN FirstBuy F
+      ON S.CODIGO_CLIENTE = F.CODIGO_CLIENTE;
+
+  GRANT EXECUTE ON FUNCTION SEGLIB.FA_PATRON_COMPRA_CLIENTE TO PUBLIC;
+

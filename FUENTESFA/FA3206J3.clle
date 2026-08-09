@@ -1,0 +1,58 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: FA3206J2                         */
+ /*   APLICACION.................: Sistema de Facturacion           */
+ /*   AUTOR .....................: Luis J. Miranda V.               */
+ /*   FECHA ESCRITURA ...........: 07 / 08 / 2026                   */
+ /*                                                                 */
+ /*    Proceso Crear Archivo KPI Productividad Conductores          */
+ /*=================================================================*/
+ INI:        PGM        PARM(&FECHAS)
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&FECHAS)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&FECH) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&CIA)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&NCIA) TYPE(*CHAR) LEN(11)
+             DCL        VAR(&NomCia) TYPE(*CHAR) LEN(40)
+             DCL        VAR(&MAIL) TYPE(*CHAR) LEN(50)
+             DCL        VAR(&EnvMai) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&PRT) TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&WSID) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&CIA)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&PGM) TYPE(*CHAR) LEN(10) VALUE('FA3206')
+             DCL        VAR(&EJECUTA) TYPE(*CHAR) LEN(1)
+
+             RTVDTAARA  DTAARA(*LDA (360 40)) RTNVAR(&NOMCIA)
+             RTVDTAARA  DTAARA(*LDA (412 11)) RTNVAR(&NCIA)
+             RTVDTAARA  DTAARA(*LDA (401 2)) RTNVAR(&CIA)
+             RTVDTAARA  DTAARA(*LDA (450 10)) RTNVAR(&PRT)
+             RTVDTAARA  DTAARA(*LDA (500 1)) RTNVAR(&EnvMai)
+             RTVDTAARA  DTAARA(*LDA (601 50)) RTNVAR(&Mail)
+             RTVJOBA    JOB(&WSID) USER(&USER)
+
+             CVTDAT     DATE(&FECHAS) TOVAR(&FECH) FROMFMT(*YYMD) +
+                          TOFMT(*DMYY) TOSEP(*SYSVAL)
+
+             CALL       PGM(*LIBL/FA3206) PARM((&FECHAS))
+/* Copia a Excel                                                    */
+
+             IF         COND(&ENVMAI *EQ "S") THEN(DO)
+
+             SNDFEXCEL  SNDF((*LIBL/FAC3206 +
+                          KPI_Productividad_Choferes.XLSx *FIRST +
+                          *ALL KPI_Productividad_Choferes *NONE)) +
+                          TO((&MAIL)) SUBJECT('PGM FA3206 Archivo +
+                          en Excel Productividad a una Fecha') +
+                          COLHDG(*ALIASBLD) TRANSFORM(*OOXML) +
+                          MSG(('Anexo Archivo de KPI KPI +
+                          Productividad Choferes al' *BCAT (&FECH) +
+                          *BCAT 'de la Compania' *BCAT (&NOMCIA))) +
+                          COLHDGFMT(*CENTERSEL)
+             ENDDO
+
+/* Actualiza control ejecucion Proceso */
+             CALL       PGM(*LIBL/SG8099) PARM(&CIA &PGM)
+
+ END:        ENDPGM
