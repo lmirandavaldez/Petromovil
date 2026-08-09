@@ -1,0 +1,34 @@
+name: Deploy to IBM i IFS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Sincronizar IFS IBM i
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar cliente SSH
+        run: sudo apt-get install -y openssh-client
+
+      - name: Agregar host SSH conocido
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.IBM_I_PORT }} ${{ secrets.IBM_I_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Configurar clave SSH privada
+        run: |
+          echo "${{ secrets.IBM_I_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Git pull en el IFS IBM i
+        run: |
+          ssh -i ~/.ssh/id_rsa -p ${{ secrets.IBM_I_PORT }} \
+            ${{ secrets.IBM_I_USER }}@${{ secrets.IBM_I_HOST }} \
+            "cd /home/MEYKER/git/Petromovil && git pull origin main"
