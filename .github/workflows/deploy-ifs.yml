@@ -1,10 +1,7 @@
 name: Deploy to IBM i IFS
 
 on:
-  push:
-    branches:
-      - main
-
+  workflow_dispatch:
 jobs:
   deploy:
     name: Sincronizar IFS IBM i
