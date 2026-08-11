@@ -1,88 +1,587 @@
 [
   {
+    "name": "Create RPGLE Program",
+    "command": "CRTBNDRPG PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "RPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "Create RPGLE Module",
+    "command": "CRTRPGMOD MODULE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "RPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "Create SQLRPGLE Program",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQLRPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "Create SQLRPGLE Module",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OBJTYPE(*MODULE) OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQLRPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "extensions": [
+      "CLP",
+      "CLLE"
+    ],
+    "name": "Create Bound CL Program",
+    "command": "CRTBNDCL PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE)",
+    "deployFirst": true,
+    "environment": "ile",
+    "type": "file"
+  },
+  {
+    "extensions": [
+      "SQL",
+      "TABLE",
+      "VIEW",
+      "SQLPRC",
+      "SQLUDF",
+      "SQLUDT",
+      "SQLTRG",
+      "SQLALIAS",
+      "SQLSEQ"
+    ],
+    "name": "Run SQL Statements (RUNSQLSTM)",
+    "command": "RUNSQLSTM SRCSTMF('&FULLPATH') COMMIT(*NONE) NAMING(*SQL)",
+    "deployFirst": true,
+    "environment": "ile",
+    "type": "file"
+  },
+  {
+    "name": "Create DSPF",
+    "command": "CRTDSPF FILE(&CURLIB/&NAME) SRCFILE(&SRCFILE) RSTDSP(*NO) OPTION(*EVENTF)",
+    "environment": "ile",
+    "deployFirst": true,
+    "extensions": [
+      "dspf"
+    ],
+    "type": "file"
+  },
+  {
+    "extensions": [
+      "GLOBAL"
+    ],
+    "name": "Create Service Program (CRTSRVPGM EXPORT(*ALL))",
+    "command": "CRTSRVPGM SRVPGM(&CURLIB/&NAME) EXPORT(*ALL) BNDSRVPGM(*NONE) BNDDIR(*NONE) ACTGRP(*CALLER)",
+    "environment": "ile",
+    "type": "file"
+  },
+  {
+    "extensions": [
+      "BND",
+      "BINDER"
+    ],
+    "deployFirst": true,
+    "name": "Create Service Program (CRTSRVPGM with source)",
+    "command": "CRTSRVPGM SRVPGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') BNDSRVPGM(*NONE) BNDDIR(*NONE) ACTGRP(*CALLER)",
+    "environment": "ile",
+    "type": "file"
+  },
+  {
+    "name": "Create RPGLE Program",
+    "command": "CRTBNDRPG PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "RPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "Create RPGLE Module",
+    "command": "CRTRPGMOD MODULE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "RPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "Create SQLRPGLE Program",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQLRPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "Create SQLRPGLE Module",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OBJTYPE(*MODULE) OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQLRPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "extensions": [
+      "CLP",
+      "CLLE"
+    ],
+    "name": "Create Bound CL Program",
+    "command": "CRTBNDCL PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE)",
+    "deployFirst": true,
+    "environment": "ile",
+    "type": "file"
+  },
+  {
+    "extensions": [
+      "SQL",
+      "TABLE",
+      "VIEW",
+      "SQLPRC",
+      "SQLUDF",
+      "SQLUDT",
+      "SQLTRG",
+      "SQLALIAS",
+      "SQLSEQ"
+    ],
+    "name": "Run SQL Statements (RUNSQLSTM)",
+    "command": "RUNSQLSTM SRCSTMF('&FULLPATH') COMMIT(*NONE) NAMING(*SQL)",
+    "deployFirst": true,
+    "environment": "ile",
+    "type": "file"
+  },
+  {
+    "name": "Create DSPF",
+    "command": "CRTDSPF FILE(&CURLIB/&NAME) SRCFILE(&SRCFILE) RSTDSP(*NO) OPTION(*EVENTF)",
+    "environment": "ile",
+    "deployFirst": true,
+    "extensions": [
+      "dspf"
+    ],
+    "type": "file"
+  },
+  {
     "name": "🔨 Compilar SQLRPGLE → Programa",
     "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": ["SQLRPGLE"]
+    "extensions": [
+      "SQLRPGLE"
+    ],
+    "type": "file"
   },
   {
     "name": "🔨 Compilar SQLRPGLE → Módulo",
     "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OBJTYPE(*MODULE) OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": ["SQLRPGLE"]
+    "extensions": [
+      "SQLRPGLE"
+    ],
+    "type": "file"
   },
   {
     "name": "🔨 Compilar RPGLE → Programa",
     "command": "CRTBNDRPG PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": ["RPGLE"]
+    "extensions": [
+      "RPGLE"
+    ],
+    "type": "file"
   },
   {
     "name": "🔨 Compilar RPGLE → Módulo",
     "command": "CRTRPGMOD MODULE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": ["RPGLE"]
+    "extensions": [
+      "RPGLE"
+    ],
+    "type": "file"
   },
   {
     "name": "🔨 Compilar CL → Programa",
     "command": "CRTBNDCL PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": ["CLP", "CLLE"]
+    "extensions": [
+      "CLP",
+      "CLLE"
+    ],
+    "type": "file"
   },
   {
     "name": "🔨 Compilar DDS → Physical File",
     "command": "CRTPF FILE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": ["PF"]
+    "extensions": [
+      "PF"
+    ],
+    "type": "file"
   },
   {
     "name": "🔨 Compilar DDS → Display File",
     "command": "CRTDSPF FILE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') RSTDSP(*NO) OPTION(*EVENTF)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": ["DSPF"]
+    "extensions": [
+      "DSPF"
+    ],
+    "type": "file"
   },
   {
     "name": "🔨 Ejecutar SQL (RUNSQLSTM)",
     "command": "RUNSQLSTM SRCSTMF('&FULLPATH') COMMIT(*NONE) NAMING(*SQL)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": ["SQL", "SQLC"]
+    "extensions": [
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
   },
   {
     "name": "📤 Exportar miembro QSYS → IFS/Git + commit + push",
     "command": "QSYS/CPYTOSTMF FROMMBR('/QSYS.LIB/&LIBRARY.LIB/&FILE.FILE/&NAME.MBR') TOSTMF('/home/MEYKER/git/Petromovil/&FILE/&NAME.&EXT') STMFOPT(*REPLACE) CVTDTA(*AUTO) STMFCCSID(1208) && cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git add '&FILE/&NAME.&EXT' && /QOpenSys/pkgs/bin/git commit -m 'Exporta &LIBRARY/&FILE/&NAME' && /QOpenSys/pkgs/bin/git push origin main",
     "environment": "pase",
-    "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
   },
   {
     "name": "📦 Git: commit + push este archivo",
     "command": "cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git add '&RELATIVEPATH' && /QOpenSys/pkgs/bin/git commit -m 'Actualiza &NAME (&CURLIB)' && /QOpenSys/pkgs/bin/git push origin main",
     "environment": "pase",
-    "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
   },
   {
     "name": "📦 Git: status del repositorio",
     "command": "cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git status",
     "environment": "pase",
-    "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
   },
   {
     "name": "📦 Git: pull desde GitHub",
     "command": "cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git pull origin main",
     "environment": "pase",
-    "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
   },
   {
     "name": "📦 Git: log últimos 10 commits",
     "command": "cd /home/MEYKER/git/Petromovil && /QOpenSys/pkgs/bin/git log --oneline -10",
     "environment": "pase",
-    "extensions": ["RPGLE", "SQLRPGLE", "CLLE", "CLP", "PF", "LF", "DSPF", "SQL", "SQLC"]
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "🔨 Compilar SQLRPGLE → Programa",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQLRPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "🔨 Compilar SQLRPGLE → Módulo",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OBJTYPE(*MODULE) OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQLRPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "🔨 Compilar RPGLE → Programa",
+    "command": "CRTBNDRPG PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "RPGLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "🔨 Compilar CL → Programa",
+    "command": "CRTBNDCL PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "CLP",
+      "CLLE"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "🔨 Compilar DDS → Physical File",
+    "command": "CRTPF FILE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "PF"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "🔨 Compilar DDS → Logical File",
+    "command": "CRTLF FILE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "LF"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "🔨 Compilar DDS → Display File",
+    "command": "CRTDSPF FILE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') RSTDSP(*NO) OPTION(*EVENTF)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "DSPF"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "🔨 Ejecutar SQL (RUNSQLSTM)",
+    "command": "RUNSQLSTM SRCSTMF('&FULLPATH') COMMIT(*NONE) NAMING(*SQL)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "📦 Git: commit + push este archivo",
+    "command": "cd /home/MEYKER/git/Petromovil && git add 'FUENTESFA/&FILENAME' && git commit -m 'FUENTESFA: Actualiza &NAME' && git push origin main",
+    "environment": "pase",
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "📦 Git: status",
+    "command": "cd /home/MEYKER/git/Petromovil && git status --short",
+    "environment": "pase",
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "📦 Git: pull desde GitHub",
+    "command": "cd /home/MEYKER/git/Petromovil && git pull origin main",
+    "environment": "pase",
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "📦 Git: log últimos 10",
+    "command": "cd /home/MEYKER/git/Petromovil && git log --oneline -10",
+    "environment": "pase",
+    "extensions": [
+      "RPGLE",
+      "SQLRPGLE",
+      "CLLE",
+      "CLP",
+      "PF",
+      "LF",
+      "DSPF",
+      "SQL",
+      "SQLC"
+    ],
+    "type": "file"
+  },
+  {
+    "name": "Create RPGLE Program (1)",
+    "command": "CRTBNDRPG PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "RPGLE"
+    ]
+  },
+  {
+    "name": "Create RPGLE Module (1)",
+    "command": "CRTRPGMOD MODULE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "RPGLE"
+    ]
+  },
+  {
+    "name": "Create SQLRPGLE Program (1)",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQLRPGLE"
+    ]
+  },
+  {
+    "name": "Create SQLRPGLE Module (1)",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OBJTYPE(*MODULE) OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)') RPGPPOPT(*LVL2)",
+    "deployFirst": true,
+    "environment": "ile",
+    "extensions": [
+      "SQLRPGLE"
+    ]
+  },
+  {
+    "extensions": [
+      "CLP",
+      "CLLE"
+    ],
+    "name": "Create Bound CL Program (1)",
+    "command": "CRTBNDCL PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE)",
+    "deployFirst": true,
+    "environment": "ile"
+  },
+  {
+    "extensions": [
+      "SQL",
+      "TABLE",
+      "VIEW",
+      "SQLPRC",
+      "SQLUDF",
+      "SQLUDT",
+      "SQLTRG",
+      "SQLALIAS",
+      "SQLSEQ"
+    ],
+    "name": "Run SQL Statements (RUNSQLSTM) (1)",
+    "command": "RUNSQLSTM SRCSTMF('&FULLPATH') COMMIT(*NONE) NAMING(*SQL)",
+    "deployFirst": true,
+    "environment": "ile"
+  },
+  {
+    "name": "Create DSPF (1)",
+    "command": "CRTDSPF FILE(&CURLIB/&NAME) SRCFILE(&SRCFILE) RSTDSP(*NO) OPTION(*EVENTF)",
+    "environment": "ile",
+    "deployFirst": true,
+    "extensions": [
+      "dspf"
+    ]
+  },
+  {
+    "extensions": [
+      "GLOBAL"
+    ],
+    "name": "Create Service Program (CRTSRVPGM EXPORT(*ALL)) (1)",
+    "command": "CRTSRVPGM SRVPGM(&CURLIB/&NAME) EXPORT(*ALL) BNDSRVPGM(*NONE) BNDDIR(*NONE) ACTGRP(*CALLER)",
+    "environment": "ile"
+  },
+  {
+    "extensions": [
+      "BND",
+      "BINDER"
+    ],
+    "deployFirst": true,
+    "name": "Create Service Program (CRTSRVPGM with source) (1)",
+    "command": "CRTSRVPGM SRVPGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') BNDSRVPGM(*NONE) BNDDIR(*NONE) ACTGRP(*CALLER)",
+    "environment": "ile"
   }
 ]
