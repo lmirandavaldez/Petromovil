@@ -10,5 +10,11 @@
       "path": "/QOpenSys/pkgs/bin/bash",
       "args": ["-l"]
     }
+  },
+  "files.associations": {
+    "*.dspf": "dds.dspf",
+    "*.DSPF": "dds.dspf",
+    "*.prtf": "dds.prtf",
+    "*.PRTF": "dds.prtf"
   }
 }
