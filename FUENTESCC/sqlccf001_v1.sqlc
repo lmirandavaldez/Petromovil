@@ -1,0 +1,65 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.CC_DIAS_PROMEDIO_PAGO (
+        P_CLICVE   INTEGER,
+        P_FECPROC  DATE
+)
+RETURNS TABLE (
+        CliCve                     INTEGER,
+        PromedioDiasTranscurridos  DECIMAL(15,4),
+        PromedioDiasDePago         DECIMAL(15,4)
+)
+LANGUAGE SQL
+RETURN
+    WITH Datos AS (
+        SELECT
+            T1.CliCve,
+            DAYS(T11.FecIso) - DAYS(T10.FecIso) AS DiasTranscurridos,
+            DAYS(T11.FecIso) - DAYS(T10.FecIso) - T7.CpaDcr AS DiasDePago
+        FROM CxcDocd T1
+        INNER JOIN CxcDoch T2
+                ON T1.CliCve = T2.CliCve
+               AND T1.CdoCve = T2.CdoCve
+               AND T1.DocNum = T2.DocNum
+               AND T1.DisCve = T2.DisCve
+               AND T1.DocAno = T2.DocAno
+               AND T1.DocMes = T2.DocMes
+               AND T1.DocDia = T2.DocDia
+        INNER JOIN CxcCmo T3
+                ON T1.CmoCve = T3.CmoCve
+        INNER JOIN CxcCdo T4
+                ON T1.CdoCve = T4.CdoCve
+        INNER JOIN SegLdm T5
+                ON T5.LdmCve = T3.CmoRel
+               AND T5.SisCve = 'CC'
+               AND T5.LdmTip = 'M'
+               AND T5.LdmTor = 5
+        INNER JOIN SegLdm T6
+                ON T6.LdmCve = T4.CdoRel
+               AND T6.SisCve = 'CC'
+               AND T6.LdmTip = 'D'
+               AND T6.LdmTor = 1
+        INNER JOIN CxcCpa T7
+                ON T2.CpaCve = T7.CpaCve
+        INNER JOIN SegFec T10
+                ON T1.DocAno = T10.FecAno
+               AND T1.DocMes = T10.FecMes
+               AND T1.DocDia = T10.FecDia
+        INNER JOIN SegFec T11
+                ON T1.DocAtr = T11.FecAno
+               AND T1.DocMtr = T11.FecMes
+               AND T1.DocDtr = T11.FecDia
+        WHERE T11.FecIso <= P_FECPROC
+          AND T11.FecIso > T10.FecIso
+          AND T1.CliCve = P_CLICVE
+    )
+    SELECT
+        CliCve,
+        CAST(AVG(DiasTranscurridos) AS DECIMAL(15,4))
+        AS PromedioDiasTranscurridos,
+        CAST(AVG(DiasDePago) AS DECIMAL(15,4)) AS PromedioDiasDePago
+    FROM Datos
+    GROUP BY CliCve;
+
+ GRANT EXECUTE ON FUNCTION SEGLIB.CC_DIAS_PROMEDIO_PAGO TO PUBLIC;
+

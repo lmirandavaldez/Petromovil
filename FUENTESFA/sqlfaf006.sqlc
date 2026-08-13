@@ -1,0 +1,186 @@
+-- ==============================================================
+-- Modulo    : Facturacion
+-- Programa  : sqlfaf006
+-- Objeto    : FA_CLASIFICACION_CLIENTE_PREDICTIVA
+-- Tipo      : Funcion SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- Proyecto  : Petromovil - Segmentacion de clientes
+-- --------------------------------------------------------------
+-- Proposito:
+--   Clasifica a un cliente en una de cinco categorias segun
+--   su comportamiento de compra en el periodo que contiene
+--   P_FECHA: NUEVO, REACTIVADO, ACTIVO, ACTIVO_PREDICTIVO
+--   o INACTIVO.
+--   Delega el calculo del patron de compra a la funcion
+--   FA_PATRON_COMPRA_CLIENTE.
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   CODIGO_CLIENTE  INTEGER   Clave del cliente evaluado
+--   CLASIFICACION   VARCHAR(20) Etiqueta de clasificacion
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   FacDtoh  Encabezado de documentos de facturacion
+--   SegDis   Maestro de distritos 
+--   SegFec   Catalogo de fechas (resolucion de fechas ISO)
+--   SYSIBM.SYSDUMMY1  Tabla dummy para calculos de periodo
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Los CTEs UltimaCompra y CompraPeriodo usan LEFT JOIN a
+--   SegFec para convertir (DtoAno, DtoMes, DtoDia) a FecIso.
+--   Si la combinacion no existe en SegFec se usa el valor
+--   por defecto '2039-12-31' mediante COALESCE.
+--   El CTE Periodo calcula PRIMER_DIA y ULTIMO_DIA a partir
+--   de P_FECHA usando funciones escalares estandar de DB2.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Evaluar persistir la clasificacion en tabla fisica
+--      para evitar recalculos en consultas masivas.
+--   2. El parametro 'T' en FA_PATRON_COMPRA_CLIENTE podria
+--      recibirse como parametro para mayor flexibilidad.
+--   3. Considerar indice en FacDtoh(CliCve, DtoSta, DtoTip)
+--      para mejorar el rendimiento de los CTEs de compras.
+--   4. El GRANT hace referencia a FA_CLASIFICACION_CLIENTE
+--      (sin _PREDICTIVA); verificar nombre correcto del rol.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-12  L. Miranda  Documentacion y mejoras de formato
+--                           LEFT JOIN SegFec con COALESCE
+--                           Sustitucion de IfNull por COALESCE
+-- ==============================================================
+
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.FA_CLASIFICACION_CLIENTE_PREDICTIVA (
+    P_CUSTNO INTEGER,
+    P_FECHA  DATE
+)
+RETURNS TABLE (
+    CODIGO_CLIENTE INTEGER,
+    CLASIFICACION  VARCHAR(30)
+)
+LANGUAGE SQL
+NOT DETERMINISTIC
+READS SQL DATA
+RETURNS NULL ON NULL INPUT
+RETURN
+    -- ----------------------------------------------------------
+    -- Patron de compra del cliente (delegado a funcion externa)
+    -- ----------------------------------------------------------
+    WITH Patron AS (
+        SELECT
+            CODIGO_CLIENTE,
+            UMBRAL,
+            ES_NUEVO,
+            PROMEDIO_DIAS
+        FROM TABLE(
+            SEGLIB.FA_PATRON_COMPRA_CLIENTE(P_CUSTNO, P_FECHA, 'T')
+        )
+    ),
+
+    -- ----------------------------------------------------------
+    -- Limites del periodo que contiene P_FECHA
+    -- ----------------------------------------------------------
+    Periodo AS (
+        SELECT
+            DATE(TO_CHAR(P_FECHA, 'YYYY-MM') || '-01') AS PRIMER_DIA,
+            LAST_DAY(P_FECHA)                          AS ULTIMO_DIA
+        FROM SYSIBM.SYSDUMMY1
+    ),
+
+    -- ----------------------------------------------------------
+    -- Ultima compra del cliente ANTES del periodo actual
+    -- LEFT JOIN SegFec: si la fecha no existe en catalogo
+    -- se usa '2039-12-31' como valor por defecto (COALESCE).
+    -- ----------------------------------------------------------
+    UltimaCompra AS (
+        SELECT MAX(
+            COALESCE(T9.FecIso, DATE('2039-12-31'))
+        ) AS FECHA_ULTIMA
+        FROM FacDtoh T2
+        JOIN SegDis T3
+            ON T2.DisCve = T3.DisCve
+        LEFT JOIN SegFec T9
+            ON  T2.DtoAno = T9.FecAno
+            AND T2.DtoMes = T9.FecMes
+            AND T2.DtoDia = T9.FecDia
+        JOIN Periodo PR ON 1 = 1
+        WHERE T2.CliCve  = P_CUSTNO
+          AND COALESCE(T9.FecIso, DATE('2039-12-31')) < PR.PRIMER_DIA
+          AND T2.DtoSta  = 'A'
+          AND T2.DtoTip NOT IN (2, 8)
+    ),
+
+    -- ----------------------------------------------------------
+    -- Primera compra del cliente DENTRO del periodo actual
+    -- LEFT JOIN SegFec: misma logica de fallback '2039-12-31'.
+    -- ----------------------------------------------------------
+    CompraPeriodo AS (
+        SELECT MIN(
+            COALESCE(T9.FecIso, DATE('2039-12-31'))
+        ) AS FECHA_PERIODO
+        FROM FacDtoh T2
+        JOIN SegDis T3
+            ON T2.DisCve = T3.DisCve
+        LEFT JOIN SegFec T9
+            ON  T2.DtoAno = T9.FecAno
+            AND T2.DtoMes = T9.FecMes
+            AND T2.DtoDia = T9.FecDia
+        JOIN Periodo PR ON 1 = 1
+        WHERE T2.CliCve  = P_CUSTNO
+          AND COALESCE(T9.FecIso, DATE('2039-12-31'))
+              BETWEEN PR.PRIMER_DIA AND PR.ULTIMO_DIA
+          AND T2.DtoSta  = 'A'
+          AND T2.DtoTip NOT IN (2, 8)
+    ),
+
+    -- ----------------------------------------------------------
+    -- Indicador de compra predicha en el periodo
+    -- ----------------------------------------------------------
+    Predictivo AS (
+        SELECT
+            CASE
+                WHEN U.FECHA_ULTIMA IS NOT NULL
+                 AND (U.FECHA_ULTIMA + INTEGER(P.PROMEDIO_DIAS) DAYS)
+                     BETWEEN PR.PRIMER_DIA AND PR.ULTIMO_DIA
+                THEN 1
+                ELSE 0
+            END AS ES_PREDICTIVO
+        FROM Patron P
+        JOIN UltimaCompra U ON 1 = 1
+        JOIN Periodo PR     ON 1 = 1
+    )
+
+    -- ----------------------------------------------------------
+    -- Clasificacion final del cliente
+    -- ----------------------------------------------------------
+    SELECT
+        P.CODIGO_CLIENTE,
+        CASE
+            WHEN P.ES_NUEVO = 1
+                THEN 'NUEVO'
+
+            WHEN C.FECHA_PERIODO IS NOT NULL
+             AND U.FECHA_ULTIMA   IS NOT NULL
+             AND (DAYS(C.FECHA_PERIODO)
+                  - DAYS(U.FECHA_ULTIMA)) > P.UMBRAL
+                THEN 'REACTIVADO'
+
+            WHEN C.FECHA_PERIODO IS NOT NULL
+             AND U.FECHA_ULTIMA   IS NOT NULL
+                THEN 'ACTIVO'
+
+            WHEN C.FECHA_PERIODO IS NULL
+             AND (SELECT ES_PREDICTIVO FROM Predictivo) = 1
+                THEN 'ACTIVO_PREDICTIVO'
+
+            ELSE 'INACTIVO'
+        END AS CLASIFICACION
+    FROM Patron P
+    LEFT JOIN UltimaCompra  U ON 1 = 1
+    LEFT JOIN CompraPeriodo C ON 1 = 1;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_CLASIFICACION_CLIENTE_PREDICTIVA TO PUBLIC;

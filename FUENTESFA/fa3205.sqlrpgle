@@ -1,7 +1,5 @@
-     h   Datedit(*Dmy)
      h   Copyright ('Miranda Valdez, S. A., 2005')
-     H   Debug Option(*SRCSTMT:*NODEBUGIO)
-     h   Dftactgrp(*NO)
+     h   Datedit(*Dmy) Debug Option(*SrcStmt:*NoDebugIO) DftActGrp(*NO)
       *  ================================================================*
       *  IDENTIFICACION:                                                 *
       *  ---------------                                                 *
@@ -24,6 +22,12 @@
       *                                FA_FECHAS_CLIENTE cambiados a      *
       *                                LEFT JOIN para incluir clientes    *
       *                                nuevos sin historial de compras    *
+      *  13/08/2026   L.Miranda        FA_CLASIFICACION_CLIENTE sustituida*
+      *                                por FA_CLASIFICACION_CLIENTE_      *
+      *                                PREDICTIVA para deteccion temprana *
+      *                                de churn (riesgo antes de INACTIVO)*
+      *                                ACTIVO_PREDICTIVO = cliente en     *
+      *                                riesgo que aun no cayo en INACTIVO *
       *==================================================================*
      d SupCod          s                   Like(SqlCxcVen.SupCve)
      d VenCod          s                   Like(SqlCxcVen.VenCve)
@@ -135,7 +139,14 @@
                    Coalesce(P.PROMEDIO_DIAS, 0),
                    Date(T1.CreTst),
                    Date(T1.ModTst),
-                   Coalesce(F.FECHA_PRIMERA_COMPRA_HIST, Date('1900-01-01')),
+             /*    Coalesce(F.FECHA_PRIMERA_COMPRA_HIST, Date('1900-01-01')), */
+             /*   FECHA PRIMERA COMPRA AJUSTADA PARA CLIENTES NUEVOS */
+              Case
+                   When F.FECHA_PRIMERA_COMPRA_HIST = Date('1900-01-01')
+                   Then F.FECHA_COMPRA_PERIODO
+                   Else F.FECHA_PRIMERA_COMPRA_HIST
+                   End As FECHA_PRIMERA_COMPRA,
+
                    Coalesce(F.FECHA_ULTIMA_COMPRA,       Date('1900-01-01')),
                    Coalesce(F.FECHA_COMPRA_PERIODO,      Date('1900-01-01'))
               From CxcCli T1
@@ -150,9 +161,12 @@
               Join CxcCla T8
                 On (T4.ClaCve = T8.ClaCve)
 
-            /* CLASIFICACION KPI usando fecha tope - INNER JOIN:          */
-            /* cliente sin clasificacion no es procesable en este KPI     */
-              Join Table(FA_CLASIFICACION_CLIENTE(
+            /* CLASIFICACION PREDICTIVA KPI usando fecha tope - INNER JOIN:*/
+            /* Detecta churn temprano: ACTIVO_PREDICTIVO = cliente fuera   */
+            /* de su ritmo normal de compra, en riesgo antes de INACTIVO   */
+            /* FA_CLASIFICACION_CLIENTE_PREDICTIVA usa PROMEDIO_DIAS para  */
+            /* anticipar abandono, no solo medirlo cuando ya ocurrio       */
+              Join Table(SEGLIB.FA_CLASIFICACION_CLIENTE_PREDICTIVA(
                          T1.CliCve,
                          :FechaPro)) As C
                       On 1 = 1
@@ -178,9 +192,13 @@
                And (T1.CliSta = 'A')
                And (T4.AdcDcr <> 998)
                And Not Exists (Select 1
-                         From Fac3205 X
-                        Where (X.FecFam = :FecFam)
-                          And (X.CliCve = T1.CliCve));
+                                 From ITEEST T9
+                                 Where (T9.CLICVE = T1.CliCve)
+                                    Or (T9.CLIRUI = T1.CliCve))
+               And Not Exists (Select 1
+                                 From Fac3205 T10
+                                Where (T10.FecFam = :FecFam)
+                                  And (T10.CliCve = T1.CliCve));
 
            If SqlCod < *Zeros ;
               SqlMsgTxt = 'Proceso: INSERT Fac3205' ;

@@ -1,0 +1,96 @@
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+CREATE OR REPLACE FUNCTION SEGLIB.FA_CLASIFICACION_CLIENTE_PREDICTIVA (
+    P_CUSTNO INTEGER,
+    P_FECHA  DATE
+)
+RETURNS TABLE (
+    CODIGO_CLIENTE INTEGER,
+    CLASIFICACION  VARCHAR(20)
+)
+LANGUAGE SQL
+NOT DETERMINISTIC
+READS SQL DATA
+RETURNS NULL ON NULL INPUT
+RETURN
+    WITH Patron AS (
+        SELECT
+            CODIGO_CLIENTE,
+            UMBRAL,
+            ES_NUEVO,
+            DIAS_PROMEDIO
+        FROM TABLE(SEGLIB.FA_PATRON_COMPRA_CLIENTE(P_CUSTNO, P_FECHA, 'T'))
+    ),
+    Periodo AS (
+        SELECT
+            DATE(TO_CHAR(P_FECHA, 'YYYY-MM') || '-01') AS PRIMER_DIA,
+            LAST_DAY(P_FECHA) AS ULTIMO_DIA
+        FROM SYSIBM.SYSDUMMY1
+    ),
+
+    UltimaCompra AS (
+        SELECT MAX(T9.FecIso) AS FECHA_ULTIMA
+        FROM FacDtoh T2
+        JOIN SegDis T3 ON T2.DisCve = T3.DisCve
+        JOIN SegFec T9 ON T2.DtoAno = T9.FecAno
+                      AND T2.DtoMes = T9.FecMes
+                      AND T2.DtoDia = T9.FecDia
+        JOIN Periodo PR ON 1 = 1
+        WHERE T2.CliCve = P_CUSTNO
+          AND T9.FecIso < PR.PRIMER_DIA
+          AND T2.DtoSta = 'A'
+          AND T2.DtoTip NOT IN (2, 8)
+    ),
+
+    CompraPeriodo AS (
+        SELECT MIN(T9.FecIso) AS FECHA_PERIODO
+        FROM FacDtoh T2
+        JOIN SegDis T3 ON T2.DisCve = T3.DisCve
+        JOIN SegFec T9 ON T2.DtoAno = T9.FecAno
+                      AND T2.DtoMes = T9.FecMes
+                      AND T2.DtoDia = T9.FecDia
+        JOIN Periodo PR ON 1 = 1
+        WHERE T2.CliCve = P_CUSTNO
+          AND T9.FecIso BETWEEN PR.PRIMER_DIA AND PR.ULTIMO_DIA
+          AND T2.DtoSta = 'A'
+          AND T2.DtoTip NOT IN (2, 8)
+    ),
+
+    Predictivo AS (
+        SELECT
+            CASE
+                WHEN U.FECHA_ULTIMA IS NOT NULL
+                 AND DATE(U.FECHA_ULTIMA + P.DIAS_PROMEDIO)
+                     BETWEEN PR.PRIMER_DIA AND PR.ULTIMO_DIA
+                THEN 1
+                ELSE 0
+            END AS ES_PREDICTIVO
+        FROM Patron P
+        JOIN UltimaCompra U ON 1=1
+        JOIN Periodo PR ON 1=1
+    )
+    SELECT
+        P.CODIGO_CLIENTE,
+        CASE
+            WHEN P.ES_NUEVO = 1
+                THEN 'NUEVO'
+
+            WHEN C.FECHA_PERIODO IS NOT NULL
+             AND U.FECHA_ULTIMA IS NOT NULL
+             AND (DAYS(C.FECHA_PERIODO) - DAYS(U.FECHA_ULTIMA)) > P.UMBRAL
+                THEN 'REACTIVADO'
+
+            WHEN C.FECHA_PERIODO IS NOT NULL
+             AND U.FECHA_ULTIMA IS NOT NULL
+                THEN 'ACTIVO'
+
+            WHEN C.FECHA_PERIODO IS NULL
+             AND (SELECT ES_PREDICTIVO FROM Predictivo) = 1
+                THEN 'ACTIVO_PREDICTIVO'
+
+            ELSE 'INACTIVO'
+        END AS CLASIFICACION
+    FROM Patron P
+    LEFT JOIN UltimaCompra U ON 1=1
+    LEFT JOIN CompraPeriodo C ON 1=1;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.FA_CLASIFICACION_CLIENTE TO PUBLIC;

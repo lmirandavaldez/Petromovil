@@ -1,0 +1,129 @@
+-- ==============================================================
+-- Modulo    : CC - Cuentas por Cobrar
+-- Programa  : sqlccf001
+-- Objeto    : CC_DIAS_PROMEDIO_PAGO
+-- Tipo      : Funcion SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 2
+-- Proyecto  : Petromovil
+-- --------------------------------------------------------------
+-- Propósito:
+--   Calcula el promedio de dias transcurridos desde la fecha del
+--   documento hasta la fecha de atraso, y el promedio de dias de
+--   pago real (descontando los dias de credito pactados) para un
+--   cliente dado, filtrado por una fecha de proceso.
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+--   P_CLICVE  - Clave del cliente (INTEGER)
+--   P_FECPROC - Fecha de proceso (DATE)
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   CliCve                    - Clave del cliente
+--   PromedioDiasTranscurridos - Promedio de dias transcurridos
+--   PromedioDiasDePago        - Promedio de dias de pago real
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   CxcDocd  - Detalle de documentos CxC
+--   CxcDoch  - Encabezado de documentos CxC
+--   CxcCmo   - Catalogo de monedas
+--   CxcCdo   - Catalogo de documentos
+--   SegLdm   - Lista de movimientos del sistema
+--   CxcCpa   - Condiciones de pago
+--   SegFec   - Tabla maestra de fechas (resolucion Ano/Mes/Dia)
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   Se utiliza LEFT JOIN a SegFec para resolver los componentes
+--   Ano/Mes/Dia de fecha documento (T10) y fecha de atraso (T11).
+--   Si la fecha no existe en SegFec se usa '2039-12-31' como
+--   valor por defecto mediante COALESCE.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Validar que P_FECPROC no sea NULL antes de ejecutar.
+--   2. Considerar indice compuesto en SegFec(FecAno,FecMes,FecDia)
+--      para mejorar rendimiento en los LEFT JOIN de fechas.
+--   3. El CTE "Datos" podria materializarse si el volumen de
+--      CxcDocd es alto; evaluar WITH UR para lectura sucia.
+--   4. Agregar filtro de estado de documento activo en CxcDoch
+--      si aplica, para excluir documentos cancelados.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-13  L. Miranda  Documentacion y mejoras de formato
+--                           LEFT JOIN a SegFec con COALESCE para
+--                           fechas no encontradas ('2039-12-31')
+--                           Estandar COALESCE en lugar de IFNULL
+-- ==============================================================
+
+--CL: CHGLIBL LIBL(QTEMP Itelib DATOS02);
+
+CREATE OR REPLACE FUNCTION SEGLIB.CC_DIAS_PROMEDIO_PAGO (
+        P_CLICVE   INTEGER,
+        P_FECPROC  DATE
+)
+RETURNS TABLE (
+        CliCve             INTEGER,
+        PDiasTranscurridos  DECIMAL(15,4),
+        PDiasDePago         DECIMAL(15,4)
+)
+LANGUAGE SQL
+RETURN
+    WITH Datos AS (
+        SELECT
+            T1.CliCve,
+            DAYS(COALESCE(T11.FecIso, DATE('2039-12-31')))
+                - DAYS(COALESCE(T10.FecIso, DATE('2039-12-31')))
+                AS DiasTranscurridos,
+            DAYS(COALESCE(T11.FecIso, DATE('2039-12-31')))
+                - DAYS(COALESCE(T10.FecIso, DATE('2039-12-31')))
+                - T7.CpaDcr
+                AS DiasDePago
+        FROM CxcDocd T1
+        INNER JOIN CxcDoch T2
+                ON T1.CliCve  = T2.CliCve
+               AND T1.CdoCve  = T2.CdoCve
+               AND T1.DocNum  = T2.DocNum
+               AND T1.DisCve  = T2.DisCve
+               AND T1.DocAno  = T2.DocAno
+               AND T1.DocMes  = T2.DocMes
+               AND T1.DocDia  = T2.DocDia
+        INNER JOIN CxcCmo T3
+                ON T1.CmoCve  = T3.CmoCve
+        INNER JOIN CxcCdo T4
+                ON T1.CdoCve  = T4.CdoCve
+        INNER JOIN SegLdm T5
+                ON T5.LdmCve  = T3.CmoRel
+               AND T5.SisCve  = 'CC'
+               AND T5.LdmTip  = 'M'
+               AND T5.LdmTor  = 5
+        INNER JOIN SegLdm T6
+                ON T6.LdmCve  = T4.CdoRel
+               AND T6.SisCve  = 'CC'
+               AND T6.LdmTip  = 'D'
+               AND T6.LdmTor  = 1
+        INNER JOIN CxcCpa T7
+                ON T2.CpaCve  = T7.CpaCve
+        LEFT JOIN SegFec T10
+               ON T1.DocAno   = T10.FecAno
+              AND T1.DocMes   = T10.FecMes
+              AND T1.DocDia   = T10.FecDia
+        LEFT JOIN SegFec T11
+               ON T1.DocAtr   = T11.FecAno
+              AND T1.DocMtr   = T11.FecMes
+              AND T1.DocDtr   = T11.FecDia
+        WHERE COALESCE(T11.FecIso, DATE('2039-12-31')) <= P_FECPROC
+          AND COALESCE(T11.FecIso, DATE('2039-12-31'))
+            > COALESCE(T10.FecIso, DATE('2039-12-31'))
+          AND T1.CliCve = P_CLICVE
+    )
+    SELECT
+        CliCve,
+        CAST(AVG(DiasTranscurridos) AS DECIMAL(15,4))
+            AS PDiasTranscurridos,
+        CAST(AVG(DiasDePago)        AS DECIMAL(15,4))
+            AS PDiasDePago
+    FROM Datos
+    GROUP BY CliCve;
+
+ GRANT EXECUTE ON FUNCTION SEGLIB.CC_DIAS_PROMEDIO_PAGO TO PUBLIC;
