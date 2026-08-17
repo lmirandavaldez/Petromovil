@@ -1,0 +1,164 @@
+-- ==============================================================
+-- Modulo    : Seguridad Comun
+-- Programa  : sqlsgf011
+-- Objeto    : SG_VALIDAR_IDENTIFICACION
+-- Tipo      : Funcion SQL (Scalar Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1.1
+-- Proyecto  : Sistema de Seguridad / Validacion Fiscal
+-- --------------------------------------------------------------
+-- Proposito:
+--   Valida un numero de identificacion fiscal dominicano
+--   (Cedula o RNC) verificando su longitud y su digito
+--   verificador segun los algoritmos oficiales de la DGII.
+--   Retorna el numero limpio (solo digitos) seguido de un
+--   espacio y el indicador: 0 = valido, 1 = invalido.
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+--   TEXTO             VARCHAR(200)  Identificacion a validar
+--   LONGITUD_ESPERADA INT           11 = Cedula, 9 = RNC
+-- --------------------------------------------------------------
+-- Valor retornado:
+--   VARCHAR(250)  "<numero_limpio> <0|1>"
+--     0 = identificacion valida
+--     1 = identificacion invalida
+-- --------------------------------------------------------------
+-- Logica de validacion:
+--   1. Se eliminan todos los caracteres no numericos con
+--      REGEXP_REPLACE.
+--   2. Si la longitud del resultado no coincide con
+--      LONGITUD_ESPERADA, retorna invalido.
+--   3. Cedula (11 digitos): algoritmo Luhn con pesos
+--      alternados 1/2; si MOD(suma,10) = 0 es valida.
+--   4. RNC (9 digitos): pesos DGII {7,9,8,6,5,4,3,2}
+--      aplicados a las primeras 8 posiciones; el residuo
+--      mod 11 determina el digito verificador esperado.
+--   5. Longitudes distintas de 9 y 11 se consideran
+--      invalidas por defecto.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. El algoritmo de cedula suma las 11 posiciones; segun
+--      DGII solo se suman las primeras 10 y el pos-11 es el
+--      digito verificador. Se conserva la logica original y
+--      se deja documentado para revision futura.
+--   2. Considerar devolver un tipo estructurado o dos columnas
+--      (numero + estado) en lugar de concatenacion, para
+--      facilitar el consumo desde RPG o SQL.
+--   3. Agregar manejo de NULL en TEXTO para evitar errores
+--      silenciosos cuando el parametro llega vacio.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ninguna (funcion de calculo puro)
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2025-07-14  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_VALIDAR_IDENTIFICACION (
+    TEXTO             VARCHAR(200),
+    LONGITUD_ESPERADA INT
+)
+RETURNS VARCHAR(250)
+LANGUAGE SQL
+DETERMINISTIC
+NO EXTERNAL ACTION
+BEGIN ATOMIC
+    DECLARE NUM    VARCHAR(200);
+    DECLARE LEN    INT;
+    DECLARE I      INT     DEFAULT 1;
+    DECLARE SUMA   INT     DEFAULT 0;
+    DECLARE DIG    INT;
+    DECLARE PESO   INT;
+    DECLARE TEMP   INT;
+    DECLARE RESTA  INT;
+    DECLARE DIGVER INT;
+    DECLARE VAL    SMALLINT DEFAULT 1;
+
+    -- Limpiar todo excepto dígitos
+    SET NUM = REGEXP_REPLACE(COALESCE(TEXTO, ''), '[^0-9]', '');
+    SET LEN = LENGTH(NUM);
+
+    -- Si la longitud no coincide con la esperada → inválido
+    IF LEN <> LONGITUD_ESPERADA THEN
+        RETURN NUM CONCAT ' ' CONCAT CAST(1 AS CHAR(1));
+    END IF;
+
+    --------------------------------------------------------------------
+    -- Validación de CÉDULA (11 dígitos)
+    --------------------------------------------------------------------
+    IF LONGITUD_ESPERADA = 11 THEN
+        SET SUMA = 0;
+        SET I    = 1;
+
+        WHILE I <= 11 DO
+            SET DIG  = INTEGER(SUBSTR(NUM, I, 1));
+            SET PESO = CASE WHEN MOD(I, 2) = 1 THEN 1 ELSE 2 END;
+            SET TEMP = DIG * PESO;
+
+            IF TEMP >= 10 THEN
+                SET TEMP = (TEMP / 10) + MOD(TEMP, 10);
+            END IF;
+
+            SET SUMA = SUMA + TEMP;
+            SET I    = I + 1;
+        END WHILE;
+
+        IF MOD(SUMA, 10) = 0 THEN
+            SET VAL = 0;
+        END IF;
+
+        RETURN NUM CONCAT ' ' CONCAT CAST(VAL AS CHAR(1));
+    END IF;
+
+    --------------------------------------------------------------------
+    -- Validación de RNC (9 dígitos)
+    --------------------------------------------------------------------
+    IF LONGITUD_ESPERADA = 9 THEN
+        SET SUMA = 0;
+        SET I    = 1;
+
+        WHILE I <= 8 DO
+            SET DIG  = INTEGER(SUBSTR(NUM, I, 1));
+            SET PESO = CASE I
+                WHEN 1 THEN 7
+                WHEN 2 THEN 9
+                WHEN 3 THEN 8
+                WHEN 4 THEN 6
+                WHEN 5 THEN 5
+                WHEN 6 THEN 4
+                WHEN 7 THEN 3
+                WHEN 8 THEN 2
+            END;
+
+            SET SUMA = SUMA + (DIG * PESO);
+            SET I    = I + 1;
+        END WHILE;
+
+        -- Aplicar reglas DGII EXACTAS
+        SET RESTA = MOD(SUMA, 11);
+
+        SET DIGVER =
+            CASE
+                WHEN RESTA = 0 THEN 2
+                WHEN RESTA = 1 THEN 1
+                ELSE 11 - RESTA
+            END;
+
+        IF DIGVER = INTEGER(SUBSTR(NUM, 9, 1)) THEN
+            SET VAL = 0;
+        END IF;
+
+        RETURN NUM CONCAT ' ' CONCAT CAST(VAL AS CHAR(1));
+    END IF;
+
+    --------------------------------------------------------------------
+    -- Si la longitud es válida pero no es 9 ni 11 → inválido
+    --------------------------------------------------------------------
+    RETURN NUM CONCAT ' ' CONCAT CAST(1 AS CHAR(1));
+END;
+
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_VALIDAR_IDENTIFICACION TO PUBLIC;

@@ -1,0 +1,80 @@
+-- ==============================================================
+-- Modulo    : Seguridad y Comunes
+-- Programa  : SQLSGF009
+-- Objeto    : SG_CENTER_TEXT
+-- Tipo      : Funcion SQL (Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1
+-- Proyecto  : PETROMOVIL
+-- --------------------------------------------------------------
+-- Proposito:
+--   Centraliza (centra) un texto dentro de un campo de longitud
+--   fija, distribuyendo el relleno de espacios de forma
+--   equitativa a izquierda y derecha del texto original.
+--   Cuando la diferencia (LONGITUD - len) es impar, el espacio
+--   extra queda del lado derecho.
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+--   TEXTO    VARCHAR(500)  Texto a centrar (se aplica TRIM).
+--   LONGITUD INTEGER       Ancho total del campo de salida.
+-- --------------------------------------------------------------
+-- Campos retornados:
+--   VARCHAR(500)  Texto centrado con relleno de espacios.
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ninguna (funcion escalar pura).
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica en esta funcion.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Validar que LONGITUD >= LENGTH(TRIM(TEXTO)); si no, la
+--      funcion retorna un texto truncado o con pads negativos.
+--      Se agrega guarda: si LONGITUD <= LEN_TXT se retorna
+--      el texto recortado al ancho pedido (SUBSTR).
+--   2. Si TEXTO es NULL, retornar NULL de forma explicita para
+--      evitar comportamiento inesperado de REPEAT con NULL.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-14  L. Miranda  Documentacion, mejoras de formato,
+--                           guarda para LONGITUD < LEN_TXT y
+--                           manejo explicito de NULL.
+-- ==============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_CENTER_TEXT (
+    TEXTO     VARCHAR(500),
+    LONGITUD  INTEGER
+)
+RETURNS VARCHAR(500)
+LANGUAGE SQL
+DETERMINISTIC
+BEGIN ATOMIC
+    DECLARE LEN_TXT   INTEGER;
+    DECLARE LEFT_PAD  INTEGER;
+    DECLARE RIGHT_PAD INTEGER;
+
+    -- Manejo explicito de NULL en el texto de entrada
+    IF TEXTO IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    SET LEN_TXT = LENGTH(TRIM(TEXTO));
+
+    -- Guarda: si el texto ya supera o iguala la longitud pedida,
+    -- retornar solo los primeros LONGITUD caracteres (sin pads).
+    IF LEN_TXT >= LONGITUD THEN
+        RETURN SUBSTR(TRIM(TEXTO), 1, LONGITUD);
+    END IF;
+
+    SET LEFT_PAD  = (LONGITUD - LEN_TXT) / 2;
+    SET RIGHT_PAD = LONGITUD - LEN_TXT - LEFT_PAD;
+
+    RETURN REPEAT(' ', LEFT_PAD)
+        || TRIM(TEXTO)
+        || REPEAT(' ', RIGHT_PAD);
+END;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_CENTER_TEXT TO PUBLIC;

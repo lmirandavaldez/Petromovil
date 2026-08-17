@@ -1,0 +1,51 @@
+-- ==============================================================
+-- Modulo    : Seguridad y Comunes
+-- Programa  : SQLSGF009
+-- Objeto    : SG_CALCULO_IMPUESTO_COMPUESTO
+-- Tipo      : Funcion Para Centralizar un Texto Hasta 500 Pos.
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1.1
+-- Proyecto  : PETROMOVIL
+-- --------------------------------------------------------------
+-- Proposito:
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+-- ==============================================================
+CREATE OR REPLACE FUNCTION SEGLIB.SG_CENTER_TEXT (
+    TEXTO     VARCHAR(500),
+    LONGITUD  INTEGER
+)
+RETURNS VARCHAR(500)
+LANGUAGE SQL
+DETERMINISTIC
+BEGIN ATOMIC
+    DECLARE LEN_TXT INTEGER;
+    DECLARE LEFT_PAD INTEGER;
+    DECLARE RIGHT_PAD INTEGER;
+
+    SET LEN_TXT = LENGTH(TRIM(TEXTO));
+
+    SET LEFT_PAD  = (LONGITUD - LEN_TXT) / 2;
+    SET RIGHT_PAD = LONGITUD - LEN_TXT - LEFT_PAD;
+
+    RETURN REPEAT(' ', LEFT_PAD)
+           || TRIM(TEXTO)
+           || REPEAT(' ', RIGHT_PAD);
+END;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_CENTER_TEXT TO PUBLIC;
+
+

@@ -1,0 +1,67 @@
+-- ==============================================================
+-- Modulo    : SEGLIB
+-- Programa  : SQLSGF010
+-- Objeto    : SG_ELIMINAR_ALFANUMERICOS
+-- Tipo      : Funcion SQL (Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1.1
+-- Proyecto  : Seguridad
+-- --------------------------------------------------------------
+-- Propósito:
+--   Recibe una cadena de texto y retorna únicamente los
+--   caracteres numéricos (dígitos 0-9), eliminando cualquier
+--   otro carácter (letras, símbolos, espacios, etc.).
+--   Nota: el nombre de la función hace referencia a "eliminar
+--   alfanuméricos", interpretado como eliminar todo carácter
+--   que no sea dígito numérico.
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+--   TEXTO  VARCHAR(500)  Cadena a procesar
+-- --------------------------------------------------------------
+-- Valor retornado:
+--   VARCHAR(500)  Cadena resultante solo con dígitos 0-9.
+--   Si TEXTO es NULL, retorna NULL (RETURNS NULL ON NULL INPUT).
+--   Si TEXTO es cadena vacía (''), retorna cadena vacía ('').
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   Ninguna. Funcion escalar pura.
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica. Esta funcion no maneja fechas.
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Considerar renombrar a SG_EXTRAER_NUMERICOS para mayor
+--      claridad semántica del propósito de la función.
+--   2. Si se requiere también eliminar espacios internos antes
+--      de filtrar, aplicar TRIM(TEXTO) como argumento previo
+--      al REGEXP_REPLACE.
+--   3. Para longitudes mayores a 500 considerar escalar el
+--      parámetro y retorno a VARCHAR(4000).
+--   4. Ifnull sustituido por COALESCE como estándar DB2
+--      (no aplica en esta versión pero se documenta como
+--      lineamiento para futuras modificaciones).
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2025-07-15  L. Miranda  Documentacion y mejoras de formato
+-- ==============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_ELIMINAR_ALFANUMERICOS (
+    TEXTO VARCHAR(500)
+)
+RETURNS VARCHAR(500)
+LANGUAGE SQL
+DETERMINISTIC
+RETURNS NULL ON NULL INPUT
+BEGIN ATOMIC
+    -- Elimina todo caracter que no sea digito (0-9).
+    -- Retorna cadena vacía si no hay dígitos en TEXTO.
+    RETURN COALESCE(
+               REGEXP_REPLACE(TEXTO, '[^0-9]', ''),
+               ''
+           );
+END;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_ELIMINAR_ALFANUMERICOS TO PUBLIC;
