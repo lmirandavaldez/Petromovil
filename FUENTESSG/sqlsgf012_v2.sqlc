@@ -1,0 +1,137 @@
+-- ==============================================================
+-- Modulo    : SEGLIB
+-- Programa  : SQLSGF012
+-- Objeto    : SG_VALIDAR_EMAILS
+-- Tipo      : Funcion SQL (Table Function)
+-- Autor     : L. Miranda
+-- Copyright : Miranda Valdez, S. A., 1997
+-- Version   : 1.1
+-- Proyecto  : Seguridad / Utilerias de validacion
+-- --------------------------------------------------------------
+-- Proposito:
+--   Recibe una cadena de correos electronicos separados por
+--   punto y coma (;) y retorna una tabla con cada correo
+--   individual indicando si es valido (0) o invalido (1).
+-- --------------------------------------------------------------
+-- Parametros de entrada:
+--   P_EMAILS  VARCHAR(2000)  Cadena de emails sep. por ";"
+-- --------------------------------------------------------------
+-- Campos retornados (en orden original):
+--   EMAIL_LIMPIO  VARCHAR(300)  Correo extraido sin espacios
+--   ES_VALIDO     SMALLINT      0=Valido  1=Invalido
+-- --------------------------------------------------------------
+-- Tablas referenciadas:
+--   SYSIBM.SYSDUMMY1  Tabla dummy para iniciar la recursion
+-- --------------------------------------------------------------
+-- Logica de resolucion de fechas:
+--   No aplica. La funcion opera exclusivamente con cadenas de
+--   texto (direcciones de correo). No se construyen ni
+--   resuelven fechas en este objeto.
+-- --------------------------------------------------------------
+-- Reglas de validacion aplicadas sobre cada email:
+--   1. El correo no puede ser vacio.
+--   2. Debe contener exactamente un simbolo "@".
+--   3. El "@" no puede estar en la primera posicion.
+--   4. Debe existir un "." despues del "@" (dominio valido).
+--   5. Solo se permiten caracteres: A-Z a-z 0-9 @ . _ + -
+-- --------------------------------------------------------------
+-- Sugerencias de mejora:
+--   1. Agregar campo POSICION (INTEGER) para identificar el
+--      numero de orden del email dentro de la cadena original.
+--   2. Considerar soporte a separador coma "," ademas de ";",
+--      usando TRANSLATE o normalizacion previa del parametro.
+--   3. Evaluar un maximo de iteraciones recursivas (DEPTH)
+--      para evitar recursion infinita con entradas malformadas.
+--   4. Retornar un campo MENSAJE_ERROR VARCHAR(100) con la
+--      descripcion del motivo de invalidez en lugar de solo
+--      el indicador numerico ES_VALIDO.
+--   5. La REGEXP utilizada rechaza caracteres internacionales
+--      validos en emails modernos (RFC 6531). Documentar como
+--      limitacion conocida o ampliar el patron si se requiere.
+-- --------------------------------------------------------------
+-- Historial de cambios:
+--   Fecha       Autor       Descripcion
+--   ----------  ----------  -----------------------------------
+--   2026-08-17  L. Miranda  Documentacion, formato 80 cols,
+--                           estandarizar COALESCE (DB2 std),
+--                           analisis y sugerencias de mejora
+-- ==============================================================
+
+CREATE OR REPLACE FUNCTION SEGLIB.SG_VALIDAR_EMAILS (
+    P_EMAILS VARCHAR(2000)
+)
+RETURNS TABLE (
+    EMAIL_LIMPIO  VARCHAR(300),
+    ES_VALIDO     SMALLINT
+)
+LANGUAGE SQL
+DETERMINISTIC
+READS SQL DATA
+RETURN
+    WITH RECURSIVE SPLIT (EMAIL, RESTO) AS (
+
+        -- Primera division: extrae el primer email de la cadena
+        SELECT
+            TRIM(SUBSTR(
+                P_EMAILS,
+                1,
+                COALESCE(
+                    NULLIF(LOCATE(';', P_EMAILS), 0),
+                    LENGTH(P_EMAILS)
+                ) - 1
+            )),
+            CASE
+                WHEN LOCATE(';', P_EMAILS) = 0
+                    THEN ''
+                ELSE SUBSTR(
+                    P_EMAILS,
+                    LOCATE(';', P_EMAILS) + 1
+                )
+            END
+        FROM SYSIBM.SYSDUMMY1
+
+        UNION ALL
+
+        -- Siguientes divisiones: procesa el resto recursivamente
+        SELECT
+            TRIM(SUBSTR(
+                RESTO,
+                1,
+                COALESCE(
+                    NULLIF(LOCATE(';', RESTO), 0),
+                    LENGTH(RESTO)
+                ) - 1
+            )),
+            CASE
+                WHEN LOCATE(';', RESTO) = 0
+                    THEN ''
+                ELSE SUBSTR(
+                    RESTO,
+                    LOCATE(';', RESTO) + 1
+                )
+            END
+        FROM SPLIT
+        WHERE RESTO <> ''
+    )
+
+    -- Validacion de cada email extraido
+    SELECT
+        EMAIL AS EMAIL_LIMPIO,
+        CASE
+            WHEN EMAIL = ''
+                THEN 1
+            WHEN REGEXP_COUNT(EMAIL, '@') <> 1
+                THEN 1
+            WHEN LOCATE('@', EMAIL) <= 1
+                THEN 1
+            WHEN LOCATE('.', SUBSTR(
+                     EMAIL, LOCATE('@', EMAIL) + 1
+                 )) <= 1
+                THEN 1
+            WHEN REGEXP_COUNT(EMAIL, '[^A-Za-z0-9@._+-]') > 0
+                THEN 1
+            ELSE 0
+        END AS ES_VALIDO
+    FROM SPLIT;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_VALIDAR_EMAILS TO PUBLIC;

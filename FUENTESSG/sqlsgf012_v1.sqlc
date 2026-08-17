@@ -1,0 +1,48 @@
+CREATE OR REPLACE FUNCTION SEGLIB.SG_VALIDAR_EMAILS (
+    P_EMAILS VARCHAR(2000)
+)
+RETURNS TABLE (
+    EMAIL_LIMPIO VARCHAR(300),
+    ES_VALIDO SMALLINT
+)
+LANGUAGE SQL
+DETERMINISTIC
+READS SQL DATA
+RETURN
+    WITH RECURSIVE SPLIT (EMAIL, RESTO) AS (
+        -- Primera división
+        SELECT
+            TRIM(SUBSTR(P_EMAILS, 1, COALESCE(NULLIF(LOCATE(';', P_EMAILS), 0),
+            LENGTH(P_EMAILS)) - 1)),
+            CASE
+                WHEN LOCATE(';', P_EMAILS) = 0 THEN ''
+                ELSE SUBSTR(P_EMAILS, LOCATE(';', P_EMAILS) + 1)
+            END
+        FROM SYSIBM.SYSDUMMY1
+
+        UNION ALL
+
+        -- Siguientes divisiones
+        SELECT
+            TRIM(SUBSTR(RESTO, 1, COALESCE(NULLIF(LOCATE(';', RESTO), 0),
+             LENGTH(RESTO)) - 1)),
+            CASE
+                WHEN LOCATE(';', RESTO) = 0 THEN ''
+                ELSE SUBSTR(RESTO, LOCATE(';', RESTO) + 1)
+            END
+        FROM SPLIT
+        WHERE RESTO <> ''
+    )
+    SELECT
+        EMAIL AS EMAIL_LIMPIO,
+        CASE
+            WHEN EMAIL = '' THEN 1
+            WHEN REGEXP_COUNT(EMAIL, '@') <> 1 THEN 1
+            WHEN LOCATE('@', EMAIL) <= 1 THEN 1
+            WHEN LOCATE('.', SUBSTR(EMAIL, LOCATE('@', EMAIL) + 1)) <= 1 THEN 1
+            WHEN REGEXP_COUNT(EMAIL, '[^A-Za-z0-9@._+-]') > 0 THEN 1
+            ELSE 0
+        END AS ES_VALIDO
+    FROM SPLIT;
+
+GRANT EXECUTE ON FUNCTION SEGLIB.SG_VALIDAR_EMAILs TO PUBLIC;
