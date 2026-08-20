@@ -1,0 +1,18 @@
+      * -----------------------------------------------------------*
+      * IDENTIFICACION:                                            *
+      * --------------                                             *
+      *     NOMBRE DEL ARCHIVO..:  SEGLIC                          *
+      *     SISTEMA.............:  Seguridad                       *
+      *     FECHA ESCRITURA.....:  27 / 01 / 1997                  *
+      *                                                            *
+      *     ARCHIVO FISICO LICENCIA MEYKER                         *
+      * -----------------------------------------------------------*
+     A          R SEGLICF                   TEXT('TABLA DE LICENCIAS')
+      *
+      *  Codigo de Licencia
+     A            LICCVE       128A         TEXT('CODIGO DE LA LICENCIA')
+     A                                      COLHDG('Codigo' 'De la' 'Licencia')
+     A                                      ALIAS(CODIGO_DE_LA_LICENCIA)
+      *
+      *  Codigo Clave Primaria
+     A          K LICCVE

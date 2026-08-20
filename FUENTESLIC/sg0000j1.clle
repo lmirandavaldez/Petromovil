@@ -1,0 +1,96 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: SG0000J1                         */
+ /*   APLICACION.................: SEGURIDAD                        */
+ /*   AUTOR .....................: LUIS J. MIRANDA V.               */
+ /*   FECHA ESCRITURA ...........: 21 / 10 / 97                     */
+ /*                                                                 */
+ /*      SELECCION DE COMPA#IAS                                     */
+ /*=================================================================*/
+ INI:        PGM
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&WSID) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&SERIE) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&MODELO) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&PROTYPE) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&hostn) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&FECHA) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&NCIA)  TYPE(*CHAR) LEN(11)
+             DCL        VAR(&CTL) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&ERROR) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&FECDIA) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&FECPRO) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DIAS) TYPE(*CHAR) LEN(9) VALUE('000000000')
+             DCL        VAR(&DIASPRO) TYPE(*DEC) LEN(9 0)
+
+             CHGDTAARA  DTAARA(*LDA *ALL) VALUE(' ')
+
+             CALL       PGM(SEGLIB/SEGLIBL)
+
+             RTVSYSVAL  SYSVAL(QDATE) RTNVAR(&FECHA)
+             RTVSYSVAL  SYSVAL(QMODEL) RTNVAR(&MODELO)
+             RTVSYSVAL  SYSVAL(QSRLNBR) RTNVAR(&SERIE)
+             RTVSYSVAL  SYSVAL(QPRCFEAT) RTNVAR(&PROTYPE)
+             RTVNETA    SYSNAME(&HOSTN)
+
+             RTVJOBA    JOB(&WSID) USER(&USER)
+
+             CVTDAT     DATE(&FECHA) TOVAR(&FECDIA) FROMFMT(*DMY) +
+                          TOFMT(*LONGJUL) TOSEP(*NONE)
+
+             CVTDAT     DATE(&FECHA) TOVAR(&FECPRO) FROMFMT(*DMY) +
+                          TOFMT(*JUL) TOSEP(*NONE)
+
+             CHGDTAARA  DTAARA(*LDA (100 6)) VALUE(&FECHA)
+
+             CHGDTAARA  DTAARA(*LDA (500 1)) VALUE('S') /* Envio por +
+                          Mail */
+             CHGDTAARA  DTAARA(*LDA (501 1)) VALUE('S') /* +
+                          Conversion de Spools */
+             CHGDTAARA  DTAARA(*LDA (502 1)) VALUE('S') /* +
+                          Conversion de Archivos a Excel */
+
+             CHGDTAARA  DTAARA(*LDA (551 10)) VALUE(&WSID)
+             CHGDTAARA  DTAARA(*LDA (561 10)) VALUE(&USER)
+
+ /* Verficiar si la libreria de Envio x Mail existe */
+             CHKOBJ     OBJ(*LIBL/SPOOLMAIL) OBJTYPE(*LIB)
+             MONMSG     MSGID(CPF9801) EXEC(CHGDTAARA DTAARA(*LDA +
+                          (500 1)) VALUE('N'))
+
+ /* Verficiar si la libreria para conversion de spool existe */
+             CHKOBJ     OBJ(*LIBL/SPLAMATIC) OBJTYPE(*LIB)
+             MONMSG     MSGID(CPF9801) EXEC(CHGDTAARA DTAARA(*LDA +
+                          (501 1)) VALUE('N'))
+
+ /* Verficiar si la libreria para conversion de archivos a Excel Existe */
+             CHKOBJ     OBJ(*LIBL/XLERATOR) OBJTYPE(*LIB)
+             MONMSG     MSGID(CPF9801) EXEC(CHGDTAARA DTAARA(*LDA +
+                          (502 1)) VALUE('N'))
+
+            ADDLIBLE SEGLIB
+             MONMSG     MSGID(CPF2103)
+
+             CALL       PGM(*LIBL/SG0000) PARM((&SERIE) (&MODELO) +
+                          (&PROTYPE) (&HOSTN) (&FECPRO) (&DIAS) +
+                          (&ERROR))
+
+             CHGVAR     VAR(&DIASPRO) VALUE(&DIAS)
+
+             IF         COND(&ERROR *EQ '2') THEN(SNDPGMMSG +
+                          MSGID(SEG9998) MSGF(SEGLIB/SEGMSGF) +
+                          MSGDTA(&DIAS) MSGTYPE(*INFO))
+
+             IF         COND(&ERROR *EQ '1') THEN(SNDPGMMSG +
+                          MSGID(SEG9997) MSGF(SEGLIB/SEGMSGF) +
+                          MSGTYPE(*INFO))
+
+             RTVDTAARA  DTAARA(*LDA (412 11)) RTNVAR(&NCIA)
+             RTVDTAARA  DTAARA(*LDA (400 1)) RTNVAR(&CTL)
+             IF         COND(&CTL *EQ ' ') THEN(RETURN)
+
+            ADDLIBLE &NCIA
+             MONMSG     MSGID(CPF2103)
+
+END:         ENDPGM

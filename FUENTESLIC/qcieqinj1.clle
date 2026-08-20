@@ -1,0 +1,53 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: QCIEQIN                          */
+ /*   APLICACION.................: SEGURIDAD                        */
+ /*   AUTOR .....................: LUIS J. MIRANDA V.               */
+ /*   FECHA ESCRITURA ...........: 21 / 10 / 97                     */
+ /*                                                                 */
+ /*      VALIDA LA DATOS DE SEGURIDAD                               */
+ /*=================================================================*/
+ INI:        PGM        PARM(&RESP)
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&SERIE) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&MODELO) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&PROTYPE) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&HOSTN) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&RESP) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&ESPE) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&FECHA) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&FECDIA) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DIAS) TYPE(*CHAR) LEN(9) VALUE('000000000')
+
+             RTVSYSVAL  SYSVAL(QMODEL) RTNVAR(&MODELO)
+             RTVSYSVAL  SYSVAL(QSRLNBR) RTNVAR(&SERIE)
+             RTVSYSVAL  SYSVAL(QPRCFEAT) RTNVAR(&PROTYPE)
+             RTVSYSVAL  SYSVAL(QDATE) RTNVAR(&FECHA)
+             RTVNETA    SYSNAME(&HOSTN)
+
+             CHGDTAARA  DTAARA(*LDA (100 6)) VALUE(&FECHA)
+
+             CVTDAT     DATE(&FECHA) TOVAR(&FECDIA) FROMFMT(*DMY) +
+                          TOFMT(*JUL) TOSEP(*NONE)
+
+ /*          CALL       PGM(*LIBL/QCIEQIN) PARM((&SERIE) (&MODELO) +
+                          (&PROTYPE) (&HOSTN) (&FECDIA) (&DIAS) +
+                          (&RESP))   */
+
+             CALL       PGM(*LIBL/SGLIC00) PARM((&SERIE) (&MODELO) +
+                          (&PROTYPE) (&HOSTN) (&FECDIA) (&DIAS) +
+                          (&RESP))
+
+             IF         COND(&RESP *EQ '2') THEN(SNDPGMMSG +
+                          MSGID(SEG9998) MSGF(SEGLIB/SEGMSGF) +
+                          MSGDTA(&DIAS) MSGTYPE(*INFO))
+
+             IF         COND(&RESP *EQ '1') THEN(SNDPGMMSG +
+                          MSGID(SEG9997) MSGF(SEGLIB/SEGMSGF) +
+                          MSGTYPE(*INFO))
+
+             IF         COND(&RESP *EQ ' ') THEN(GOTO CMDLBL(END))
+             CHGDTAARA  DTAARA(*LDA *ALL) VALUE(' ')
+             CHGLIBL    LIBL(QGPL QTEMP) CURLIB(QGPL)
+
+END:         ENDPGM

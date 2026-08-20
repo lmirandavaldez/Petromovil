@@ -1,0 +1,26 @@
+ /*=================================================================*/
+ /*   NOMBRE DEL PROGRAMA .......: SGLIC01J1                        */
+ /*   APLICACION.................: Seguridad                        */
+ /*   AUTOR .....................: Luis J. Miranda V.               */
+ /*   FECHA ESCRITURA ...........: 27 / 01 / 2026                   */
+ /*                                                                 */
+ /*      Captura Parametros Generador de Licencias                  */
+ /*=================================================================*/
+ INI:        PGM
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&WSID) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&USER) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FECHA) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&PGM) TYPE(*CHAR) LEN(10) VALUE('SGLIC02')
+             DCL        VAR(&NOMREP) TYPE(*CHAR) LEN(50)
+
+             RTVSYSVAL  SYSVAL(QDATE) RTNVAR(&FECHA)
+             RTVJOBA    JOB(&WSID) USER(&USER)
+
+             CHGVAR     VAR(&NOMREP) VALUE('Generador de Licencias +
+                          Meyker')
+
+             CALL       PGM(*LIBL/SGLIC01) PARM((&NOMREP) (&PGM))
+
+END:         ENDPGM

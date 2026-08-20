@@ -10,19 +10,14 @@
       *  DESCR:                                                          *
       *     Validar Licencia                                             *
       *  ================================================================*
-      *  MODIFICACIONES:                                                 *
-      *  ---------------                                                 *
-      *  FECHA        AUTOR            DESCRIPCION                       *
-      *  -----------  ---------------  --------------------------------- *
-      *  (optimiz.)   IBM Bob          Reemplazar FOR+SQL por WITH       *
-      *               (asistente)      RECURSIVE para calcular hash      *
-      *               eliminando hasta 128 llamadas SQL por ejecucion.   *
-      *  ================================================================*
       *
-     * Campos Usado en el programa
+      * Campos Usado en el programa
      d BaseStr         s            128a   Inz(*Blanks)
      d Suma            s              9  0 Inz(*Zeros)
+     d Char            s              1a   Inz(*Blanks)
+     d AscVal          s              3  0 Inz(*Zeros)
      d LicKey          s            128a   Inz(*Blanks)
+     d CodigoAscii     s             10I 0
      d Status          s               n   Inz(*Off)
       *
      d NSerial         s             10A
@@ -43,7 +38,7 @@
      d FechaCrj        s                   Like(SqlSegFec.FecJul)
      d FechaExj        s                   Like(SqlSegFec.FecJul)
      d FechaExjIso     s                   Like(SqlSegFec.FecIso)
-     * Tablas Definidas Externamente
+      * Tablas Definidas Externamente
      d SqlSegFec     e Ds                  ExtName(SegFec) Qualified
      d SqlSegCtl     e Ds                  ExtName(SegCtl) Qualified
      d SqlSegLic     e Ds                  ExtName(SegLic) Qualified
@@ -53,7 +48,7 @@
       *
      d/Copy *Libl/Fuentes,sg9001
       *
-     * SGLIC00 Prototype
+      **SGLIC00 Prototype
      d SGLIC00         Pr
      d InpCtlSrl                      8
      d InpCtlMod                      4
@@ -63,7 +58,7 @@
      d InpTiempo                      9
      d InpCtlSta                      1
       *
-     * SGLIC00 Program Interface
+      **SGLIC00 Program Interface
      d SGLIC00         Pi
      d InpCtlSrl                      8
      d InpCtlMod                      4
@@ -87,19 +82,19 @@
         // ------------------------------------------------------
         Begsr Proceso            ;
 
-      //Verificar la vigencia del Periodo de Prueba
+       //Verificar la vigencia del Periodo de Prueba
               TiempoD = *Zeros  ;
 
               If FechaDia > SqlSegCtl.CtlFtc  ;
                   FechaDiaIso = FechaDia ;
                   FechaExjIso = SqlSegCtl.CtlFtc  ;
                   TiempoD = %Diff(FechaDiaIso: FechaExjIso: *Days);
-                  InpCtlSta = '2'      ;          //Periodo de Prueba
+                  InpCtlSta = '2'      ;          //Periodo de Prueba
                   InpTiempo = %Trim(%Editc(TiempoD:'1'))  ;
                LeaveSr ;
              EndIf   ;
 
-      //Buscar Datos de la empresa
+       //Buscar Datos de la empresa
           Clear CiaNom ;
           Clear CiaRnc ;
 
@@ -123,7 +118,7 @@
            FecIni = %Editc(%Dec(SqlSegCtl.CtlFic):'X')  ;
            FecFin = %Editc(%Dec(SqlSegCtl.CtlFtc):'X')  ;
 
-      //1. Construir cadena base
+       //1. Construir cadena base
 
            BaseStr = %Trim(Abrevi) +
                      %Trim(NSerial) +
@@ -134,28 +129,26 @@
                      %Trim(FecFin) +
                      %Trim(%Editc((SqlSegCtl.CtlMus):'X'))  ;
 
-      //2. Hash: Suma de ASCII mediante CTE recursiva (compatible IBM i 7.1+)
-      //   Sustituye el FOR con SELECT individual por caracter (hasta 128 SQLs)
-      //   por una sola consulta que genera la secuencia internamente.
+       //2. Función simple de "hash" Suma de códigos + Mod para reducir tamaño
 
-           Exec Sql
-              With Nums(N) As (
-                Select 1 From SysIbm.SysDummy1
-                Union All
-                Select N + 1 From Nums
-                 Where N < Length(Trim(:BaseStr))
-              )
-              Select Sum(Ascii(Substr(:BaseStr, N, 1)))
-                Into :Suma
-                From Nums                              ;
-           SqlCod = *Zeros ;
+           For i = 1 to %Len(%Trim(BaseStr));
+              Char = %Subst(BaseStr:i:1);
+
+           // Obtener ASCII mediante SQL
+                 Exec Sql
+                      Select Ascii(:Char)
+                        Into :CodigoAscii
+                      From SysIbm.SysDummy1;
+
+              Suma += CodigoAscii ;
+           EndFor;
 
            Suma = %Rem(Suma:999999)         ;
 
-      //3. Construir LICKEY
+       //3. Construir LICKEY
            LicKey = %Trim(BaseStr) + %Char(Suma);
 
-      //Buscar la licencia
+       //Buscar la licencia
           Status = *Off   ;
 
           Exec Sql
@@ -167,17 +160,17 @@
 
           SqlCod = *Zeros ;
 
-      //Validar si la Licencia es Valida o No
+       //Validar si la Licencia es Valida o No
            Select ;
-             When Status = *Off        ;          //Licencia No Valida
+             When Status = *Off        ;          //Licencia No Valida
                   InpCtlSta = '1'      ;
                   LeaveSr ;
 
-             When Status = *On         ;          //Licencia Valida
+             When Status = *On         ;          //Licencia Valida
                   InpCtlSta = *Blanks  ;
            EndSl  ;
 
-      //Actualizar fecha ultima Verificacion
+       //Actualizar fecha ultima Verificacion
 
           Exec Sql
            Update SegCtl Set CtlFuv = Current Timestamp
@@ -203,20 +196,20 @@
         // -----------------------------------------------------
         BegSr *Inzsr;
 
-      //Recibir Patametros
+       //Recibir Patametros
            NSerial = %Trim(InpCtlSrl)        ;
            NModel = %Trim(InpCtlMod)         ;
            ProcType = %Trim(InpCtlPty)      ;
            HostName = %Trim(InpHostna)      ;
            FechaDia = %Date(%Dec(InpFecPro:5:0):*Jul)  ;
 
-      //Buscar Informaciones del Servidor
+       //Buscar Informaciones del Servidor
         //  Exec Sql
         //    Select Host_Name
         //      Into :HostName
         //      From Qsys2.SysTem_Status_Info  ;
 
-      //Buscar Datos Control de Licencia
+       //Buscar Datos Control de Licencia
           Clear SqlSegCtl ;
 
           Exec Sql

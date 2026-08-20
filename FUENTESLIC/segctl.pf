@@ -1,0 +1,57 @@
+      * -----------------------------------------------------------*
+      * IDENTIFICACION:                                            *
+      * --------------                                             *
+      *     NOMBRE DEL ARCHIVO..:  SEGCTL                          *
+      *     SISTEMA.............:  Seguridad                       *
+      *     FECHA ESCRITURA.....:  21 / 08 / 1997                  *
+      *                                                            *
+      *     ARCHIVO FISICO CONTROL DE LICENCIAS                    *
+      * -----------------------------------------------------------*
+     A          R SEGCTLF                   TEXT('TABLA CONTROL DE LICENCIA')
+      *  Datos de Hardware
+     A            CTLSRL        10A         TEXT('NUMERO DE SERIE')
+     A                                      COLHDG('Numero' 'De' 'Serie')
+     A                                      ALIAS(NUMERO_DE_SERIE)
+     A            CTLMOD         8A         TEXT('MODELO DEL SERVIDOR')
+     A                                      COLHDG('Modelo' 'Del' 'Servidor')
+     A                                      ALIAS(MODELO_DEL_SERVIDOR)
+     A            CTLPTY         8A         TEXT('TIPO DE PROCESADOR')
+     A                                      COLHDG('Tipo' 'De' 'Procesador')
+     A                                      ALIAS(TIPO_DE_PROCESADOR)
+     A            CTLHTN        25A         TEXT('NOMBRE DEL HOST')
+     A                                      COLHDG('Nombre' 'Del' 'Host')
+     A                                      ALIAS(NOMBRE_DEL_HOST)
+      *  Datos del Cliente
+     A            CTLABR        25A         TEXT('ABREVIATURA DEL CLIENTE')
+     A                                      COLHDG('Abreviatura' 'Del' +
+     A                                             'Cliente')
+     A                                      ALIAS(ABREVIATURA_DEL_CLIENTE)
+     A            CTLCVE         9  0       TEXT('CODIGO DEL CLIENTE')
+     A                                      COLHDG('Codigo' 'Del' 'Cliente')
+     A                                      ALIAS(CODIGO_DEL_CLIENTES)
+     A            CTLFIC          L         TEXT('FECHA INICIO DEL CONTRATO')
+     A                                      COLHDG('Fecha' 'Inicio' 'Contrato')
+     A                                      ALIAS(FECHA_INICIO_DEL_CONTRATO)
+     A                                      DATFMT(*JUL)
+     A            CTLFTC          L         TEXT('FECHA TERMINO DEL CONTRATO')
+     A                                      COLHDG('Fecha' 'Termino' 'Contrato')
+     A                                      ALIAS(FECHA_TERMINO_DEL_CONTRATO)
+     A                                      DATFMT(*JUL)
+      *
+      *  Opcionales
+     A            CTLMUS         5S 0       TEXT('CANTIDAD MAXIMO DE USUARIOS')
+     A                                      COLHDG('Cantidad' 'Maximo de' +
+     A                                              'Usuarios')
+     A                                      ALIAS(CANTIDAD_MAXIMO_DE_USUARIOS)
+     A            CTLFCR          Z         TEXT('FECHA DE CREACION')
+     A                                      COLHDG('Fecha' 'De' +
+     A                                              'Creacion')
+     A                                      ALIAS(FECHA_DE_CREACION)
+     A            CTLFUV          Z         TEXT('FECHA ULTIMA VERIFICACION')
+     A                                      COLHDG('Fecha' 'Ultima' +
+     A                                              'Verificacion')
+     A                                      ALIAS(FECHA_ULTIMA_VERIFICACION)
+      *
+      *  Codigo Clave Primaria
+     A          K CTLSRL
+     A          K CTLHTN

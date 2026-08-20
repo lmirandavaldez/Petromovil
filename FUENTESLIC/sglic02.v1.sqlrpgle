@@ -3,24 +3,19 @@
       *  ================================================================*
       *  IDENTIFICACION:                                                 *
       *  ---------------                                                 *
-      *  NOMBRE DEL PROGRAMA .........: SGLIC04                          *
+      *  NOMBRE DEL PROGRAMA .........: SGLIC02                          *
       *  APLICACION...................: Seguridad                        *
       *  AUTOR .......................: Luis J. Miranda V.               *
       *  FECHA ESCRITURA .............: 21 / 01 / 2026                   *
       *  DESCR:                                                          *
       *     Generador de Licencias                                       *
       *  ================================================================*
-      *  MODIFICACIONES:                                                 *
-      *  ---------------                                                 *
-      *  FECHA        AUTOR            DESCRIPCION                       *
-      *  -----------  ---------------  --------------------------------- *
-      *  (optimiz.)   IBM Bob          Reemplazar FOR+SQL por WITH       *
-      *               (asistente)      RECURSIVE para calcular hash      *
-      *               eliminando hasta 128 llamadas SQL por ejecucion.   *
-      *  ================================================================*
      d BaseStr         s            128a   Inz(*Blanks)
      d Suma            s              9  0 Inz(*Zeros)
+     d Char            s              1a   Inz(*Blanks)
+     d AscVal          s              3  0 Inz(*Zeros)
      d LicKey          s            128a   Inz(*Blanks)
+     d CodigoAscii     s             10I 0
       *
      d NSerial         s             10A
      d NModel          s              8A
@@ -35,30 +30,30 @@
      d FechaCrj        s                   Like(SqlSegFec.FecJul)
      d FechaExp        s                   Like(SqlSegFec.FecYmd)
      d FechaExj        s                   Like(SqlSegFec.FecJul)
-      * Archivos Definidos Externamente
+      * Archivos Definidos Externamente
      d SqlSegFec     e Ds                  ExtName(SegFec) Qualified
       *
      d/Copy *Libl/Fuentes,sg9003
       *
      d/Copy *Libl/Fuentes,sg9001
       *
-      **SGLIC04 Prototype
-     d SGLIC04         Pr
-     d InpCtlSrl                      8
-     d InpCtlMod                      4
-     d InpCtlPty                      4
-     d InpHostna                      8
+      **SGLIC02 Prototype
+     d SGLIC02         Pr
+     d InpNSerial                    10
+     d InpNModel                      8
+     d InpProcType                    8
+     d InpHostName                    8
      d InpCrtDate                     8
      d InpExpDate                     8
      d InpAbrev                      25
      d InpMaxUsr                      5
       *
-      **SGLIC04 Program Interface
-     d SGLIC04         Pi
-     d InpCtlSrl                      8
-     d InpCtlMod                      4
-     d InpCtlPty                      4
-     d InpHostna                      8
+      **SGLIC02 Program Interface
+     d SGLIC02         Pi
+     d InpNSerial                    10
+     d InpNModel                      8
+     d InpProcType                    8
+     d InpHostName                    8
      d InpCrtDate                     8
      d InpExpDate                     8
      d InpAbrev                      25
@@ -77,9 +72,8 @@
         // Imprimir Reporte
         // ------------------------------------------------------
         Begsr Proceso            ;
-        //----
 
-       //1. Construir cadena base
+       //1. Construir cadena base
 
            BaseStr = %Trim(InpAbrev) +
                      %Trim(NSerial) +
@@ -90,43 +84,44 @@
                      %Trim(FecFin) +
                      %Trim(InpMaxUsr)  ;
 
-       //2. Hash: Suma de ASCII mediante CTE recursiva (compatible IBM i 7.1+)
-       // Sustituye el FOR con SELECT individual por caracter (hasta 128 SQLs)
-       // por una sola consulta que genera la secuencia internamente.
+       //2. Función simple de "hash" Suma de códigos + Mod para reducir tamaño
 
-           Exec Sql
-              With Nums(N) As (
-                Select 1 From SysIbm.SysDummy1
-                Union All
-                Select N + 1 From Nums
-                 Where N < Length(Trim(:BaseStr)))
-              Select Sum(Ascii(Substr(:BaseStr, N, 1)))
-                Into :Suma
-                From Nums                              ;
-           SqlCod = *Zeros ;
+           For i = 1 to %Len(%Trim(BaseStr));
+              Char = %Subst(BaseStr:i:1);
 
+           // Obtener ASCII mediante SQL
+                 Exec Sql
+                      Select Ascii(:Char)
+                        Into :CodigoAscii
+                      From SysIbm.SysDummy1;
+
+              Suma += CodigoAscii ;
+           EndFor;
 
            Suma = %Rem(Suma:999999)         ;
 
-       //3. Construir LICKEY
+       //3. Construir LICKEY
            LicKey = %Trim(BaseStr) + %Char(Suma);
 
-       //4. Hash sobre Abreviatura: CTE recursiva (1 SQL en lugar de N SQLs)
+       //4. Función simple de "hash" Suma de códigos + Mod para reducir tamaño
            Suma = *Zeros  ;
-           Exec Sql
-              With Nums(N) As (
-                Select 1 From SysIbm.SysDummy1
-                Union All
-                Select N + 1 From Nums
-                 Where N < Length(Trim(:InpAbrev)))
-              Select Sum(Ascii(Substr(:InpAbrev, N, 1)))
-                Into :Suma
-                From Nums                              ;
-           SqlCod = *Zeros ;
+           i = *Zeros     ;
+
+           For i = 1 to %Len(%Trim(InpAbrev));
+              Char = %Subst(InpAbrev:i:1);
+
+           // Obtener ASCII mediante SQL
+                 Exec Sql
+                      Select Ascii(:Char)
+                        Into :CodigoAscii
+                      From SysIbm.SysDummy1;
+
+              Suma += CodigoAscii ;
+           EndFor;
 
            Suma = %Rem(Suma:999999)         ;
 
-       //Grabar en Tabla de Control
+       //Grabar en Tabla de Control
            FechaCrj = %Date(FechaCrt:*Iso);
            FechaExj = %Date(FechaExp:*Iso);
            CtlCve = Suma ;
@@ -165,7 +160,7 @@
                            And CtlHtn = :HostName
                    );
 
-       //Grabar en Tabla de Licencia
+       //Grabar en Tabla de Licencia
            Exec sql
               Insert Into SegLic (
                    LicCve
@@ -193,10 +188,11 @@
         // -----------------------------------------------------
         BegSr *Inzsr;
 
-           NSerial  = %Trim(InpCtlSrl)      ;
-           NModel   = %Trim(InpCtlMod)      ;
-           ProcType = %Trim(InpCtlPty)      ;
-           HostName = %Trim(InpHostna)      ;
+           NSerial = %Trim(InpNSerial)      ;
+           NModel  = %Trim(InpNModel)       ;
+           ProcType = %Trim(InpProcType)    ;
+           HostName = %Trim(InpHostName)    ;
+
            FechaCrt = %Dec(InPCrtDate:8:0)  ;
            FechaCrj = %Date(FechaCrt:*Iso)  ;
            FechaExp = %Dec(InPexpDate:8:0)  ;
@@ -205,7 +201,7 @@
            FecFin = %Editc(%Dec(FechaExj):'X')  ;
            MaxUsr = %Dec(InPMaxUsr:5:0)  ;
 
-       //Buscar Informaciones del Servidor
+       //Buscar Informaciones del Servidor
         //  Exec Sql
         //    Select
         //        Max(Case When SysValName = 'QSRLNBR'  Then CurcharVal End),
