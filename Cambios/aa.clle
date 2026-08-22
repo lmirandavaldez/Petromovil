@@ -1,0 +1,21 @@
+ /*====================================================================*/
+ /*   Nombre del Programa .......:                                     */
+ /*   Aplicacion.................:                                     */
+ /*   Autor .....................:                                     */
+ /*   Fecha Escritura ...........:                                     */
+ /*                                                                    */
+ /*                                                                    */
+ /*====================================================================*/
+ /**------------------------------------------------------------------*/
+ /**        ® COPYRIGHT Miranda Valdez, S. R. L.                      */
+ /**------------------------------------------------------------------*/
+
+             COPYRIGHT  TEXT('Miranda Valdez, S. A., 1997')
+
+             DCL        VAR(&PRT) TYPE(*CHAR) LEN(10)
+
+             RTVDTAARA  DTAARA(*LDA (450 10)) RTNVAR(&PRT)
+
+             OVRPRTF    FILE(CG0001LPT) PAGESIZE(66 80) LPI(6) +
+                          CPI(10) OVRFLW(60) PRTQLTY(*DRAFT) +
+                          OUTQ(&PRT) MAXRCDS(*NOMAX) HOLD(*YES)
