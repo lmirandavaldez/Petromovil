@@ -9,11 +9,13 @@
 
 ## Campos
 
-| Campo | Tipo | Long | Dec | Descripción | Notas |
-|-------|------|------|-----|-------------|-------|
-| — | — | — | — | — | — |
+------------------------------------------------------------------------------------------------------------------------------------
+                                 Pos. Tipo
+ Campo      Desde  Hasta  Long.  Dec. Campo Descripcion del campo                     Alias del Campo
+------------------------------------------------------------------------------------------------------------------------------------
+ IEFCVE         1      2      2   0    P   NRO. DE GRUPO
+ IEFDES         3     52     50        A   DESCRIPCION O TITULO
 
-> Completar con todos los campos reales de la tabla.
 
 ---
 

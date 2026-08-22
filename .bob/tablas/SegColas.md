@@ -9,11 +9,20 @@
 
 ## Campos
 
-| Campo | Tipo | Long | Dec | Descripción | Notas |
-|-------|------|------|-----|-------------|-------|
-| — | — | — | — | — | — |
+------------------------------------------------------------------------------------------------------------------------------------
+                                 Pos. Tipo
+ Campo      Desde  Hasta  Long.  Dec. Campo Descripcion del campo                     Alias del Campo
+------------------------------------------------------------------------------------------------------------------------------------
+ COLNRO         1      4      4   0    S   CODIGO DE COLA                            CODIGO_COLA
+ COLENT         5     52     48        A   NOMBRE DE LA COLA                         NOMBRE_DE_LA_COLA
+ COLLIB        53     62     10        A   LIBRERIA                                  NOMBRE_DE_LA_LIBRERIA
+ COLLNG        63     65      3   0    P   LONGITUD                                  LONGITUD
+ COLWAI        66     70      5   0    S   TIEMPO DE ESPERA                          TIEMPO_DE_ESPERA
+ COLORI        71     71      1        A   ORIGEN                                    ORIGEN
+ COLTIP        72     72      1        A   TIPO                                      TIPO
+ COLDES        73    132     60        A   DESCRIPCION DE LA COLA                    DESCRIPCION_DE_LA_COLA
 
-> Completar con todos los campos reales de la tabla.
+
 
 ---
 

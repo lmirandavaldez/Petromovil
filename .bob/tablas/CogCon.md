@@ -9,11 +9,14 @@
 
 ## Campos
 
-| Campo | Tipo | Long | Dec | Descripción | Notas |
-|-------|------|------|-----|-------------|-------|
-| — | — | — | — | — | — |
+------------------------------------------------------------------------------------------------------------------------------------
+                                 Pos. Tipo
+ Campo      Desde  Hasta  Long.  Dec. Campo Descripcion del campo                     Alias del Campo
+------------------------------------------------------------------------------------------------------------------------------------
+ CONCVE         1      3      3   0    P   CODIGO CONCEPTO                           CODIGO_CONCEPTO_DEL_MOVIMIENT
+ CONDES         4     33     30        A   DESCRIPCION                               DESCRIPCION_CONCEPTO_MOVIMIEN
+ CONDCO        34     43     10        A   DESCRIPCION CORTA                         DESCRIPCION_COSTA_CONCEPTO_MO
 
-> Completar con todos los campos reales de la tabla.
 
 ---
 

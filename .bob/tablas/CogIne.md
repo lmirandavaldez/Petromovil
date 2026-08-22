@@ -9,11 +9,16 @@
 
 ## Campos
 
-| Campo | Tipo | Long | Dec | Descripción | Notas |
-|-------|------|------|-----|-------------|-------|
-| — | — | — | — | — | — |
+------------------------------------------------------------------------------------------------------------------------------------
+                                 Pos. Tipo
+ Campo      Desde  Hasta  Long.  Dec. Campo Descripcion del campo                     Alias del Campo
+------------------------------------------------------------------------------------------------------------------------------------
+ IEFCVE         1      2      2   0    P   NRO. DE GRUPO
+ INEPAG         3      5      3   0    P   NUMERO DE PAGINA
+ IEFTIT         6     45     40        A   TITULO DEL ESTADO                         TITULO_ESTADO
+ IEFANE        46     53      8        A   DESC. ANEXO                               DESC_ANEXO_ESTADO
+ IEFEST        54     57      4        A   IDENTIFICACION ESTADO                     IDENTIFICACION_ESTADO
 
-> Completar con todos los campos reales de la tabla.
 
 ---
 

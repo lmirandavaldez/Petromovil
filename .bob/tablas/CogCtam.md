@@ -9,11 +9,18 @@
 
 ## Campos
 
-| Campo | Tipo | Long | Dec | Descripción | Notas |
-|-------|------|------|-----|-------------|-------|
-| — | — | — | — | — | — |
+------------------------------------------------------------------------------------------------------------------------------------
+                                 Pos. Tipo
+ Campo      Desde  Hasta  Long.  Dec. Campo Descripcion del campo                     Alias del Campo
+------------------------------------------------------------------------------------------------------------------------------------
+ CTACVE         1     18     18        A   NUMERO CUENTA CONTABLE                    NUMERO_DE_CUENTA_CONTABLE
+ CMECTA        19     28     10   0    S   CUENTA CONTABLE EXTERNOS                  CUENTA_CONTABLE_MODULO_EXTERN
+ CMEDES        29     73     45        A   DESCRIPCION CUENTA CONTABLE               DESCRIPCION_CUENTA_MODULO_EXT
+ CMEMOV        74     83     10        A   TIPO DE MOVIMIENTO CONTABLE               TIPO_MOVIMIENTO_CONTABLE_EXT
+ CMEARE        84     93     10   0    S   AREA CONTABLE MODULO EXTERNO              AREA_CONTABLE_MODULO_EXTERNO
+ CMEPRO        94    103     10        A   PROFIT CENTER MODULO EXTERNO              PROFIT_CENTER_MODULO_EXTERNO
+ CMEPAR       104    113     10   0    S   PARTNER UNIT MODULO EXTERNO               PERTNER_UNIT_MODULO_EXTERNO
 
-> Completar con todos los campos reales de la tabla.
 
 ---
 

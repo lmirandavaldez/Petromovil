@@ -9,11 +9,20 @@
 
 ## Campos
 
-| Campo | Tipo | Long | Dec | Descripción | Notas |
-|-------|------|------|-----|-------------|-------|
-| — | — | — | — | — | — |
+------------------------------------------------------------------------------------------------------------------------------------
+                                 Pos. Tipo
+ Campo      Desde  Hasta  Long.  Dec. Campo Descripcion del campo                     Alias del Campo
+------------------------------------------------------------------------------------------------------------------------------------
+ CNOCVE         1      2      2   0    P   CODIGO CLASE DE NOMINA                    CODIGO_CLASE_NOMINA
+ TNOCVE         3      4      2   0    P   CODIGO TIPO DE NOMINA                     CODIGO_TIPO_NOMINA
+ CIPANO         5      7      3   0    P   ANO CICLO                                 ANO_CICLO
+ CIPNUM         8      9      2   0    P   NUMERO DE CICLO                           NUMERO_CICLO
+ BANCVE        10     12      3   0    P   CODIGO DEL BANCO                          CODIGO_DEL_BANCO
+ CECFEC        13     17      5   0    P   FECHA DE EMISION AMD                      FECHA_EMISION_CHEQUE
+ APLUSR        18     27     10        A   USUARIO QUE APLICO                        USUARIO_QUE_APLICO
+ APLWSI        28     37     10        A   TERMINAL DONDE SE APLICO                  TERMINAL_DONDE_SE_APLICO
+ APLHOR        38     41      4   0    P   HORA QUE SE APLICO                        HORA_QUE_SE_APLICO
 
-> Completar con todos los campos reales de la tabla.
 
 ---
 

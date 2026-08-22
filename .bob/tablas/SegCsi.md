@@ -9,11 +9,13 @@
 
 ## Campos
 
-| Campo | Tipo | Long | Dec | Descripción | Notas |
-|-------|------|------|-----|-------------|-------|
-| — | — | — | — | — | — |
+------------------------------------------------------------------------------------------------------------------------------------
+                                 Pos. Tipo
+ Campo      Desde  Hasta  Long.  Dec. Campo Descripcion del campo                     Alias del Campo
+------------------------------------------------------------------------------------------------------------------------------------
+ CIACVE         1      2      2        A   NRO. COMPA#IA                             NUMERO_COMPANIA
+ SISCVE         3      4      2        A   CLAVE DE SISTEMA                          CLAVE_DEL_SISTEMA
 
-> Completar con todos los campos reales de la tabla.
 
 ---
 
